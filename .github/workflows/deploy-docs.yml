@@ -1,0 +1,65 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'docs/**'
+      - '**.go'
+      - 'assets/**'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Go
+      - name: Setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      # Build the Kiln Binary from the current source
+      - name: Build kiln
+        run: |
+          go build -o kiln_bin .
+          chmod +x kiln_bin
+          echo "Kiln binary built successfully"
+
+      # Generate the site
+      - name: Generate site
+        run: |
+          KILN_PATH=$(pwd)/kiln_bin
+          cd docs
+          $KILN_PATH generate --input ./docs --output ./dist
+          
+          echo "Site generated in ./dist"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # Upload the 'dist' folder created inside 'docs'
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Deploy to github pages
+        id: deployment
+        uses: actions/deploy-pages@v4
