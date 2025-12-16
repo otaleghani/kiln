@@ -38,6 +38,8 @@ jobs:
       # Build the Kiln Binary from the current source
       - name: Build kiln
         run: |
+          echo "Listing 'cmd' directory:"
+          ls -R cmd
           go build -o kiln_bin ./cmd/main
           chmod +x kiln_bin
           echo "Kiln binary built successfully"
