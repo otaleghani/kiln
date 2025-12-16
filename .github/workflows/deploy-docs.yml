@@ -39,7 +39,7 @@ jobs:
       - name: Build kiln
         run: |
           echo "Listing 'cmd' directory:"
-          ls -R cmd
+          ls -R .
           go build -o kiln_bin ./cmd/main
           chmod +x kiln_bin
           echo "Kiln binary built successfully"
