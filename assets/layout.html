@@ -20,7 +20,7 @@
         })();
     </script>
 
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="{{.BaseURL}}/style.css">
     
     <style>
         .sidebar { transition: none !important; }
@@ -51,8 +51,8 @@
         window.mermaid = mermaid;
     </script>
     
-    <script src="/graph.js"></script>
-    <script src="/app.js"></script>
+    <script src="{{.BaseURL}}/graph.js"></script>
+    <script src="{{.BaseURL}}/app.js"></script>
 </head>
 
 <body hx-boost="true" hx-select="#kiln-main" hx-target="#kiln-main" hx-swap="outerHTML">

@@ -14,6 +14,7 @@ type GraphRenderer struct {
 	minifier *minify.M          // Minifier
 	siteName string             // The name of the website
 	template *template.Template // Golang html template
+	baseURL  string             // The base URL for links
 }
 
 func (g *GraphRenderer) render() {
@@ -36,6 +37,7 @@ func (g *GraphRenderer) render() {
 
 	dataGraph := PageData{
 		Title:       "Graph View",
+		BaseURL:     g.baseURL,
 		SiteName:    g.siteName,
 		Content:     template.HTML(graphHTML),
 		Breadcrumbs: []string{"Home", "Graph"},

@@ -17,21 +17,17 @@ import (
 
 // PageData is passed to the HTML template
 type PageData struct {
-	Title string
-
-	// For Markdown Pages
-	Content template.HTML
-
-	// For Canvas Pages
+	Title         string
+	Content       template.HTML
 	SiteName      string
 	CanvasContent template.JS
 	IsCanvas      bool
 	IsGraph       bool
 	Breadcrumbs   []string
-
-	Sidebar     []*Node
-	Frontmatter map[string]any
-	TOC         template.HTML
+	Sidebar       []*Node
+	Frontmatter   map[string]any
+	TOC           template.HTML
+	BaseURL       string
 }
 
 type MarkdownNoteRenderer struct {
@@ -39,6 +35,7 @@ type MarkdownNoteRenderer struct {
 	nameWithoutExt string             // Name of the file without extention
 	siteName       string             // The name of the website
 	relPath        string             // Relative path of the file
+	baseURL        string             // The base URL for links
 	renderer       goldmark.Markdown  // Markdown renderer
 	rootNode       *Node              // The root node of the vault
 	template       *template.Template // Golang html template
@@ -86,6 +83,7 @@ func (m *MarkdownNoteRenderer) render() string {
 	defer mw.Close()
 
 	data := PageData{
+		BaseURL:     m.baseURL,
 		Title:       m.nameWithoutExt,
 		SiteName:    m.siteName,
 		Content:     template.HTML(finalHTML),

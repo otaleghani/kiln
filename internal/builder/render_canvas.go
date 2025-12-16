@@ -22,6 +22,7 @@ type CanvasNoteRenderer struct {
 	renderer       goldmark.Markdown  // Markdown renderer
 	minifier       *minify.M          // Minifier
 	rootNode       *Node              // The root node of the vault
+	baseURL        string             // The base URL for links
 }
 
 type CanvasNode struct {
@@ -112,6 +113,7 @@ func (c *CanvasNoteRenderer) render() string {
 
 	data := PageData{
 		Title:         c.nameWithoutExt,
+		BaseURL:       c.baseURL,
 		SiteName:      c.siteName,
 		CanvasContent: template.JS(string(source)),
 		Breadcrumbs:   breadcrumbs,
