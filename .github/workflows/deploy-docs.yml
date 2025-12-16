@@ -46,7 +46,6 @@ jobs:
       - name: Generate site
         run: |
           KILN_PATH=$(pwd)/kiln_bin
-          cd docs
           $KILN_PATH generate --input ./docs --output ./dist
           
           echo "Site generated in ./dist"
