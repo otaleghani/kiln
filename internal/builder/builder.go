@@ -29,16 +29,16 @@ type GraphNode struct {
 type Builder struct {
 	ThemeName string
 	FontName  string
-	BaseUrl   string
+	BaseURL   string
 	SiteName  string
 }
 
-func Build(themeName, fontName, baseUrl, siteName string) {
+func Build(themeName, fontName, baseURL, siteName string) {
 	start := time.Now()
 	theme := resolveTheme(themeName, fontName)
 
 	fileIndex, graphNodes := initBuild()
-	rootNode := getRootNode(InputDir)
+	rootNode := getRootNode(InputDir, baseURL)
 
 	// Parses layouts
 	layoutContent, err := assets.TemplateFS.ReadFile("layout.html")
@@ -101,13 +101,13 @@ func Build(themeName, fontName, baseUrl, siteName string) {
 				relPath:        relPath,
 				renderer:       markdownRenderer,
 				rootNode:       rootNode,
-				baseURL:        baseUrl,
+				baseURL:        baseURL,
 				template:       tmplLayout,
 				minifier:       minifier,
 			}
 			webPath := m.render()
-			if baseUrl != "" {
-				addToSitemap(d, baseUrl, webPath, &sitemapEntries)
+			if baseURL != "" {
+				addToSitemap(d, baseURL, webPath, &sitemapEntries)
 			}
 		case ".canvas":
 			fileCount++
@@ -118,13 +118,13 @@ func Build(themeName, fontName, baseUrl, siteName string) {
 				nameWithoutExt: nameWithoutExt,
 				template:       tmplLayout,
 				renderer:       markdownRenderer,
-				baseURL:        baseUrl,
+				baseURL:        baseURL,
 				minifier:       minifier,
 				rootNode:       rootNode,
 			}
 			webPath := c.render()
-			if baseUrl != "" {
-				addToSitemap(d, baseUrl, webPath, &sitemapEntries)
+			if baseURL != "" {
+				addToSitemap(d, baseURL, webPath, &sitemapEntries)
 			}
 		default:
 			outPath := filepath.Join(OutputDir, getSlugPath(relPath))
@@ -168,15 +168,15 @@ func Build(themeName, fontName, baseUrl, siteName string) {
 	graphPage := GraphRenderer{
 		rootNode: rootNode,
 		minifier: minifier,
-		baseURL:  baseUrl,
+		baseURL:  baseURL,
 		siteName: siteName,
 		template: tmplLayout,
 	}
 	graphPage.render()
 
-	if baseUrl != "" {
+	if baseURL != "" {
 		generateSitemap(sitemapEntries)
-		generateRobots(baseUrl)
+		generateRobots(baseURL)
 	}
 
 	log.Printf("Build complete! Processed %d files in %v", fileCount, time.Since(start))

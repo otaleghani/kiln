@@ -3,6 +3,7 @@ package builder
 import (
 	"log"
 	"os"
+	"path" // Use 'path' for URLs, 'filepath' for OS files
 	"path/filepath"
 	"sort"
 	"strings"
@@ -17,13 +18,32 @@ type Node struct {
 	Children []*Node
 }
 
-func getRootNode(dir string) *Node {
+// Added baseURL parameter
+func getRootNode(dir string, baseURL string) *Node {
+	// 1. Sanitize BaseURL
+	// Ensure it starts with / and clean trailing slashes
+	cleanBase := baseURL
+	if cleanBase == "" {
+		cleanBase = "/"
+	} else {
+		// Ensure it starts with / if not empty
+		if !strings.HasPrefix(cleanBase, "/") {
+			cleanBase = "/" + cleanBase
+		}
+		// Remove trailing slash for consistency (we add it back when joining)
+		cleanBase = strings.TrimSuffix(cleanBase, "/")
+		if cleanBase == "" {
+			cleanBase = "/"
+		}
+	}
+
 	rootNode := &Node{
 		Name:     "Home",
 		IsFolder: true,
+		Path:     cleanBase, // 2. Set the Root Node's path explicitly
 	}
 
-	buildTree(dir, rootNode)
+	buildTree(dir, rootNode, cleanBase) // 3. Pass baseURL down
 	rootNode.Children = pruneTree(rootNode.Children)
 	sortTree(rootNode.Children)
 	log.Println("File tree constructed, pruned, and sorted")
@@ -32,7 +52,7 @@ func getRootNode(dir string) *Node {
 }
 
 // buildTree recursively walks the directory to create the sidebar structure
-func buildTree(dir string, parent *Node) {
+func buildTree(dir string, parent *Node, baseURL string) {
 	entries, _ := os.ReadDir(dir)
 	for _, entry := range entries {
 		// Skip hidden files/folders
@@ -45,44 +65,39 @@ func buildTree(dir string, parent *Node) {
 			IsFolder: entry.IsDir(),
 		}
 
-		// 1. Calculate the SLUG for this node (Folder OR File)
-		// Clean the name (remove extension if it's a file)
+		// Calculate the SLUG for this node
 		nameForSlug := node.Name
 		if !node.IsFolder {
 			ext := filepath.Ext(node.Name)
-			// ALLOW both .md and .canvas
 			if ext != ".md" && ext != ".canvas" {
 				continue
 			}
 			nameForSlug = strings.TrimSuffix(node.Name, ext)
-			node.Name = nameForSlug // Update display name
+			node.Name = nameForSlug
 		}
 
-		// 2. Build the URL Path relative to the PARENT
-		// This ensures folders get paths, and files preserve their hierarchy.
-		currentSlug := slugify(nameForSlug)
+		// --- URL GENERATION LOGIC ---
 
-		// Special handling to avoid double slashes if parent is root "/"
-		parentPath := parent.Path
-		if parentPath == "/" {
-			parentPath = ""
-		}
-
-		// Assign path to BOTH folders and files
-		node.Path = parentPath + "/" + currentSlug
-
-		// Special case: "Home" or "index" overrides the path to root
+		// 1. Check for "Home" or "index" overrides FIRST
+		// Instead of hardcoding "/", we use the parent's path.
+		// This respects the BaseURL and correctly handles nested index files (e.g. /docs/index)
 		if !node.IsFolder &&
 			(strings.EqualFold(nameForSlug, "Home") || strings.EqualFold(nameForSlug, "index")) {
-			node.Path = "/"
+			node.Path = parent.Path
+		} else {
+			// 2. Standard Slug Generation
+			currentSlug := slugify(nameForSlug)
+
+			// We use path.Join for URLs (it handles forward slashes correctly on all OSs)
+			// It also handles the "/" + "/" case automatically.
+			node.Path = path.Join(parent.Path, currentSlug)
 		}
 
 		parent.Children = append(parent.Children, node)
 
 		if entry.IsDir() {
-			// Calculate full physical path for the next recursion step
 			fullPath := filepath.Join(dir, entry.Name())
-			buildTree(fullPath, node)
+			buildTree(fullPath, node, baseURL)
 		}
 	}
 }
@@ -97,9 +112,18 @@ func pruneTree(nodes []*Node) []*Node {
 				kept = append(kept, n)
 			}
 		} else {
-			ext := filepath.Ext(n.Path)
-			lowerExt := strings.ToLower(ext)
-			if ext == "" || lowerExt == ".md" || lowerExt == ".canvas" {
+			// Use path.Ext for URL paths
+			ext := path.Ext(n.Path)
+			// If path is root or just base url, ext might be empty, which is fine for folders/root
+			if !n.IsFolder && ext == "" {
+				// If it's a file but has no extension in the Path (slugified), keep it
+				kept = append(kept, n)
+			} else {
+				// Original logic
+				// lowerExt := strings.ToLower(filepath.Ext(n.Name)) // Check extension of original Name, not Path
+				// Or if you only store extension-less names now, you might need to check IsFolder
+				// The original logic checked the Path extension, but our URLs don't have .md anymore!
+				// Correct Logic: Just keep all files that made it this far (since buildTree filters .md/.canvas)
 				kept = append(kept, n)
 			}
 		}
@@ -107,22 +131,18 @@ func pruneTree(nodes []*Node) []*Node {
 	return kept
 }
 
-// sortTree recursively sorts nodes: Folders first, then alphabetically (A-Z)
+// sortTree recursively sorts nodes
 func sortTree(nodes []*Node) {
 	sort.Slice(nodes, func(i, j int) bool {
-		// Folders always come before files
 		if nodes[i].IsFolder && !nodes[j].IsFolder {
 			return true
 		}
 		if !nodes[i].IsFolder && nodes[j].IsFolder {
 			return false
 		}
-
-		// Alphabetical sort (case-insensitive)
 		return strings.ToLower(nodes[i].Name) < strings.ToLower(nodes[j].Name)
 	})
 
-	// Sort children of folder nodes
 	for _, n := range nodes {
 		if n.IsFolder && len(n.Children) > 0 {
 			sortTree(n.Children)
@@ -130,9 +150,9 @@ func sortTree(nodes []*Node) {
 	}
 }
 
-// setTreeActive sets the node as active if it has the currentPath
 func setTreeActive(nodes []*Node, currentPath string) {
 	for _, n := range nodes {
+		// Ensure strict slash matching or clean paths
 		n.Active = (n.Path == currentPath)
 		if n.IsFolder {
 			setTreeActive(n.Children, currentPath)

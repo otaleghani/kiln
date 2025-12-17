@@ -208,27 +208,27 @@ type SitemapEntry struct {
 	LastMod string   `xml:"lastmod"`
 }
 
-func addToSitemap(d fs.DirEntry, baseUrl, webPath string, sitemapEntries *[]SitemapEntry) {
+func addToSitemap(d fs.DirEntry, baseURL, webPath string, sitemapEntries *[]SitemapEntry) {
 	info, err := d.Info()
 	modTime := time.Now()
 	if err == nil {
 		modTime = info.ModTime()
 	}
 
-	fullUrl := strings.TrimRight(baseUrl, "/") + webPath
+	fullURL := strings.TrimRight(baseURL, "/") + webPath
 	*sitemapEntries = append(*sitemapEntries, SitemapEntry{
-		Loc:     fullUrl,
+		Loc:     fullURL,
 		LastMod: modTime.Format("2006-01-02"),
 	})
 
 }
 
-func generateRobots(baseUrl string) {
+func generateRobots(baseURL string) {
 	robotsFile, _ := os.Create(filepath.Join(OutputDir, "robots.txt"))
 	defer robotsFile.Close()
 	robotsFile.WriteString("User-agent: *\n")
 	robotsFile.WriteString("Allow: /\n")
-	robotsFile.WriteString("Sitemap: " + strings.TrimRight(baseUrl, "/") + "/sitemap.xml\n")
+	robotsFile.WriteString("Sitemap: " + strings.TrimRight(baseURL, "/") + "/sitemap.xml\n")
 }
 
 func generateSitemap(sitemapEntries []SitemapEntry) {

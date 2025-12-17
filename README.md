@@ -1,5 +1,7 @@
 # Kiln
 
+**Attention**: this is still a WIP. I'm currently working on handling all of the deployment quirks. If you wish to test it, use the `serve` command that is baked into the program.
+
 > **Bake your Obsidian vault into a blazing fast static site.**
 
 ![Build Status](https://img.shields.io/github/actions/workflow/status/otaleghani/kiln/release.yml?style=flat-square) ![Go Version](https://img.shields.io/badge/go-1.25+-00ADD8?style=flat-square&logo=go)

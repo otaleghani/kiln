@@ -25,5 +25,7 @@ func runServe(cmd *cobra.Command, args []string) {
 		builder.OutputDir = outputDir
 	}
 
-	server.Serve(port, builder.OutputDir)
+	localBaseURL := "http://localhost:" + port
+
+	server.Serve(port, builder.OutputDir, localBaseURL)
 }

@@ -7,7 +7,7 @@ import (
 
 var themeName string
 var fontName string
-var baseUrl string
+var baseURL string
 var siteName string
 var inputDir string
 var outputDir string
@@ -24,7 +24,7 @@ func init() {
 	cmdGenerate.Flags().
 		StringVarP(&fontName, "font", "f", "inter", "Font family (inter, merriweather, lato, system)")
 	cmdGenerate.Flags().
-		StringVarP(&baseUrl, "url", "u", "", "Base URL for sitemap generation (e.g. https://example.com)")
+		StringVarP(&baseURL, "url", "u", "", "Base URL for sitemap generation (e.g. https://example.com)")
 	cmdGenerate.Flags().
 		StringVarP(&siteName, "name", "n", "My Notes", "Name of the website (e.g. 'My Obsidian Vault')")
 	cmdGenerate.Flags().
@@ -41,5 +41,5 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		builder.InputDir = inputDir
 	}
 
-	builder.Build(themeName, fontName, baseUrl, siteName)
+	builder.Build(themeName, fontName, baseURL, siteName)
 }
