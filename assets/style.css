@@ -653,7 +653,7 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
 .toc a {
     text-decoration: none;
     color: var(--accent-color);
-    opacity: 0.65;
+    opacity: 0.85;
     display: block;
     padding: 0.35rem 0;
     /* transition: all 0.2s ease; */
