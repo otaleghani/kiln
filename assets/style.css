@@ -180,7 +180,8 @@ body {
 }
 
 .sidebar.left-sidebar.collapsed {
-    margin-left: calc(var(--sidebar-width) * -1);
+    display: none !important;
+    /* margin-left: calc(var(--sidebar-width) * -1); */
 }
 
 /* Right Sidebar Specifics */
@@ -189,7 +190,8 @@ body {
 }
 
 .sidebar.right-sidebar.collapsed {
-    margin-right: calc(var(--sidebar-width) * -1);
+    display: none !important;
+    /* margin-right: calc(var(--sidebar-width) * -1); */
 }
 
 .sidebar-header {

@@ -57,7 +57,6 @@
 
 <body hx-boost="true" hx-select="#kiln-main" hx-target="#kiln-main" hx-swap="outerHTML">
     <div class="layout" id="layout">
-        
         <nav class="sidebar left-sidebar" id="sidebar">
             <script>
                 try { if (localStorage.getItem('sidebar-collapsed') === 'true') document.getElementById('sidebar').classList.add('collapsed'); } catch(e){}
@@ -143,7 +142,7 @@
             </main>
         </div>
 
-        <aside class="sidebar right-sidebar" id="right-sidebar" >
+        <aside class="sidebar right-sidebar" id="right-sidebar">
             <script>
                 try { if (localStorage.getItem('right-sidebar-collapsed') === 'true') document.getElementById('right-sidebar').classList.add('collapsed'); } catch(e){}
             </script>
@@ -155,7 +154,7 @@
                 </div>
             </div>
             
-            <div class="sidebar-content" hx-swap-oob="true">
+            <div class="sidebar-content">
                 <div id="local-graph-wrapper" class="local-graph-wrapper">
                     <div class="graph-header">
                         <h4>Local Graph</h4>
@@ -166,7 +165,7 @@
                     <div id="local-graph-container"></div>
                 </div>
                 
-                <aside class="toc-container" id="toc-container">
+                <aside class="toc-container" id="toc-container" hx-swap-oob="true">
                     {{ if .TOC }}
                         <h4>On this page</h4>
                         {{ .TOC }}

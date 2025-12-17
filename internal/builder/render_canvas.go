@@ -40,6 +40,7 @@ type CanvasNode struct {
 	HtmlContent string `json:"htmlContent,omitempty"`
 	IsImage     bool   `json:"isImage,omitempty"`
 	Src         string `json:"src,omitempty"`
+	URL         string `json:"url,omitempty"`
 }
 
 type CanvasData struct {

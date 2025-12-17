@@ -197,7 +197,23 @@ window.highlightSidebarLink = function() {
     }
 };
 
+// This should be in your initAll or DOMContentLoaded
+window.initSidebarState = function() {
+    const sidebar = document.getElementById('sidebar');
+    const rightSidebar = document.getElementById('right-sidebar');
+
+    // Double requestAnimationFrame ensures the DOM has fully painted 
+    // the collapsed state before we turn on animations.
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if(sidebar) sidebar.classList.add('animate-ready');
+            if(rightSidebar) rightSidebar.classList.add('animate-ready');
+        });
+    });
+}
+
 window.initAll = function() {
+    window.initSidebarState();
     window.initSidebarSearch();
     window.setupSidebarInteraction();
     window.setupRightSidebarInteraction();
@@ -219,6 +235,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.initAll();
     window.setupMobileAutoClose();
     if (window.lucide) window.lucide.createIcons();
+});
+
+document.addEventListener('htmx:beforeSwap', (evt) => {
+    // 1. Temporarily disable animations before the new content is swapped in.
+    // This prevents the sidebar from "sliding" if the layout shifts slightly.
+    const sidebar = document.getElementById('sidebar');
+    const rightSidebar = document.getElementById('right-sidebar');
+    
+    if (sidebar) sidebar.classList.remove('animate-ready');
+    if (rightSidebar) rightSidebar.classList.remove('animate-ready');
 });
 
 document.addEventListener('htmx:afterSwap', (evt) => {
