@@ -2,6 +2,7 @@ package builder
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"path" // Use 'path' for URLs, 'filepath' for OS files
 	"path/filepath"
@@ -18,32 +19,35 @@ type Node struct {
 	Children []*Node
 }
 
-// Added baseURL parameter
-func getRootNode(dir string, baseURL string) *Node {
-	// 1. Sanitize BaseURL
-	// Ensure it starts with / and clean trailing slashes
-	cleanBase := baseURL
-	if cleanBase == "" {
-		cleanBase = "/"
-	} else {
-		// Ensure it starts with / if not empty
-		if !strings.HasPrefix(cleanBase, "/") {
-			cleanBase = "/" + cleanBase
-		}
-		// Remove trailing slash for consistency (we add it back when joining)
-		cleanBase = strings.TrimSuffix(cleanBase, "/")
-		if cleanBase == "" {
-			cleanBase = "/"
-		}
+func getRootNode(dir string, fullURL string) *Node {
+	// Parse the Full URL to extract ONLY the path
+	// Input: "https://otaleghani.github.io/kiln" -> basePaths: "/kiln"
+	// Input: "http://localhost:8080"             -> basePaths: "/"
+	u, err := url.Parse(fullURL)
+	basePath := "/"
+	if err == nil {
+		basePath = u.Path
+	}
+
+	// Sanitize the Path (ensure it starts/ends correctly for joining)
+	// e.g. "/kiln" or "/"
+	if !strings.HasPrefix(basePath, "/") {
+		basePath = "/" + basePath
+	}
+	// We trim the suffix here so path.Join doesn't get confused later,
+	// unless it's just root "/"
+	basePath = strings.TrimSuffix(basePath, "/")
+	if basePath == "" {
+		basePath = "/"
 	}
 
 	rootNode := &Node{
 		Name:     "Home",
 		IsFolder: true,
-		Path:     cleanBase, // 2. Set the Root Node's path explicitly
+		Path:     basePath, // Set the root path to "/kiln", not the full URL
 	}
 
-	buildTree(dir, rootNode, cleanBase) // 3. Pass baseURL down
+	buildTree(dir, rootNode)
 	rootNode.Children = pruneTree(rootNode.Children)
 	sortTree(rootNode.Children)
 	log.Println("File tree constructed, pruned, and sorted")
@@ -52,10 +56,9 @@ func getRootNode(dir string, baseURL string) *Node {
 }
 
 // buildTree recursively walks the directory to create the sidebar structure
-func buildTree(dir string, parent *Node, baseURL string) {
+func buildTree(dir string, parent *Node) {
 	entries, _ := os.ReadDir(dir)
 	for _, entry := range entries {
-		// Skip hidden files/folders
 		if strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
@@ -65,7 +68,6 @@ func buildTree(dir string, parent *Node, baseURL string) {
 			IsFolder: entry.IsDir(),
 		}
 
-		// Calculate the SLUG for this node
 		nameForSlug := node.Name
 		if !node.IsFolder {
 			ext := filepath.Ext(node.Name)
@@ -76,20 +78,16 @@ func buildTree(dir string, parent *Node, baseURL string) {
 			node.Name = nameForSlug
 		}
 
-		// --- URL GENERATION LOGIC ---
-
-		// 1. Check for "Home" or "index" overrides FIRST
-		// Instead of hardcoding "/", we use the parent's path.
-		// This respects the BaseURL and correctly handles nested index files (e.g. /docs/index)
+		// URL GENERATION
+		// Handle Home/Index override
 		if !node.IsFolder &&
 			(strings.EqualFold(nameForSlug, "Home") || strings.EqualFold(nameForSlug, "index")) {
+			// Inherit parent path (e.g. "/kiln/" or "/kiln/docs")
 			node.Path = parent.Path
 		} else {
-			// 2. Standard Slug Generation
+			// Standard Join
 			currentSlug := slugify(nameForSlug)
-
-			// We use path.Join for URLs (it handles forward slashes correctly on all OSs)
-			// It also handles the "/" + "/" case automatically.
+			// path.Join handles the slashes intelligently
 			node.Path = path.Join(parent.Path, currentSlug)
 		}
 
@@ -97,7 +95,7 @@ func buildTree(dir string, parent *Node, baseURL string) {
 
 		if entry.IsDir() {
 			fullPath := filepath.Join(dir, entry.Name())
-			buildTree(fullPath, node, baseURL)
+			buildTree(fullPath, node)
 		}
 	}
 }
