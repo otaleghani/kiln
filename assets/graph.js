@@ -1,4 +1,7 @@
 (function() {
+    // 1. Define Base URL globally for the script (Removing trailing slash if present)
+    const BASE_URL = '{{.BaseURL}}'.replace(/\/$/, '');
+
     // Cache the data promise to prevent re-fetching on every HTMX navigation
     let graphDataPromise = null;
 
@@ -66,17 +69,18 @@
     function initGraph(globalContainer, localContainer) {
         // Initialize cache if empty
         if (!graphDataPromise) {
-            graphDataPromise = fetch('{{.BaseURL}}/graph.json')
+            // Use the injected BaseURL for fetching
+            graphDataPromise = fetch(BASE_URL + '/graph.json')
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                     return res.json();
                 })
                 .then(data => {
-                    // 1. Pre-process: Filter out links pointing to non-existent nodes
+                    // Pre-process: Filter out links pointing to non-existent nodes
                     const nodeIds = new Set(data.nodes.map(n => n.id));
                     data.links = data.links.filter(l => nodeIds.has(l.source) && nodeIds.has(l.target));
 
-                    // 2. Calculate Degrees (Connections per node)
+                    // Calculate Degrees (Connections per node)
                     const degreeMap = {};
                     data.links.forEach(l => {
                         degreeMap[l.source] = (degreeMap[l.source] || 0) + 1;
@@ -124,7 +128,7 @@
         const linkedIds = new Set();
         linkedIds.add(currentId);
         
-        // 1. Identify neighbors
+        // Identify neighbors
         const validLinks = data.links.filter(l => {
             const isSource = l.source === currentId;
             const isTarget = l.target === currentId;
@@ -133,7 +137,7 @@
             return isSource || isTarget;
         });
 
-        // 2. Filter nodes based on neighbors
+        // Filter nodes based on neighbors
         const validNodes = data.nodes.filter(n => linkedIds.has(n.id));
 
         return { nodes: validNodes, links: validLinks };
@@ -240,7 +244,17 @@
             label.filter(l => l === d).style("opacity", isLocal ? 1 : 0.7).style("font-weight", "normal");
         })
         .on("click", function(event, d) {
-            window.location.href = d.url;
+            // --- FIX FOR RELATIVE URLS ---
+            // Ensure the target path starts with a slash
+            const targetPath = d.url.startsWith('/') ? d.url : '/' + d.url;
+
+            // Prevent double-stacking if the JSON already includes the base URL
+            // e.g. if BASE_URL is "/kiln" and d.url is "/kiln/page", we don't want "/kiln/kiln/page"
+            if (BASE_URL && targetPath.startsWith(BASE_URL)) {
+                window.location.href = targetPath;
+            } else {
+                window.location.href = BASE_URL + targetPath;
+            }
         });
 
         simulation.on("tick", () => {
