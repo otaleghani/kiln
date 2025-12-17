@@ -8,6 +8,12 @@
     <meta name="description" content="{{if .Frontmatter.description}}{{.Frontmatter.description}}{{else}}Notes on {{.Title}}{{end}}">
     <meta name="generator" content="Kiln">
     <meta property="og:title" content="{{.Title}}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://d3js.org">
     
     <script>
         (function() {
@@ -27,8 +33,10 @@
         .sidebar.animate-ready { transition: margin 0.3s ease !important; }
     </style>
 
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <script src="{{.BaseURL}}/graph.js" defer></script>
+    <script src="{{.BaseURL}}/app.js" defer></script>
     
     <script>
     window.MathJax = {
@@ -50,9 +58,6 @@
         mermaid.initialize({ startOnLoad: true, theme: getTheme() === 'dark' ? 'dark' : 'default' });
         window.mermaid = mermaid;
     </script>
-    
-    <script src="{{.BaseURL}}/graph.js"></script>
-    <script src="{{.BaseURL}}/app.js"></script>
 </head>
 
 <body hx-boost="true" hx-select="#kiln-main" hx-target="#kiln-main" hx-swap="outerHTML">

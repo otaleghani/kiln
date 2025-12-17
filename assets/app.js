@@ -2,12 +2,23 @@
  * Kiln Logic - app.js
  */
 
-// Theme
+window.loadScript = function(src, id) {
+    return new Promise((resolve, reject) => {
+        if (document.getElementById(id)) return resolve(); // Already loaded
+        const s = document.createElement('script');
+        s.src = src;
+        s.id = id;
+        s.defer = true;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+    });
+};
+
 window.initThemeToggle = function () {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
     
-    // Clone to remove old listeners
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
 
@@ -20,11 +31,10 @@ window.initThemeToggle = function () {
             document.documentElement.setAttribute('data-theme', target);
             localStorage.setItem('theme', target);
 
-            // Update Mermaid Diagrams
+            // Re-render Mermaid if loaded
             if (window.mermaid) {
                 const mermaidTheme = target === 'dark' ? 'dark' : 'default';
                 window.mermaid.initialize({ startOnLoad: false, theme: mermaidTheme });
-
                 const graphs = document.querySelectorAll('.mermaid');
                 graphs.forEach(graph => {
                     const original = graph.getAttribute('data-original');
@@ -38,6 +48,96 @@ window.initThemeToggle = function () {
         } catch (e) { console.error(e); }
     });
 };
+
+window.initMermaid = async function() {
+    const graphs = document.querySelectorAll('.mermaid');
+    if (graphs.length === 0) return; // Stop if no diagrams
+
+    // Save original content for theme switching re-renders
+    graphs.forEach(g => {
+        if (!g.getAttribute('data-original')) g.setAttribute('data-original', g.innerHTML);
+    });
+
+    // Lazy Load Mermaid
+    try {
+        await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs')
+            .then(m => {
+                window.mermaid = m.default;
+                const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
+                window.mermaid.initialize({ startOnLoad: false, theme: theme });
+                window.mermaid.run({ querySelector: '.mermaid' });
+            });
+    } catch (e) { console.warn("Mermaid failed to load", e); }
+};
+
+window.initMathJax = async function() {
+    // Basic heuristic: check for delimiters in text content
+    // We search the main content only to be efficient
+    const content = document.querySelector('.markdown-body');
+    if (!content) return;
+    
+    const text = content.innerText;
+    // Check for $$ or \[ or \( 
+    if (!text.includes('$$') && !text.includes('\\(') && !text.includes('\\[')) return;
+
+    // Lazy Load MathJax
+    window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], processEscapes: true },
+        svg: { fontCache: 'global' },
+        startup: {
+            pageReady: () => {
+                return window.MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    
+    await window.loadScript('https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js', 'mathjax-script');
+};
+
+window.initLucide = async function() {
+    // Only load if icons exist
+    if (!document.querySelector('[data-lucide]')) return;
+
+    await window.loadScript('https://unpkg.com/lucide@latest', 'lucide-script');
+    if (window.lucide) window.lucide.createIcons();
+};
+
+// Theme
+// window.initThemeToggle = function () {
+//     const btn = document.getElementById('theme-toggle');
+//     if (!btn) return;
+//
+//     // Clone to remove old listeners
+//     const newBtn = btn.cloneNode(true);
+//     btn.parentNode.replaceChild(newBtn, btn);
+//
+//     newBtn.addEventListener('click', async () => {
+//         try {
+//             const current = document.documentElement.getAttribute('data-theme');
+//             const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+//             let target = (!current) ? (sysDark ? 'light' : 'dark') : (current === 'dark' ? 'light' : 'dark');
+//
+//             document.documentElement.setAttribute('data-theme', target);
+//             localStorage.setItem('theme', target);
+//
+//             // Update Mermaid Diagrams
+//             if (window.mermaid) {
+//                 const mermaidTheme = target === 'dark' ? 'dark' : 'default';
+//                 window.mermaid.initialize({ startOnLoad: false, theme: mermaidTheme });
+//
+//                 const graphs = document.querySelectorAll('.mermaid');
+//                 graphs.forEach(graph => {
+//                     const original = graph.getAttribute('data-original');
+//                     if (original) {
+//                         graph.removeAttribute('data-processed');
+//                         graph.innerHTML = original;
+//                     }
+//                 });
+//                 await window.mermaid.run({ querySelector: '.mermaid' });
+//             }
+//         } catch (e) { console.error(e); }
+//     });
+// };
 
 // Sidebar
 window.setupSidebarInteraction = function () {
@@ -212,45 +312,72 @@ window.initSidebarState = function() {
     });
 }
 
+// window.initAll = function() {
+//     window.initSidebarState();
+//     window.initSidebarSearch();
+//     window.setupSidebarInteraction();
+//     window.setupRightSidebarInteraction();
+//     window.initThemeToggle();
+//     window.addCopyButtons();
+//     window.highlightSidebarLink();
+//
+//     // Animate sidebars in only after JS loads
+//     const sb = document.getElementById('sidebar');
+//     const rsb = document.getElementById('right-sidebar');
+//     requestAnimationFrame(() => {
+//         if (sb) sb.classList.add('animate-ready');
+//         if (rsb) rsb.classList.add('animate-ready');
+//     });
+// };
+
 window.initAll = function() {
-    window.initSidebarState();
-    window.initSidebarSearch();
+    // UI Setup (Instant)
     window.setupSidebarInteraction();
     window.setupRightSidebarInteraction();
     window.initThemeToggle();
     window.addCopyButtons();
     window.highlightSidebarLink();
-    
-    // Animate sidebars in only after JS loads
-    const sb = document.getElementById('sidebar');
-    const rsb = document.getElementById('right-sidebar');
-    requestAnimationFrame(() => {
-        if (sb) sb.classList.add('animate-ready');
-        if (rsb) rsb.classList.add('animate-ready');
-    });
+    window.initSidebarSearch();
+
+    // Lazy Load Heavy Libs (Conditional)
+    // We run these concurrently
+    Promise.all([
+        window.initMermaid(),
+        window.initMathJax(),
+        window.initLucide()
+    ]);
 };
 
 // --- 5. Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     window.initAll();
     window.setupMobileAutoClose();
-    if (window.lucide) window.lucide.createIcons();
+    // if (window.lucide) window.lucide.createIcons();
 });
 
 document.addEventListener('htmx:beforeSwap', (evt) => {
     // 1. Temporarily disable animations before the new content is swapped in.
     // This prevents the sidebar from "sliding" if the layout shifts slightly.
-    const sidebar = document.getElementById('sidebar');
-    const rightSidebar = document.getElementById('right-sidebar');
-    
-    if (sidebar) sidebar.classList.remove('animate-ready');
-    if (rightSidebar) rightSidebar.classList.remove('animate-ready');
+    // const sidebar = document.getElementById('sidebar');
+    // const rightSidebar = document.getElementById('right-sidebar');
+    // if (sidebar) sidebar.classList.remove('animate-ready');
+    // if (rightSidebar) rightSidebar.classList.remove('animate-ready');
 });
 
 document.addEventListener('htmx:afterSwap', (evt) => {
-    if (window.lucide) window.lucide.createIcons();
-    if (window.mermaid) window.mermaid.run({ querySelector: '.mermaid' });
-    if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
+    // if (window.lucide) window.lucide.createIcons();
+    // if (window.mermaid) window.mermaid.run({ querySelector: '.mermaid' });
+    // if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
+    //
+    // window.initAll(); // Re-attach listeners to new DOM elements
+});
+
+document.addEventListener('htmx:afterSwap', (evt) => {
+    // Re-run checks on new content
+    window.initAll(); 
     
-    window.initAll(); // Re-attach listeners to new DOM elements
+    // MathJax specific re-render if it was already loaded
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+    }
 });
