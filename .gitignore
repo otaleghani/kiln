@@ -33,3 +33,6 @@ tmp/
 # Output dir
 public/
 vault/
+
+# Obsidian dirs
+.obsidian
