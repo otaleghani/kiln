@@ -62,7 +62,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 	fileCount := 0
 	var sitemapEntries []SitemapEntry
 
-	markdownRenderer, resolver := newMarkdownParser(fileIndex)
+	markdownRenderer, resolver := newMarkdownParser(fileIndex, baseURL)
 
 	minifier := minify.New()
 	minifier.AddFunc("text/html", html.Minify)
