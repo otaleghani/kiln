@@ -66,7 +66,7 @@
     function initGraph(globalContainer, localContainer) {
         // Initialize cache if empty
         if (!graphDataPromise) {
-            graphDataPromise = fetch('/graph.json')
+            graphDataPromise = fetch('{{.BaseURL}}/graph.json')
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                     return res.json();

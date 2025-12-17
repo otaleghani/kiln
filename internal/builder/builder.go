@@ -60,11 +60,20 @@ func Build(themeName, fontName, baseURL, siteName string) {
 		log.Fatal("CSS parsing failed: ", err)
 	}
 
+	graphJsContent, err := assets.TemplateFS.ReadFile("graph.js")
+	if err != nil {
+		log.Fatal("Could not read graph.js: ", err)
+	}
+	tmplGraphJs, err := textTemplate.New("js").Parse(string(graphJsContent))
+	if err != nil {
+		log.Fatal("Graph JS parsing failed: ", err)
+	}
+
 	fileCount := 0
 	var sitemapEntries []SitemapEntry
 
-	u, _ := url.Parse(baseURL)
-	basePath := u.Path
+	u, _ := url.Parse(baseURL) // e.g. "https://otaleghani.github.io/kiln"
+	basePath := u.Path         // -> "/kiln"
 	markdownRenderer, resolver := newMarkdownParser(fileIndex, basePath)
 
 	minifier := minify.New()
@@ -156,8 +165,14 @@ func Build(themeName, fontName, baseURL, siteName string) {
 	os.WriteFile(filepath.Join(OutputDir, "canvas.js"), canvasJsContent, 0644)
 
 	// Static files - Graph javascript
-	graphJsContent, _ := assets.TemplateFS.ReadFile("graph.js")
-	os.WriteFile(filepath.Join(OutputDir, "graph.js"), graphJsContent, 0644)
+	graphJsOut, _ := os.Create(filepath.Join(OutputDir, "graph.js"))
+	defer graphJsOut.Close()
+	type GraphJsTemplate struct {
+		BaseURL string
+	}
+	tmplGraphJs.Execute(graphJsOut, GraphJsTemplate{BaseURL: baseURL})
+	// graphJsContent, _ := assets.TemplateFS.ReadFile("graph.js")
+	// os.WriteFile(filepath.Join(OutputDir, "graph.js"), graphJsContent, 0644)
 
 	// Static files - Graph JSON
 	graphJSON := map[string]any{
