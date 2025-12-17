@@ -15,6 +15,7 @@ type GraphRenderer struct {
 	siteName string             // The name of the website
 	template *template.Template // Golang html template
 	baseURL  string             // The base URL for links
+	theme    Theme
 }
 
 func (g *GraphRenderer) render() {
@@ -44,6 +45,7 @@ func (g *GraphRenderer) render() {
 		IsCanvas:    false,
 		IsGraph:     true,
 		Sidebar:     g.rootNode.Children,
+		Font:        g.theme.Font,
 	}
 	g.template.Execute(mwGraph, dataGraph)
 }

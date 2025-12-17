@@ -23,6 +23,7 @@ type CanvasNoteRenderer struct {
 	minifier       *minify.M          // Minifier
 	rootNode       *Node              // The root node of the vault
 	baseURL        string             // The base URL for links
+	theme          Theme
 }
 
 type CanvasNode struct {
@@ -121,6 +122,7 @@ func (c *CanvasNoteRenderer) render() string {
 		IsCanvas:      true,
 		IsGraph:       false,
 		Sidebar:       c.rootNode.Children,
+		Font:          c.theme.Font,
 	}
 	c.template.Execute(mw, data)
 	return webPath

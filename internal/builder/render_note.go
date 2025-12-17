@@ -28,6 +28,7 @@ type PageData struct {
 	Frontmatter   map[string]any
 	TOC           template.HTML
 	BaseURL       string
+	Font          FontData
 }
 
 type MarkdownNoteRenderer struct {
@@ -40,6 +41,7 @@ type MarkdownNoteRenderer struct {
 	rootNode       *Node              // The root node of the vault
 	template       *template.Template // Golang html template
 	minifier       *minify.M          // Minifier
+	theme          Theme
 }
 
 func (m *MarkdownNoteRenderer) render() string {
@@ -93,6 +95,7 @@ func (m *MarkdownNoteRenderer) render() string {
 		TOC:         tocHTML,
 		Sidebar:     m.rootNode.Children,
 		Frontmatter: meta.Get(ctx),
+		Font:        m.theme.Font,
 	}
 	m.template.Execute(mw, data)
 

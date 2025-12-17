@@ -116,6 +116,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 				baseURL:        baseURL,
 				template:       tmplLayout,
 				minifier:       minifier,
+				theme:          theme,
 			}
 			webPath := m.render()
 			if baseURL != "" {
@@ -133,6 +134,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 				baseURL:        baseURL,
 				minifier:       minifier,
 				rootNode:       rootNode,
+				theme:          theme,
 			}
 			webPath := c.render()
 			if baseURL != "" {
@@ -189,6 +191,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 		baseURL:  baseURL,
 		siteName: siteName,
 		template: tmplLayout,
+		theme:    theme,
 	}
 	graphPage.render()
 

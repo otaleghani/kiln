@@ -14,6 +14,10 @@
     <link rel="preconnect" href="https://unpkg.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://d3js.org">
+
+    <link rel="preload" href="{{.Font.URL}}" media="print" onload="this.media='all'">
+    <link rel="preload" href="{{.BaseURL}}/style.css" as="style">
+    <link rel="stylesheet" href="{{.BaseURL}}/style.css">
     
     <script>
         (function() {
@@ -26,7 +30,6 @@
         })();
     </script>
 
-    <link rel="stylesheet" href="{{.BaseURL}}/style.css">
     
     <style>
         .sidebar { transition: none !important; }
