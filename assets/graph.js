@@ -243,20 +243,7 @@
             // Reset Label
             label.filter(l => l === d).style("opacity", isLocal ? 1 : 0.7).style("font-weight", "normal");
         })
-        // .on("click", function(event, d) {
-        //     // --- FIX FOR RELATIVE URLS ---
-        //     // Ensure the target path starts with a slash
-        //     const targetPath = d.url.startsWith('/') ? d.url : '/' + d.url;
-        //
-        //     // Prevent double-stacking if the JSON already includes the base URL
-        //     // e.g. if BASE_URL is "/kiln" and d.url is "/kiln/page", we don't want "/kiln/kiln/page"
-        //     if (BASE_URL && targetPath.startsWith(BASE_URL)) {
-        //         window.location.href = targetPath;
-        //     } else {
-        //         window.location.href = BASE_URL + targetPath;
-        //     }
-        // });
-    .on("click", function(event, d) {
+        .on("click", function(event, d) {
             // Calculate the final URL (Existing logic)
             // Ensure the target path starts with a slash
             const targetPath = d.url.startsWith('/') ? d.url : '/' + d.url;

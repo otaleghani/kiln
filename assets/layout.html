@@ -157,7 +157,7 @@
             <div class="sidebar-content">
                 <div id="local-graph-wrapper" class="local-graph-wrapper">
                     <div class="graph-header">
-                        <h4>Local Graph</h4>
+                        <span class="sidebar-label">Local Graph</span>
                         <div class="graph-controls">
                             <button class="graph-btn" onclick="window.toggleGraphExpand()" title="Expand"><i data-lucide="maximize-2"></i></button>
                         </div>
@@ -167,7 +167,7 @@
                 
                 <aside class="toc-container" id="toc-container" hx-swap-oob="true">
                     {{ if .TOC }}
-                        <h4>On this page</h4>
+                        <span class="sidebar-label">On this page</span>
                         {{ .TOC }}
                     {{ end }}
                 </aside>

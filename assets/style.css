@@ -94,6 +94,11 @@ body {
 .content h5 { font-size: 0.875em; }
 .content h6 { font-size: 0.85em; }
 
+.sidebar-label {
+    margin: 1rem 0 1rem 0;
+    font-weight: bold;
+}
+
 /* Icons */
 [data-lucide] {
     width: 18px;
@@ -173,12 +178,12 @@ body {
     flex-direction: column;
     flex-shrink: 0;
     z-index: 9999;
-    transition: none !important; /* Default no transition to prevent load flash */
+    /* transition: none !important; /* Default no transition to prevent load flash */ */
 }
 
 /* Unified transition for both desktop (margin) and mobile (transform) */
 .sidebar.animate-ready {
-    transition: margin-left 0.3s ease, margin-right 0.3s ease, transform 0.3s ease !important;
+    /* transition: margin-left 0.3s ease, margin-right 0.3s ease, transform 0.3s ease !important; */
 }
 
 /* Left Sidebar Specifics */
@@ -223,7 +228,7 @@ body {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.95rem;
-    transition: color 0.2s;
+    /* transition: color 0.2s; */
 }
 
 .sidebar-home-link:hover {
@@ -249,7 +254,7 @@ body {
     border-radius: 4px;
     font-size: 0.85rem;
     padding-left: 1.8rem;
-    transition: color 0.2s;
+    /* transition: color 0.2s; */
 }
 
 .sidebar ul li a:hover {
@@ -647,24 +652,24 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
 
 .toc a {
     text-decoration: none;
-    color: var(--text-color);
+    color: var(--accent-color);
     opacity: 0.65;
     display: block;
     padding: 0.35rem 0;
-    transition: all 0.2s ease;
+    /* transition: all 0.2s ease; */
 }
 
 .toc a:hover {
     opacity: 1;
-    color: var(--accent-color);
+    color: var(--text-color);
 }
 
 .toc-level-1 {
     font-weight: 600;
     margin-top: 0.5rem;
     margin-bottom: 0.25rem;
-    color: var(--text-color);
-    opacity: 0.9;
+    /* color: var(--text-color); */
+    /* opacity: 0.9; */
 }
 
 .toc-level-2 {
@@ -760,7 +765,7 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    transition: box-shadow 0.2s;
+    /* transition: box-shadow 0.2s; */
     font-size: 1rem;
     overflow-y: auto;
 }
