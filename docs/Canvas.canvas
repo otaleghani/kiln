@@ -1,0 +1,11 @@
+{
+	"nodes":[
+		{"id":"26625dfa323ef535","x":-53,"y":-174,"width":250,"height":60,"type":"text","text":"Test card"},
+		{"id":"c027e3d739c41826","x":33,"y":-1,"width":400,"height":400,"type":"file","file":"Home.md"},
+		{"id":"4b60cd01df028376","x":629,"y":65,"width":811,"height":400,"type":"link","url":"https://github.com/otaleghani/kiln"}
+	],
+	"edges":[
+		{"id":"26cabd8b37778ace","fromNode":"26625dfa323ef535","fromSide":"bottom","toNode":"c027e3d739c41826","toSide":"top"},
+		{"id":"66b77a76000c8ef6","fromNode":"26625dfa323ef535","fromSide":"right","toNode":"4b60cd01df028376","toSide":"top"}
+	]
+}
