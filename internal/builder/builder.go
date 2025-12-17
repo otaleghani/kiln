@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,8 +36,8 @@ type Builder struct {
 
 func Build(themeName, fontName, baseURL, siteName string) {
 	start := time.Now()
-	theme := resolveTheme(themeName, fontName)
 
+	theme := resolveTheme(themeName, fontName)
 	fileIndex, graphNodes := initBuild()
 	rootNode := getRootNode(InputDir, baseURL)
 
@@ -62,7 +63,9 @@ func Build(themeName, fontName, baseURL, siteName string) {
 	fileCount := 0
 	var sitemapEntries []SitemapEntry
 
-	markdownRenderer, resolver := newMarkdownParser(fileIndex, baseURL)
+	u, _ := url.Parse(baseURL)
+	basePath := u.Path
+	markdownRenderer, resolver := newMarkdownParser(fileIndex, basePath)
 
 	minifier := minify.New()
 	minifier.AddFunc("text/html", html.Minify)
