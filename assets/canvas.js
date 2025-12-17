@@ -166,8 +166,40 @@ window.JsonCanvasRenderer = class JsonCanvasRenderer {
                 break;
 
             case 'link':
-                el.innerHTML = `<a href="${nodeData.url}" target="_blank" class="canvas-node-link"><span>${nodeData.url}</span></a>`;
+                // UPDATED LINK RENDERING
+                el.style.overflow = 'visible'; 
+                el.style.background = 'transparent'; 
+                el.style.boxShadow = 'none';
+                el.style.border = 'none';
+
+                // Header (Shows URL and allows opening in new tab)
+                const linkHeader = document.createElement('div');
+                linkHeader.className = 'canvas-node-header';
+                linkHeader.innerHTML = `<a href="${nodeData.url}" target="_blank">${nodeData.url}</a>`;
+                el.appendChild(linkHeader);
+
+                // Content Box (The Iframe)
+                const linkContent = document.createElement('div');
+                linkContent.className = 'canvas-node-content-box';
+                // Remove padding for iframes so they fill the box
+                linkContent.style.padding = '0';
+                linkContent.style.overflow = 'hidden';
+
+                // Iframe
+                // Note: Some sites (like Google/GitHub) block embedding via X-Frame-Options headers.
+                const iframe = document.createElement('iframe');
+                iframe.src = nodeData.url;
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+                // Sandbox attributes for security
+                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms');
+                
+                linkContent.appendChild(iframe);
+                el.appendChild(linkContent);
                 break;
+                // el.innerHTML = `<a href="${nodeData.url}" target="_blank" class="canvas-node-link"><span>${nodeData.url}</span></a>`;
+                // break;
 
             case 'group':
                 if (nodeData.label) {
