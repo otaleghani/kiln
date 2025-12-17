@@ -34,7 +34,7 @@
     </style>
 
     <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
-    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <!-- <script src="https://unpkg.com/lucide@latest" defer></script> -->
     <script src="{{.BaseURL}}/graph.js" defer></script>
     <script src="{{.BaseURL}}/app.js" defer></script>
     
@@ -44,20 +44,20 @@
       svg: { fontCache: 'global' }
     };
     </script>
-    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <!-- <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script> -->
 
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        const getTheme = () => {
-            try {
-                const saved = localStorage.getItem('theme');
-                if (saved) return saved;
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            } catch(e) { return 'light'; }
-        };
-        mermaid.initialize({ startOnLoad: true, theme: getTheme() === 'dark' ? 'dark' : 'default' });
-        window.mermaid = mermaid;
-    </script>
+    <!-- <script type="module"> -->
+    <!--     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; -->
+    <!--     const getTheme = () => { -->
+    <!--         try { -->
+    <!--             const saved = localStorage.getItem('theme'); -->
+    <!--             if (saved) return saved; -->
+    <!--             return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; -->
+    <!--         } catch(e) { return 'light'; } -->
+    <!--     }; -->
+    <!--     mermaid.initialize({ startOnLoad: true, theme: getTheme() === 'dark' ? 'dark' : 'default' }); -->
+    <!--     window.mermaid = mermaid; -->
+    <!-- </script> -->
 </head>
 
 <body hx-boost="true" hx-select="#kiln-main" hx-target="#kiln-main" hx-swap="outerHTML">
