@@ -2,7 +2,11 @@ package builder
 
 import (
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/otaleghani/kiln/assets"
 )
 
 type ThemeColors struct {
@@ -30,26 +34,77 @@ type Theme struct {
 }
 
 type FontData struct {
-	Family string
-	URL    string
+	Family   string
+	Files    []string
+	FontFace string
 }
 
+// Define the fonts map
 var fonts = map[string]FontData{
 	"inter": {
 		Family: "'Inter', sans-serif",
-		URL:    "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap",
-	},
-	"merriweather": {
-		Family: "'Merriweather', serif",
-		URL:    "https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap",
+		Files:  []string{"Inter-Regular.woff2", "Inter-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'Inter';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('./fonts/Inter-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'Inter';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('./fonts/Inter-Bold.woff2') format('woff2');
+			}
+		`,
 	},
 	"lato": {
 		Family: "'Lato', sans-serif",
-		URL:    "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",
+		Files:  []string{"Lato-Regular.woff2", "Lato-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'Lato';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('./fonts/Lato-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'Lato';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('./fonts/Lato-Bold.woff2') format('woff2');
+			}
+		`,
+	},
+	"merriweather": {
+		Family: "'Merriweather', serif",
+		Files:  []string{"Merriweather-Regular.woff2", "Merriweather-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'Merriweather';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('./fonts/Merriweather-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'Merriweather';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('./fonts/Merriweather-Bold.woff2') format('woff2');
+			}
+		`,
 	},
 	"system": {
-		Family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-		URL:    "", // No import needed
+		Family:   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+		Files:    []string{},
+		FontFace: "",
 	},
 }
 
@@ -113,4 +168,35 @@ func resolveFont(name string) FontData {
 		return fonts["inter"]
 	}
 	return font
+}
+
+func extractFonts(fontName string) {
+	data, ok := fonts[fontName]
+	if !ok {
+		data = fonts["system"]
+	}
+
+	if len(data.Files) == 0 {
+		return
+	}
+
+	fontsDir := filepath.Join(OutputDir, "fonts")
+	if err := os.MkdirAll(fontsDir, 0755); err != nil {
+		log.Printf("Failed to create fonts directory: %s\n", err.Error())
+	}
+
+	for _, fileName := range data.Files {
+		// Read from embedded FS
+		content, err := assets.TemplateFS.ReadFile("fonts/" + fileName)
+		if err != nil {
+			log.Printf("Failed to read embedded font %s: %s", fileName, err.Error())
+		}
+
+		// Write to disk
+		destPath := filepath.Join(fontsDir, fileName)
+		if err := os.WriteFile(destPath, content, 0644); err != nil {
+			log.Printf("Failed to write font file %s: %s", fileName, err.Error())
+		}
+	}
+
 }
