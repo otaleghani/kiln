@@ -1,6 +1,6 @@
 # Kiln
 
-**Attention**: this is still a WIP. I'm currently working on handling all of the deployment quirks. If you wish to test it, use the `serve` command that is baked into the program.
+**Attention!**: this is still a WIP. I'm currently working on handling all of the deployment quirks. If you wish to test it, use the `serve` command that is baked into the program.
 
 > **Bake your Obsidian vault into a blazing fast static site.**
 
