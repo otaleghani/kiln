@@ -170,12 +170,7 @@ func resolveFont(name string) FontData {
 	return font
 }
 
-func extractFonts(fontName string) {
-	data, ok := fonts[fontName]
-	if !ok {
-		data = fonts["system"]
-	}
-
+func extractFonts(data FontData) {
 	if len(data.Files) == 0 {
 		return
 	}
@@ -198,5 +193,4 @@ func extractFonts(fontName string) {
 			log.Printf("Failed to write font file %s: %s", fileName, err.Error())
 		}
 	}
-
 }

@@ -162,6 +162,9 @@ func Build(themeName, fontName, baseURL, siteName string) {
 	appJsContent, _ := assets.TemplateFS.ReadFile("app.js")
 	os.WriteFile(filepath.Join(OutputDir, "app.js"), appJsContent, 0644)
 
+	// Static files - Fonts
+	extractFonts(theme.Font)
+
 	// Static files - Canvas javascript
 	canvasJsContent, _ := assets.TemplateFS.ReadFile("canvas.js")
 	os.WriteFile(filepath.Join(OutputDir, "canvas.js"), canvasJsContent, 0644)
