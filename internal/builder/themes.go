@@ -182,7 +182,7 @@ func extractFonts(data FontData) {
 
 	for _, fileName := range data.Files {
 		// Read from embedded FS
-		content, err := assets.TemplateFS.ReadFile("fonts/" + fileName)
+		content, err := assets.TemplateFS.ReadFile(fileName)
 		if err != nil {
 			log.Printf("Failed to read embedded font %s: %s", fileName, err.Error())
 		}
