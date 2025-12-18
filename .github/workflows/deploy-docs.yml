@@ -46,7 +46,7 @@ jobs:
       - name: Generate site
         run: |
           KILN_PATH=$(pwd)/kiln_bin
-          $KILN_PATH generate --input ./docs --output ./dist --url https://kiln.talesign.com
+          $KILN_PATH generate --input ./docs --output ./dist --url https://kiln.talesign.com --name Kiln
           
           echo "Site generated in ./dist"
 
