@@ -51,6 +51,16 @@ func initBuild() (map[string]string, []GraphNode) {
 		}
 	}
 
+	// Copy over CNAME file if it exists
+	cnameSrc := filepath.Join(InputDir, "CNAME")
+	if _, err := os.Stat(cnameSrc); err == nil {
+		if err := copyFile(cnameSrc, filepath.Join(OutputDir, "CNAME")); err != nil {
+			log.Printf("Warning: Found CNAME but failed to copy it: %v", err)
+		} else {
+			log.Println("Found and copied CNAME")
+		}
+	}
+
 	// Creates file index and file nodes by traversing the input directory
 	fileIndex := make(map[string]string)
 	graphNodes := []GraphNode{}
