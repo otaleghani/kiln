@@ -99,9 +99,23 @@ ___
 - [ ] Custom font selection
 - [ ] Configurable input/output directories
 - [ ] Localization / i18n
-- [ ] Tag search page
 - [ ] Frontmatter display toggle
 - [ ] Custom colors for Canvas elements
+- [ ] View transitions for page navigation
+- [ ] CSS animations for buttons and links
+- [ ] Folder pages
+- [ ] Page metadata (last update, time to read, etc.)
+- [ ] Hover on links to preview note
+- [ ] Backlinks on right sidebar
+- [ ] Breadcrumbs links
+- [ ] Tags management
+- [ ] Search for tags
+- [ ] Fuzzy finder (full-text search)
+- [ ] Hide certain pages
+- [ ] RSS feed
+- [ ] Social media preview cards
+- [ ] Draft management
+- [ ] Custom permalink
 
 ___
 

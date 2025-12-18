@@ -626,13 +626,13 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
 .local-graph-wrapper.expanded .graph-header {
     position: fixed;
     top: calc(5vh + 10px);
-    right: calc(5vw + 20px);
+    right: calc(5vw + 10px);
     z-index: 10001;
     width: auto;
     margin: 0;
 }
 
-.local-graph-wrapper.expanded h4 {
+.local-graph-wrapper.expanded .sidebar-label {
     display: none;
 }
 
