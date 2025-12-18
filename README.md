@@ -79,6 +79,7 @@ To keep Kiln simple, it has a few opinionated behaviors:
 
 - Ignored Folders: Kiln automatically ignores the .obsidian folder and any other file or folder starting with a dot (.).
 - Favicon: To have a custom favicon, place a favicon.ico file in the root of your vault. Kiln will automatically detect and use it.
+- CNAME: Kiln copies over a CNAME file if it finds it
 
 ---
 
@@ -92,6 +93,7 @@ ___
 
 ## 🗺 Roadmap
 
+- [ ] Fix hover colors
 - [ ] Configuration file support (kiln.yaml)
 - [ ] Automatic image optimization (WebP conversion)
 - [ ] PDF preview support
