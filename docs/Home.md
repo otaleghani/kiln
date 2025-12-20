@@ -20,10 +20,10 @@ The recommended way to install Kiln is via Go:
 go install github.com/otaleghani/kiln/cmd/kiln@latest
 ```
 
-(See [[Installation]] for binary downloads and CI/CD setup).
+(See [[Installation]] for binary downloads).
 
 ### Bake your Site
-Locate your Obsidian vault folder and run:
+Locate your Obsidian vault folder using [[generate]] and preview it locally with [[serve]]:
 ```bash
 # Generate the static website from your vault
 kiln generate --input ./path-to-your-vault --output ./output-directory
@@ -69,6 +69,10 @@ Built for performance and discoverability.
 
 - **Zero-Config SEO**: Automatic generation of **[[Meta Tags]]**, **[[Sitemap xml|Sitemap xml]]**, and **[[Robots txt|Robots.txt]]**.
 - **[[Themes|Theming]]**: Built-in Light/Dark modes and customizable color palettes baked directly into CSS.
+
+## Deployment
+
+The output of Kiln is a static website, which makes it really easy to deploy on your server. You can follow one of our guide for some popular services, like [[GitHub Pages]], [[Vercel]], [[Netlify]] or just one of the many [[Web Servers]].
 
 ## Contributing
 

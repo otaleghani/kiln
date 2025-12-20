@@ -111,12 +111,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Roadmap.md",
+                "file": "Home.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Roadmap"
+              "title": "Home"
             }
           }
         ],
@@ -284,6 +284,8 @@
   },
   "active": "8c2ca40afce821cc",
   "lastOpenFiles": [
+    "Commands/serve.md",
+    "Roadmap.md",
     "Home.md",
     "Features/Rendering/Obsidian Canvas.md",
     "Installation.md",
@@ -318,8 +320,6 @@
     "Features/Navigation/Client Side Navigation.md",
     "Commands/clean.md",
     "Credits.md",
-    "Canvas.canvas",
-    "Roadmap.md",
-    "Deployment/Vercel.md"
+    "Canvas.canvas"
   ]
 }
