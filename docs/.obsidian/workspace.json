@@ -111,12 +111,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Index.md",
+                "file": "Home.md",
                 "mode": "source",
                 "source": true
               },
               "icon": "lucide-file",
-              "title": "Index"
+              "title": "Home"
             }
           }
         ],
@@ -282,10 +282,10 @@
       "bases:Create new base": false
     }
   },
-  "active": "8c2ca40afce821cc",
+  "active": "86b641c6cc865fd9",
   "lastOpenFiles": [
     "Features/User Interface/Local Graph.md",
-    "Index.md",
+    "Home.md",
     "Features/User Interface/Light-Dark Mode.md",
     "Features/User Interface/Global Graph.md",
     "Features/User Interface/Fonts.md",

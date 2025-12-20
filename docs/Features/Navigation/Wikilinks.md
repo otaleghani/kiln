@@ -13,9 +13,9 @@ To link to another note in your vault, simply wrap the filename in double square
 
 | Syntax               | Description                                                                        | Result             |
 | :------------------- | :--------------------------------------------------------------------------------- | :----------------- |
-| `[[Index]]`          | **Standard Link**<br>Links to a file named `Index.md`.                             | [[Index]]          |
-| `[[Index\|Home]]`    | **Aliased Link**<br>Links to `Index.md` but displays "Home" as the clickable text. | [[Index\|Home]]    |
-| `[[Index#Features]]` | **Anchor Link**<br>Links directly to a specific header section inside the note.    | [[Index#Features]] |
+| `[[Index]]`          | **Standard Link**<br>Links to a file named `Index.md`.                             | [[Home]]          |
+| `[[Index\|Home]]`    | **Aliased Link**<br>Links to `Index.md` but displays "Home" as the clickable text. | [[Home\|Home]]    |
+| `[[Index#Features]]` | **Anchor Link**<br>Links directly to a specific header section inside the note.    | [[Home#Features]] |
 
 > **Note:** You do not need to include the `.md` extension inside the brackets.
 
