@@ -24,24 +24,28 @@ jobs:
 
       # Compile for Linux (AMD64)
       - name: Build Linux
-        run: env GOOS=linux GOARCH=amd64 go build -o kiln_linux_amd64 ./cmd/main
+        run: env GOOS=linux GOARCH=amd64 go build -o kiln_linux_amd64 ./cmd/kiln
 
       # Compile for Windows (AMD64)
       - name: Build Windows
-        run: env GOOS=windows GOARCH=amd64 go build -o kiln_windows_amd64.exe ./cmd/main
+        run: env GOOS=windows GOARCH=amd64 go build -o kiln_windows_amd64.exe ./cmd/kiln
 
       # Compile for macOS (Apple Silicon & Intel)
       - name: Build macOS (Intel)
-        run: env GOOS=darwin GOARCH=amd64 go build -o kiln_darwin_amd6 ./cmd/main
+        run: env GOOS=darwin GOARCH=amd64 go build -o kiln_darwin_amd6 ./cmd/kiln
       
       - name: Build macOS (Apple Silicon)
-        run: env GOOS=darwin GOARCH=arm64 go build -o kiln_darwin_arm64 ./cmd/main
+        run: env GOOS=darwin GOARCH=arm64 go build -o kiln_darwin_arm64 ./cmd/kiln
+
+      - name: Generate checksums
+        run: sha256sum kiln_* > checksums.txt
 
       # Create Release & Upload Assets
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
+            checksums.txt
             kiln_linux_amd64
             kiln_windows_amd64.exe
             kiln_darwin_amd64
