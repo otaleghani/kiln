@@ -1,7 +1,6 @@
 package linter
 
 import (
-	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -74,7 +73,7 @@ func BrokenLinks(inputDir string, notes map[string]bool) {
 			}
 
 			if !exists {
-				fmt.Printf("Broken link in [%s]: [[%s]]\n", d.Name(), rawLink)
+				log.Printf("Broken link in [%s]: [[%s]]\n", d.Name(), rawLink)
 				issuesFound++
 			}
 		}

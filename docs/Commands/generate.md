@@ -1,19 +1,48 @@
 ---
-title: generate command
-description: Test
+title: Generate Command
+description: The generate command is the core of Kiln. Learn how to build your static site and customize it using flags for themes, fonts, and SEO settings.
 ---
-# `generate`
 
-The `generate` command is used to build the static website from your vault. Is the primary command that you'll be using.
+# Generate Command
+
+The `generate` command is the primary workhorse of Kiln. It reads your Markdown files from the source directory and compiles them into a fully functional, static HTML website ready for deployment.
+
+You will run this command every time you want to update your site with new content.
+
+## Usage
+
+```bash
+./kiln generate [flags]
+```
 
 ## Flags
 There are some flags that you can use to customize the output:
 
-| Flag       | Short version | Default value | Description                                                                                                       |
-| ---------- | ------------- | ------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `--theme`  | `-t`          | `"default"`   | Color theme for the website. View [[Themes]] for more infomation.                                                 |
-| `--font`   | `-f`          | `"inter"`     | Font family for the website. View [[Fonts]] for more information.                                                 |
-| `--url`    | `-u`          | `""`          | The base URL of the website. Used for navigation setup, [[Sitemap.xml]] generation and [[Robots.txt]] generation. |
-| `--name`   | `-n`          | `"My Notes"`  | The name of the website. Used in [[Meta Tags]] and as the website title.                                          |
-| `--input`  | `-i`          | `"vault"`     | Name of the directory containing your vault.                                                                      |
-| `--output` | `-o`          | `"public"`    | Name of the directory where your static website will be generated.                                                |
+|**Flag**|**Short**|**Default**|**Description**|
+|---|---|---|---|
+|`--theme`|`-t`|`default`|Sets the visual color scheme. See [[Themes]] for options.|
+|`--font`|`-f`|`inter`|Sets the typography family. See [[Fonts]] for options.|
+|`--url`|`-u`|`""`|The final public URL of your site (e.g., `https://example.com`). Required for generating the [[Sitemap.xml]] and [[Robots.txt]].|
+|`--name`|`-n`|`My Notes`|The global name of your site. This appears in the browser tab and [[Meta Tags]].|
+|`--input`|`-i`|`vault`|The path to your source folder containing the Markdown notes.|
+|`--output`|`-o`|`public`|The path where the generated HTML files will be saved.|
+
+## Examples
+
+### Basic Test
+
+For a quick local test, you can run the command without arguments (uses default settings):
+```bash
+./kiln generate
+```
+
+### Production Build
+
+When deploying your site to the web, you should always include the `url` and `name` flags to ensure SEO features work correctly.
+```bash
+./kiln generate \
+  --name "My Digital Garden" \
+  --url "https://notes.mysite.com" \
+  --theme "nord" \
+  --font "inter"
+```

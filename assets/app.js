@@ -91,7 +91,7 @@ window.initMathJax = async function() {
         }
     };
     
-    await window.loadScript('https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js', 'mathjax-script');
+    await window.loadScript('https://cdn.jsdelivr.net/npm/mathjax@4implement-trie-prefix-tree/es5/tex-svg.js', 'mathjax-script');
 };
 
 window.initLucide = async function() {

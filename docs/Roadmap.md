@@ -1,37 +1,54 @@
 ---
-title: Local Graph
-description: Custom description
+title: Roadmap
+description: Explore the future of Kiln. A list of upcoming features, planned fixes, and long-term goals for the project.
 ---
 
 # Roadmap
 
-Here's a list of soon-to-be features of Kiln.
+Kiln is an evolving project. Below is the current plan for upcoming features and improvements.
 
-- [ ] Fix hover colors
-- [ ] Configuration file support (kiln.yaml)
-- [ ] Automatic image optimization (WebP conversion)
-- [ ] PDF preview support
-- [ ] Custom themes support
-- [ ] Custom font selection
-- [ ] Configurable input/output directories
-- [ ] Localization / i18n
-- [ ] Frontmatter display toggle
-- [ ] Custom colors for Canvas elements
-- [ ] View transitions for page navigation
-- [ ] CSS animations for buttons and links
-- [ ] Folder pages
-- [ ] Page metadata (last update, time to read, etc.)
-- [ ] Hover on links to preview note
-- [ ] Backlinks on right sidebar
-- [ ] Breadcrumbs links
-- [ ] Tags management
-- [ ] Search for tags
-- [ ] Fuzzy finder (full-text search)
-- [ ] Hide certain pages
-- [ ] RSS feed
-- [ ] Social media preview cards
-- [ ] Draft management
-- [ ] Custom permalink
-- [ ] Custom 404 page
-- [ ] Choose between other layouts
-- [ ] Custom layouts
+> [!note] Contributing
+> Have a suggestion? Feel free to open an issue or contribute to the discussion on our GitHub repository.
+
+## Immediate Fixes
+*Priority items to stabilize the current beta.*
+
+- [ ] **UI Polish:** Fix hover colors and table of contents styling (borders/colors).
+- [ ] **Mobile Experience:** Ensure sidebars auto-close correctly on small screens.
+- [ ] **CLI Integrity:** Fix the `doctor` command (currently unstable).
+
+## Core Features
+*Major functionality upgrades.*
+
+- [ ] **Configuration File:** Support for `kiln.yaml` to save preferences (flags) persistently.
+- [ ] **Performance:** Automatic image optimization (WebP conversion).
+- [ ] **Customization:** Full support for custom CSS themes and user-defined fonts.
+- [ ] **Flexible Paths:** Configurable input/output directories in the config file.
+- [ ] **Localization:** i18n support for translating the UI.
+
+## UI & UX Improvements
+*Enhancing the reading experience.*
+
+- [ ] **Page Transitions:** Smooth View Transitions API support for navigation.
+- [ ] **Link Previews:** Obsidian-style hover previews when mousing over Wikilinks.
+- [ ] **Search:** Fuzzy finder implementation for full-text search.
+- [ ] **Navigation:** Breadcrumb trails and "Back to Top" buttons.
+- [ ] **Animations:** Subtle CSS animations for interactive elements.
+- [ ] **Canvas:** Custom color support for Canvas nodes.
+
+## Content Management
+*Tools to help you manage your digital garden.*
+
+- [ ] **Metadata:** Display "Last Updated" and "Time to Read" on pages.
+- [ ] **Tags:** Dedicated tag pages and tag-based search.
+- [ ] **Backlinks:** A dedicated section in the sidebar showing incoming links.
+- [ ] **RSS:** Automatic RSS feed generation for blog posts.
+- [ ] **Drafts:** Better handling for draft pages (exclude from build).
+- [ ] **Folder Pages:** Auto-generated index pages for folders.
+- [ ] **Privacy:** Ability to hide specific pages or folders via frontmatter.
+
+## Advanced Configuration
+- [ ] **Permalinks:** Custom URL slugs via frontmatter.
+- [ ] **Social Cards:** Auto-generated Open Graph images for social sharing.
+- [ ] **Custom 404:** Support for a user-defined `404.md`.
+- [ ] **Layouts:** Support for alternative page layouts (e.g., full-width, landing page).

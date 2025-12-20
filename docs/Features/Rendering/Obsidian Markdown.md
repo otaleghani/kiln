@@ -31,7 +31,7 @@ Kiln's parser includes support for the following Obsidian-specific syntax extens
 | Feature | Syntax | Description |
 | :--- | :--- | :--- |
 | [[Wikilinks]] | `[[Note]]` | Internal linking between files. |
-| [[Wikilinks#Embedding Media|Embed]] | `![[Image.png]]` | Displaying images or transcluding notes. |
+| [[Wikilinks#Embedding Media]] | `![[Image.png]]` | Displaying images or transcluding notes. |
 | [[Callouts]] | `> [!info]` | Colored blockquotes for distinct content. |
 | [[Math]] | `$E=mc^2$` | LaTeX rendering via MathJax. |
 | **Highlighting** (Not yet supported, soon to be) | `==text==` | Visual highlighting of text. |

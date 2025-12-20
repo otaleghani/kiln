@@ -24,5 +24,3 @@ The Local Graph updates automatically as you navigate.
 1.  **Center Node:** The current page is always the central node, highlighted for clarity.
 2.  **Neighbors:** Any note that directly links to *or* is linked from the current page is displayed as a connected node.
 3.  **Interactivity:** Just like the global graph, you can hover over nodes to see titles and click them to navigate directly to that page.
-
-*Note: On smaller screens (mobile devices), the right sidebar—and thus the Local Graph—is hidden to preserve reading space.*

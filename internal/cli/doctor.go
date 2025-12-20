@@ -16,14 +16,14 @@ var cmdDoctor = &cobra.Command{
 
 func init() {
 	cmdDoctor.Flags().
-		StringVarP(&outputDir, "output", "o", "", "Name of the output directory (defaults to ./public)")
+		StringVarP(&inputDir, "input", "i", "", "Name of the input directory (defaults to ./vault)")
 }
 
 func runDoctor(cmd *cobra.Command, args []string) {
 	log.Println("Diagnosing vault...")
 
-	if outputDir != "" {
-		builder.OutputDir = outputDir
+	if inputDir != "" {
+		builder.InputDir = inputDir
 	}
 
 	notes := linter.CollectNotes(builder.OutputDir)

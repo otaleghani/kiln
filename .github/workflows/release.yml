@@ -1,0 +1,51 @@
+name: Release Kiln
+
+# Trigger ONLY when a tag starting with 'v' is pushed (e.g. v1.0.0, v2.3.1)
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      # Compile for Linux (AMD64)
+      - name: Build Linux
+        run: env GOOS=linux GOARCH=amd64 go build -o kiln_linux_amd64 ./cmd/main
+
+      # Compile for Windows (AMD64)
+      - name: Build Windows
+        run: env GOOS=windows GOARCH=amd64 go build -o kiln_windows_amd64.exe ./cmd/main
+
+      # Compile for macOS (Apple Silicon & Intel)
+      - name: Build macOS (Intel)
+        run: env GOOS=darwin GOARCH=amd64 go build -o kiln_darwin_amd6 ./cmd/main
+      
+      - name: Build macOS (Apple Silicon)
+        run: env GOOS=darwin GOARCH=arm64 go build -o kiln_darwin_arm64 ./cmd/main
+
+      # Create Release & Upload Assets
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            kiln_linux_amd64
+            kiln_windows_amd64.exe
+            kiln_darwin_amd64
+            kiln_darwin_arm64
+          draft: false
+          prerelease: false
+          generate_release_notes: true
