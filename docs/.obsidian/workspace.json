@@ -111,12 +111,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Installation.md",
+                "file": "Roadmap.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Installation"
+              "title": "Roadmap"
             }
           }
         ],
@@ -285,6 +285,8 @@
   "active": "8c2ca40afce821cc",
   "lastOpenFiles": [
     "Home.md",
+    "Features/Rendering/Obsidian Canvas.md",
+    "Installation.md",
     "Features/SEO/Sitemap xml.md",
     "Features/SEO/Robots txt.md",
     "table-of-contents.md",
@@ -298,7 +300,6 @@
     "public/fonts",
     "public/app.js",
     "public/style.css",
-    "Installation.md",
     "Features/User Interface/Themes.md",
     "Features/User Interface/Table of Contents.md",
     "Features/User Interface/Local Graph.md",
@@ -310,7 +311,6 @@
     "Features/Rendering/Obsidian Markdown.md",
     "Features/Rendering/Mermaid Graphs.md",
     "Features/Rendering/Math.md",
-    "Features/Rendering/Canvas.md",
     "Features/Rendering/Callouts.md",
     "Features/Navigation/Wikilinks.md",
     "Features/Navigation/Search.md",

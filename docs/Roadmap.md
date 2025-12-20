@@ -16,6 +16,7 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 - [ ] **UI Polish:** Fix hover colors and table of contents styling (borders/colors).
 - [ ] **Mobile Experience:** Ensure sidebars auto-close correctly on small screens.
 - [ ] **CLI Integrity:** Fix the `doctor` command (currently unstable).
+- [ ] **URL generation**: Fix URLs generation when `.md` wikilinks that do not have the same case as the page name
 
 ## Core Features
 *Major functionality upgrades.*

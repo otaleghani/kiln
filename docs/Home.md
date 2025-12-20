@@ -20,7 +20,7 @@ The recommended way to install Kiln is via Go:
 go install github.com/otaleghani/kiln/cmd/kiln@latest
 ```
 
-(See [[installation]] for binary downloads and CI/CD setup).
+(See [[Installation]] for binary downloads and CI/CD setup).
 
 ### Bake your Site
 Locate your Obsidian vault folder and run:
@@ -42,7 +42,7 @@ Kiln is packed with features designed to bridge the gap between your personal kn
 We support the tools you use to think.
 
 - **[[Obsidian Markdown|Obsidian Parity]]**: Full support for **[[Wikilinks]]**, **[[Callouts]]**, and standard Markdown.
-- **[[Canvas|Interactive Canvas]]**: Render `.canvas` files as zoomable, pan-able diagrams directly on your site.
+- **[[Obsidian Canvas|Interactive Canvas]]**: Render `.canvas` files as zoomable, pan-able diagrams directly on your site.
 - **[[Mermaid Graphs]]**: Native support for flowcharts, sequence diagrams, and Gantt charts.
 - **[[Math|Math & LaTeX]]**: Beautiful equation rendering via MathJax.
 - **[[Syntax Highlighting]]**: Automatic language detection and coloring for code blocks.
@@ -52,8 +52,8 @@ We support the tools you use to think.
 Your site behaves like a modern app, not a static document.
 
 - **[[Client Side Navigation|Instant Navigation]]**: Powered by **HTMX**, pages load instantly without full refreshes (SPA feel).
-- **[[explorer|File Explorer]]**: A "What You See Is What You Get" sidebar that mirrors your vault structure.
-- **[[search|Quick Find]]**: Real-time, fuzzy search to filter your file tree instantly.
+- **[[Explorer|File Explorer]]**: A "What You See Is What You Get" sidebar that mirrors your vault structure.
+- **[[Search|Quick Find]]**: Real-time, fuzzy search to filter your file tree instantly.
 - **[[Table of Contents|Table of Contents]]**: Auto-generated right sidebar navigation for every note.
 
 ### Visual Knowledge
@@ -67,9 +67,9 @@ Visualize how your ideas connect.
 
 Built for performance and discoverability.
 
-- **Zero-Config SEO**: Automatic generation of [[Meta Tags]], **[[Sitemap xml|Sitemap xml]]**, and **[[Robots txt|Robots.txt]]**.
-- **[[themes|Theming]]**: Built-in Light/Dark modes and customizable color palettes baked directly into CSS.
+- **Zero-Config SEO**: Automatic generation of **[[Meta Tags]]**, **[[Sitemap xml|Sitemap xml]]**, and **[[Robots txt|Robots.txt]]**.
+- **[[Themes|Theming]]**: Built-in Light/Dark modes and customizable color palettes baked directly into CSS.
 
 ## Contributing
 
-Kiln is open source and distributed under the MIT License. If you spot a bug or have a feature request, please check our [Roadmap](https://www.google.com/search?q=https://github.com/otaleghani/kiln) or [open an issue on GitHub](https://github.com/otaleghani/kiln/releases/latest).
+Kiln is open source and distributed under the MIT License. If you spot a bug or have a feature request, please check our [[Roadmap]] or [open an issue on GitHub](https://github.com/otaleghani/kiln/releases/latest).
