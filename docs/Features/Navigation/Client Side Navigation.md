@@ -2,7 +2,6 @@
 title: Client Side Navigation
 description: Learn how Kiln uses HTMX hx-boost to provide instant, single-page application (SPA) navigation while maintaining perfect SEO and progressive enhancement.
 ---
-
 # Client Side Navigation
 
 Kiln transforms your static site into a high-performance **Single Page Application (SPA)** using [HTMX](https://htmx.org/) and its powerful [`hx-boost`](https://htmx.org/attributes/hx-boost/) feature.

@@ -2,7 +2,6 @@
 title: Fonts & Typography
 description: Kiln includes a selection of high-quality, self-hosted Google Fonts that are baked directly into your site for maximum performance and privacy.
 ---
-
 # Fonts & Typography
 
 Typography is the foundation of a readable site. Kiln allows you to choose from a curated selection of typefaces to match your site's aesthetic.

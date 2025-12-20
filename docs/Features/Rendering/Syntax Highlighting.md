@@ -2,7 +2,6 @@
 title: Syntax Highlighting
 description: Kiln includes built-in server-side syntax highlighting for hundreds of programming languages, fully customizable via CSS classes.
 ---
-
 # Syntax Highlighting
 
 Kiln includes robust support for code syntax highlighting out of the box. It automatically detects code blocks in your Markdown and applies coloring based on the specified language.

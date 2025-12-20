@@ -2,7 +2,6 @@
 title: Global Graph
 description: Visualize the connections between your notes with Kiln's interactive Global Graph, a force-directed network view of your entire vault.
 ---
-
 # Global Graph
 
 Kiln automatically generates a **Global Graph** view for your website. This is an interactive visualization of your entire knowledge base, modeled after the popular graph view in Obsidian.

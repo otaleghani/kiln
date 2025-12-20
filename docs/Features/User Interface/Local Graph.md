@@ -2,7 +2,6 @@
 title: Local Graph
 description: Kiln generates a context-aware Local Graph for every page, visualizing the immediate connections, backlinks, and related topics in the sidebar.
 ---
-
 # Local Graph
 
 While the [[Global Graph]] provides a view of your entire knowledge base, the **Local Graph** focuses on context.

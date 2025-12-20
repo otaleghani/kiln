@@ -2,7 +2,6 @@
 title: Obsidian Markdown
 description: Kiln is built to support Obsidian Flavored Markdown, a rich superset of standard Markdown that includes wikilinks, callouts, and math support.
 ---
-
 # Obsidian Markdown
 
 Kiln is designed with a "Parity First" philosophy: **If it renders in Obsidian, it should render in Kiln.**

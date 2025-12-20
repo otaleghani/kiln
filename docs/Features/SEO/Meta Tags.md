@@ -2,7 +2,6 @@
 title: Meta Tags & SEO
 description: Learn how to optimize your site's SEO by customizing page titles and meta descriptions using standard Markdown frontmatter.
 ---
-
 # Meta Tags & SEO
 
 Kiln is built to be **SEO-native**. It automatically generates the necessary `<meta>` tags to ensure your content looks great in search engine results and on social media.

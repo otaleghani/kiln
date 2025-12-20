@@ -2,7 +2,6 @@
 title: Light & Dark Mode
 description: Kiln features a built-in theme toggle that supports Light and Dark modes, respects system preferences, and persists your choice across sessions.
 ---
-
 # Light & Dark Mode
 
 Kiln comes equipped with a fully responsive theming engine that supports both **Light** and **Dark** visual modes.

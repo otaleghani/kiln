@@ -2,7 +2,6 @@
 title: Math & LaTeX
 description: Kiln supports mathematical notation using MathJax, allowing you to write complex equations with standard LaTeX syntax while maintaining optimal page performance.
 ---
-
 # Math & LaTeX
 
 Kiln includes full support for mathematical notation, allowing you to render complex equations directly in your notes using **LaTeX** syntax.

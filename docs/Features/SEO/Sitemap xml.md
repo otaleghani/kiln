@@ -2,7 +2,6 @@
 title: Sitemap.xml
 description: Kiln automatically builds an XML sitemap to help search engines discover and index your content efficiently. Learn how to enable and configure it.
 ---
-
 # Sitemap.xml
 
 A **Sitemap** is a blueprint of your website that helps search engines find, crawl, and index all of your website's content. Kiln automatically generates a standards-compliant `sitemap.xml` file every time you build your site.

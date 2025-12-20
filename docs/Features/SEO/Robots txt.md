@@ -2,7 +2,6 @@
 title: Robots.txt
 description: Learn how Kiln automatically generates a robots.txt file to guide search engine crawlers and why the base URL configuration is required.
 ---
-
 # Robots.txt
 
 Kiln automatically generates a standard `robots.txt` file at the root of your site during the build process. This file serves as the "gatekeeper" for your website, giving instructions to web crawlers (like Googlebot) about which pages they are allowed to access.

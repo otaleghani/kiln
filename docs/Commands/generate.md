@@ -22,7 +22,7 @@ There are some flags that you can use to customize the output:
 |---|---|---|---|
 |`--theme`|`-t`|`default`|Sets the visual color scheme. See [[Themes]] for options.|
 |`--font`|`-f`|`inter`|Sets the typography family. See [[Fonts]] for options.|
-|`--url`|`-u`|`""`|The final public URL of your site (e.g., `https://example.com`). Required for generating the [[Sitemap.xml]] and [[Robots.txt]].|
+|`--url`|`-u`|`""`|The final public URL of your site (e.g., `https://example.com`). Required for generating the [[Sitemap xml]] and [[Robots txt]].|
 |`--name`|`-n`|`My Notes`|The global name of your site. This appears in the browser tab and [[Meta Tags]].|
 |`--input`|`-i`|`vault`|The path to your source folder containing the Markdown notes.|
 |`--output`|`-o`|`public`|The path where the generated HTML files will be saved.|

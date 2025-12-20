@@ -2,7 +2,6 @@
 title: Canvas
 description: Kiln natively renders Obsidian .canvas files as interactive diagrams, allowing you to visualize complex relationships directly on your static site.
 ---
-
 # Canvas
 
 Kiln provides out-of-the-box support for **Obsidian Canvas**. It automatically detects `.canvas` files in your vault and renders them as fully interactive diagrams on your website.

@@ -2,7 +2,6 @@
 title: Mermaid Graphs
 description: Kiln natively renders Mermaid diagrams from your Markdown. Create flowcharts, sequence diagrams, and Gantt charts that automatically adapt to your site's theme.
 ---
-
 # Mermaid Graphs
 
 Kiln includes native support for [Mermaid.js](https://mermaid.js.org/), allowing you to create complex diagrams and visualizations using simple text-based syntax.

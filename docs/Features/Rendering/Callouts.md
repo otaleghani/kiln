@@ -7,8 +7,6 @@ description: Learn how to use Obsidian-style callouts to highlight important inf
 
 Kiln supports standard **Obsidian-style callouts**. These allow you to highlight specific parts of your content with distinct colors and icons, making your notes more readable and structured.
 
-
-
 ## Syntax
 
 To create a callout, use the blockquote syntax `>` followed by the callout type in square brackets `[!type]`.

@@ -2,7 +2,6 @@
 title: Themes & Visuals
 description: Customize the look of your site with Kiln's built-in color palettes, including popular themes like Catppuccin, Nord, and Dracula.
 ---
-
 # Themes
 
 Kiln allows you to completely transform the visual aesthetic of your site to match your personal taste.

@@ -2,7 +2,6 @@
 title: Search
 description: Kiln features a real-time client-side search that instantly filters your sidebar, allowing you to quickly locate notes and folders by name.
 ---
-
 # Search
 
 Kiln includes a built-in **Quick Find** feature designed to help you navigate large vaults with ease.
