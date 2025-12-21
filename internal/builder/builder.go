@@ -17,11 +17,14 @@ import (
 	"github.com/tdewolff/minify/v2/html"
 )
 
-// OutputDir is the destination directory for the generated site.
-var OutputDir string = "./public"
-
-// InputDir is the source directory containing the Obsidian vault.
-var InputDir string = "./vault"
+var (
+	// OutputDir is the destination directory for the generated site.
+	OutputDir string = "./public"
+	// InputDir is the source directory containing the Obsidian vault.
+	InputDir string = "./vault"
+	// FlatUrls defines if the user opted in for flat urls.
+	FlatUrls bool
+)
 
 // GraphNode represents a single node in the interactive graph view.
 type GraphNode struct {

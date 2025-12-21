@@ -28,11 +28,13 @@ func init() {
 		StringVarP(&inputDir, "input", "i", "", "Name of the input directory (defaults to ./vault)")
 	cmdGenerate.Flags().
 		StringVarP(&outputDir, "output", "o", "", "Name of the output directory (defaults to ./public)")
+	cmdGenerate.Flags().
+		BoolVar(&flatUrls, "flat-urls", false, "Generate flat HTML files (note.html) instead of pretty directories (note/index.html)")
 }
 
 // runGenerate executes the build logic.
 func runGenerate(cmd *cobra.Command, args []string) {
-	// 1. Apply overrides
+	// Apply overrides
 	// If the user specified custom directories via flags, update the builder configuration.
 	if outputDir != "" {
 		builder.OutputDir = outputDir
@@ -40,8 +42,9 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	if inputDir != "" {
 		builder.InputDir = inputDir
 	}
+	builder.FlatUrls = flatUrls
 
-	// 2. Trigger the build
+	// Trigger the build
 	// Pass the cosmetic and metadata configurations to the builder.
 	builder.Build(themeName, fontName, baseURL, siteName)
 }

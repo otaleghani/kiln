@@ -21,6 +21,7 @@ var (
 	siteName  string // The display name of the generated site
 	inputDir  string // Custom path to the source vault
 	outputDir string // Custom path for the build output
+	flatUrls  bool   // Choose between pretty (e.g. note/index.html) or flat URLs (e.g. note.html)
 )
 
 // Init constructs and returns the root command for the application.

@@ -208,15 +208,18 @@ func getOutputPaths(relPath, nameWithoutExt, ext string) (outPath string, webPat
 		outPath = filepath.Join(OutputDir, "index.html")
 		webPath = "/"
 	} else {
-		// Regular files -> ./public/folder/note-name/index.html
-		slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
-		outPath = filepath.Join(OutputDir, slugFolder, "index.html")
-		webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
+		if !FlatUrls {
+			// Regular files -> ./public/folder/note-name/index.html
+			slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
+			outPath = filepath.Join(OutputDir, slugFolder, "index.html")
+			webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
+		} else {
+			// Regular files -> ./public/folder/note-name.html
+			slugName := strings.TrimSuffix(slugPath, slugify(ext))
+			outPath = filepath.Join(OutputDir, slugName+".html")
+			webPath = "/" + strings.ReplaceAll(slugName, string(os.PathSeparator), "/")
+		}
 
-		// Regular files -> ./public/folder/note-name.html
-		// slugName := strings.TrimSuffix(slugPath, slugify(ext))
-		// outPath = filepath.Join(OutputDir, slugName+".html")
-		// webPath = "/" + strings.ReplaceAll(slugName, string(os.PathSeparator), "/")
 	}
 
 	// Ensure the parent directory exists before returning
