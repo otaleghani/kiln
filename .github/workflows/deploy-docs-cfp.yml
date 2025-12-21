@@ -21,15 +21,19 @@ jobs:
       - name: Checkout Vault
         uses: actions/checkout@v4
 
-      # Setup Go
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.25'
 
-      # Install Kiln
-      - name: Install Kiln
-        run: go install github.com/otaleghani/kiln/cmd/kiln@latest
+      - name: Download Kiln Binary
+        run: |
+          TAG=${{ github.event.release.tag_name }}
+          URL="https://github.com/otaleghani/kiln/releases/download/${TAG}/kiln_linux_amd64"
+          echo "Downloading Kiln version ${TAG} from ${URL}..."
+          sudo curl -L -o /usr/local/bin/kiln $URL
+          sudo chmod +x /usr/local/bin/kiln
+          kiln --help
 
       # Build site
       - name: Build Site
