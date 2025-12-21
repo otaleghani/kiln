@@ -8,11 +8,6 @@ name: Deploy Release to Cloudflare Pages
 on:
   push:
     branches: ["main"]
-    paths:
-      - 'docs/**'
-      - '**.go'
-      - 'assets/**'
-      - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
 jobs:
