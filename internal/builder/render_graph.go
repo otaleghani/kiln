@@ -9,31 +9,37 @@ import (
 	"github.com/tdewolff/minify/v2"
 )
 
+// GraphRenderer generates the dedicated full-screen interactive graph page.
 type GraphRenderer struct {
-	rootNode *Node              // The root node of the vault
-	minifier *minify.M          // Minifier
-	siteName string             // The name of the website
-	template *template.Template // Golang html template
-	baseURL  string             // The base URL for links
-	theme    Theme
+	rootNode *Node              // Navigation tree root
+	minifier *minify.M          // HTML minifier
+	siteName string             // Global site name
+	template *template.Template // Main HTML layout
+	baseURL  string             // Site Base URL
+	theme    Theme              // Visual theme settings
 }
 
+// render creates the /graph/index.html page.
+// It sets up the specific container ID that the frontend JS looks for to initialize the D3 graph.
 func (g *GraphRenderer) render() {
 	graphOutPath := filepath.Join(OutputDir, "graph", "index.html")
 	os.MkdirAll(filepath.Dir(graphOutPath), 0755)
 
-	// Set active for graph
+	// Highlight the "Graph" item in the sidebar navigation
 	setTreeActive(g.rootNode.Children, "/graph")
 
 	fGraph, err := os.Create(graphOutPath)
 	if err != nil {
 		log.Printf("Failed to create graph view. Error: %s", err.Error())
+		return
 	}
 	defer fGraph.Close()
+
+	// Wrap writer with minifier
 	mwGraph := g.minifier.Writer("text/html", fGraph)
 	defer mwGraph.Close()
 
-	// Use a special div ID for the global graph
+	// The frontend script targets this ID to mount the global graph
 	graphHTML := `<div id="global-graph-container" style=""></div>`
 
 	dataGraph := PageData{
@@ -43,9 +49,10 @@ func (g *GraphRenderer) render() {
 		Content:     template.HTML(graphHTML),
 		Breadcrumbs: []string{"Home", "Graph"},
 		IsCanvas:    false,
-		IsGraph:     true,
+		IsGraph:     true, // Flags the template to load graph-specific scripts
 		Sidebar:     g.rootNode.Children,
 		Font:        g.theme.Font,
 	}
+
 	g.template.Execute(mwGraph, dataGraph)
 }

@@ -17,9 +17,13 @@ import (
 	"github.com/tdewolff/minify/v2/html"
 )
 
+// OutputDir is the destination directory for the generated site.
 var OutputDir string = "./public"
+
+// InputDir is the source directory containing the Obsidian vault.
 var InputDir string = "./vault"
 
+// GraphNode represents a single node in the interactive graph view.
 type GraphNode struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
@@ -27,6 +31,7 @@ type GraphNode struct {
 	Val   int    `json:"val"`
 }
 
+// Builder holds configuration for the site generation process.
 type Builder struct {
 	ThemeName string
 	FontName  string
@@ -34,6 +39,8 @@ type Builder struct {
 	SiteName  string
 }
 
+// Build orchestrates the static site generation process.
+// It walks the input directory, processes Markdown/Canvas files, and generates assets.
 func Build(themeName, fontName, baseURL, siteName string) {
 	start := time.Now()
 
@@ -41,7 +48,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 	fileIndex, graphNodes := initBuild()
 	rootNode := getRootNode(InputDir, baseURL)
 
-	// Parses layouts
+	// Load and parse the base HTML layout
 	layoutContent, err := assets.TemplateFS.ReadFile("layout.html")
 	if err != nil {
 		log.Fatal("Could not read layout.html: ", err)
@@ -51,6 +58,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 		log.Fatal("Layout parsing failed: ", err)
 	}
 
+	// Load and parse the CSS template
 	cssContent, err := assets.TemplateFS.ReadFile("style.css")
 	if err != nil {
 		log.Fatal("Could not read style.css: ", err)
@@ -60,6 +68,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 		log.Fatal("CSS parsing failed: ", err)
 	}
 
+	// Load and parse the Graph JS template
 	graphJsContent, err := assets.TemplateFS.ReadFile("graph.js")
 	if err != nil {
 		log.Fatal("Could not read graph.js: ", err)
@@ -72,19 +81,22 @@ func Build(themeName, fontName, baseURL, siteName string) {
 	fileCount := 0
 	var sitemapEntries []SitemapEntry
 
-	u, _ := url.Parse(baseURL) // e.g. "https://otaleghani.github.io/kiln"
-	basePath := u.Path         // -> "/kiln"
+	// Determine the base path for link resolution (e.g., "/kiln" from "https://domain.com/kiln")
+	u, _ := url.Parse(baseURL)
+	basePath := u.Path
 	markdownRenderer, resolver := newMarkdownParser(fileIndex, basePath)
 
+	// Configure the HTML minifier
 	minifier := minify.New()
 	minifier.AddFunc("text/html", html.Minify)
 
+	// Walk the input directory to process files
 	err = filepath.WalkDir(InputDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Skip hidden files and folders (e.g. .obsidian, .trash, .git)
+		// Skip hidden files and directories (dotfiles)
 		if strings.HasPrefix(d.Name(), ".") && path != InputDir {
 			if d.IsDir() {
 				return filepath.SkipDir
@@ -100,7 +112,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 		ext := filepath.Ext(path)
 		nameWithoutExt := strings.TrimSuffix(d.Name(), ext)
 
-		// Set context for resolver
+		// Set the current file context for the link resolver
 		resolver.CurrentSource = nameWithoutExt
 
 		switch ext {
@@ -141,6 +153,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 				addToSitemap(d, baseURL, webPath, &sitemapEntries)
 			}
 		default:
+			// Copy static assets (images, PDFs, etc.) directly to output
 			outPath := filepath.Join(OutputDir, getSlugPath(relPath))
 			os.MkdirAll(filepath.Dir(outPath), 0755)
 			copyFile(path, outPath)
@@ -153,33 +166,30 @@ func Build(themeName, fontName, baseURL, siteName string) {
 		log.Fatal("Walk failed: ", err)
 	}
 
-	// Generate CSS based on the selected theme and font
+	// Generate the final CSS based on theme and font settings
 	cssOut, _ := os.Create(filepath.Join(OutputDir, "style.css"))
 	defer cssOut.Close()
 	tmplCSS.Execute(cssOut, theme)
 
-	// Static files - App javascript
+	// Write static JS files
 	appJsContent, _ := assets.TemplateFS.ReadFile("app.js")
 	os.WriteFile(filepath.Join(OutputDir, "app.js"), appJsContent, 0644)
 
-	// Static files - Fonts
-	extractFonts(theme.Font)
-
-	// Static files - Canvas javascript
 	canvasJsContent, _ := assets.TemplateFS.ReadFile("canvas.js")
 	os.WriteFile(filepath.Join(OutputDir, "canvas.js"), canvasJsContent, 0644)
 
-	// Static files - Graph javascript
+	extractFonts(theme.Font, OutputDir)
+
+	// Generate Graph JS with the correct BaseURL
 	graphJsOut, _ := os.Create(filepath.Join(OutputDir, "graph.js"))
 	defer graphJsOut.Close()
+
 	type GraphJsTemplate struct {
 		BaseURL string
 	}
 	tmplGraphJs.Execute(graphJsOut, GraphJsTemplate{BaseURL: baseURL})
-	// graphJsContent, _ := assets.TemplateFS.ReadFile("graph.js")
-	// os.WriteFile(filepath.Join(OutputDir, "graph.js"), graphJsContent, 0644)
 
-	// Static files - Graph JSON
+	// Generate Graph JSON data
 	graphJSON := map[string]any{
 		"nodes": graphNodes,
 		"links": resolver.Links,
@@ -187,7 +197,7 @@ func Build(themeName, fontName, baseURL, siteName string) {
 	jsonBytes, _ := json.Marshal(graphJSON)
 	os.WriteFile(filepath.Join(OutputDir, "graph.json"), jsonBytes, 0644)
 
-	// Generates graph page
+	// Render the dedicated Graph page
 	graphPage := GraphRenderer{
 		rootNode: rootNode,
 		minifier: minifier,

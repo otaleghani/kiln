@@ -4,13 +4,13 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"path" // Use 'path' for URLs, 'filepath' for OS files
-	"path/filepath"
+	"path"          // Used for URL path construction (forward slashes)
+	"path/filepath" // Used for OS file system operations
 	"sort"
 	"strings"
 )
 
-// Node represents a file or folder in the sidebar tree
+// Node represents a single item (file or folder) in the sidebar navigation tree.
 type Node struct {
 	Name     string
 	Path     string
@@ -19,23 +19,22 @@ type Node struct {
 	Children []*Node
 }
 
+// getRootNode initializes the navigation tree starting from the input directory.
+// It parses the BaseURL to ensure all node paths are prefixed correctly (e.g., "/kiln/foo").
 func getRootNode(dir string, fullURL string) *Node {
-	// Parse the Full URL to extract ONLY the path
-	// Input: "https://otaleghani.github.io/kiln" -> basePaths: "/kiln"
-	// Input: "http://localhost:8080"             -> basePaths: "/"
+	// Parse the Base URL to extract the path component.
+	// Input: "https://example.com/kiln" -> basePath: "/kiln"
+	// Input: "http://localhost:8080"    -> basePath: "/"
 	u, err := url.Parse(fullURL)
 	basePath := "/"
 	if err == nil {
 		basePath = u.Path
 	}
 
-	// Sanitize the Path (ensure it starts/ends correctly for joining)
-	// e.g. "/kiln" or "/"
+	// Normalize basePath to ensure it is clean for joining.
 	if !strings.HasPrefix(basePath, "/") {
 		basePath = "/" + basePath
 	}
-	// We trim the suffix here so path.Join doesn't get confused later,
-	// unless it's just root "/"
 	basePath = strings.TrimSuffix(basePath, "/")
 	if basePath == "" {
 		basePath = "/"
@@ -44,21 +43,29 @@ func getRootNode(dir string, fullURL string) *Node {
 	rootNode := &Node{
 		Name:     "Home",
 		IsFolder: true,
-		Path:     basePath, // Set the root path to "/kiln", not the full URL
+		Path:     basePath,
 	}
 
+	// 1. Construct the raw tree from the file system
 	buildTree(dir, rootNode)
+
+	// 2. Remove empty folders
 	rootNode.Children = pruneTree(rootNode.Children)
+
+	// 3. Sort folders first, then alphabetical
 	sortTree(rootNode.Children)
+
 	log.Println("File tree constructed, pruned, and sorted")
 
 	return rootNode
 }
 
-// buildTree recursively walks the directory to create the sidebar structure
+// buildTree recursively walks the directory structure to populate the Node tree.
+// It filters for .md and .canvas files and handles URL slug generation.
 func buildTree(dir string, parent *Node) {
 	entries, _ := os.ReadDir(dir)
 	for _, entry := range entries {
+		// Skip dotfiles (hidden files)
 		if strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
@@ -69,25 +76,26 @@ func buildTree(dir string, parent *Node) {
 		}
 
 		nameForSlug := node.Name
+
 		if !node.IsFolder {
 			ext := filepath.Ext(node.Name)
+			// Only include Markdown and Canvas files in the sidebar
 			if ext != ".md" && ext != ".canvas" {
 				continue
 			}
+			// Store display name without extension
 			nameForSlug = strings.TrimSuffix(node.Name, ext)
 			node.Name = nameForSlug
 		}
 
-		// URL GENERATION
-		// Handle Home/Index override
+		// URL Generation Logic
+		// If the file is named "Home" or "index", it adopts the parent's path.
 		if !node.IsFolder &&
 			(strings.EqualFold(nameForSlug, "Home") || strings.EqualFold(nameForSlug, "index")) {
-			// Inherit parent path (e.g. "/kiln/" or "/kiln/docs")
 			node.Path = parent.Path
 		} else {
-			// Standard Join
+			// Construct URL path: parent path + slugified name
 			currentSlug := slugify(nameForSlug)
-			// path.Join handles the slashes intelligently
 			node.Path = path.Join(parent.Path, currentSlug)
 		}
 
@@ -100,47 +108,41 @@ func buildTree(dir string, parent *Node) {
 	}
 }
 
-// pruneTree removes empty folders or folders that do not contain .md files or .canvas files
+// pruneTree removes folders that end up empty (containing no valid .md or .canvas files).
+// This is necessary because we might scan a folder that only contains images or unrelated files.
 func pruneTree(nodes []*Node) []*Node {
 	var kept []*Node
 	for _, n := range nodes {
 		if n.IsFolder {
+			// Recursively prune children first
 			n.Children = pruneTree(n.Children)
+			// Only keep the folder if it still has children
 			if len(n.Children) > 0 {
 				kept = append(kept, n)
 			}
 		} else {
-			// Use path.Ext for URL paths
-			ext := path.Ext(n.Path)
-			// If path is root or just base url, ext might be empty, which is fine for folders/root
-			if !n.IsFolder && ext == "" {
-				// If it's a file but has no extension in the Path (slugified), keep it
-				kept = append(kept, n)
-			} else {
-				// Original logic
-				// lowerExt := strings.ToLower(filepath.Ext(n.Name)) // Check extension of original Name, not Path
-				// Or if you only store extension-less names now, you might need to check IsFolder
-				// The original logic checked the Path extension, but our URLs don't have .md anymore!
-				// Correct Logic: Just keep all files that made it this far (since buildTree filters .md/.canvas)
-				kept = append(kept, n)
-			}
+			// Since buildTree already filters non-md/canvas files, we keep all leaf nodes.
+			kept = append(kept, n)
 		}
 	}
 	return kept
 }
 
-// sortTree recursively sorts nodes
+// sortTree sorts nodes in place: Folders top, then files, both alphabetically.
 func sortTree(nodes []*Node) {
 	sort.Slice(nodes, func(i, j int) bool {
+		// Prioritize Folders over Files
 		if nodes[i].IsFolder && !nodes[j].IsFolder {
 			return true
 		}
 		if !nodes[i].IsFolder && nodes[j].IsFolder {
 			return false
 		}
+		// Alphabetical sort for same types
 		return strings.ToLower(nodes[i].Name) < strings.ToLower(nodes[j].Name)
 	})
 
+	// Recursively sort children
 	for _, n := range nodes {
 		if n.IsFolder && len(n.Children) > 0 {
 			sortTree(n.Children)
@@ -148,9 +150,10 @@ func sortTree(nodes []*Node) {
 	}
 }
 
+// setTreeActive traverses the tree and marks the node matching currentPath as Active.
+// This is used by the template to highlight the current page in the sidebar.
 func setTreeActive(nodes []*Node, currentPath string) {
 	for _, n := range nodes {
-		// Ensure strict slash matching or clean paths
 		n.Active = (n.Path == currentPath)
 		if n.IsFolder {
 			setTreeActive(n.Children, currentPath)

@@ -5,6 +5,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// cmdInit represents the command to scaffold a new project structure.
+// It checks for the existence of a vault directory and creates a welcome note if one isn't found.
 var cmdInit = &cobra.Command{
 	Use:   "init",
 	Short: "Initializes a new Kiln project",
@@ -12,14 +14,19 @@ var cmdInit = &cobra.Command{
 }
 
 func init() {
+	// Register flags for the init command.
+	// Allows the user to specify a custom directory name for their new vault.
 	cmdInit.Flags().
 		StringVarP(&inputDir, "input", "i", "", "Name of the input directory (defaults to ./vault)")
 }
 
+// runInit executes the initialization logic.
 func runInit(cmd *cobra.Command, args []string) {
+	// If a custom input directory is provided via flags, update the global builder configuration.
 	if inputDir != "" {
 		builder.InputDir = inputDir
 	}
 
+	// Trigger the creation of the vault directory and default files.
 	builder.Init()
 }

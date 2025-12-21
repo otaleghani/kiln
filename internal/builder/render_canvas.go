@@ -13,19 +13,22 @@ import (
 	"github.com/yuin/goldmark"
 )
 
+// CanvasNoteRenderer handles the conversion of Obsidian .canvas files into HTML pages.
+// It parses the JSON structure, hydrates referenced Markdown/Images, and renders the layout.
 type CanvasNoteRenderer struct {
-	path           string             // Path of the file to render
-	relPath        string             // Relative path of the file
-	siteName       string             // The name of the website
-	nameWithoutExt string             // Name of the file without extention
-	template       *template.Template // Golang html template
-	renderer       goldmark.Markdown  // Markdown renderer
-	minifier       *minify.M          // Minifier
-	rootNode       *Node              // The root node of the vault
-	baseURL        string             // The base URL for links
-	theme          Theme
+	path           string             // Absolute path to source file
+	relPath        string             // Path relative to input directory
+	siteName       string             // Global site name
+	nameWithoutExt string             // Filename without extension (slug)
+	template       *template.Template // Main HTML layout
+	renderer       goldmark.Markdown  // Shared Markdown parser
+	minifier       *minify.M          // HTML minifier
+	rootNode       *Node              // Navigation tree root
+	baseURL        string             // Site Base URL
+	theme          Theme              // Visual theme settings
 }
 
+// CanvasNode represents a single element (card, file, group) within the Canvas JSON.
 type CanvasNode struct {
 	ID     string `json:"id"`
 	Type   string `json:"type"`
@@ -37,61 +40,71 @@ type CanvasNode struct {
 	Width  int    `json:"width"`
 	Height int    `json:"height"`
 	Color  string `json:"color,omitempty"`
-	// Injected by render function
-	HtmlContent string `json:"htmlContent,omitempty"`
-	IsImage     bool   `json:"isImage,omitempty"`
-	Src         string `json:"src,omitempty"`
-	URL         string `json:"url,omitempty"`
+
+	// Fields injected during build time for the frontend:
+	HtmlContent string `json:"htmlContent,omitempty"` // Rendered HTML for markdown files
+	IsImage     bool   `json:"isImage,omitempty"`     // Flag for image nodes
+	Src         string `json:"src,omitempty"`         // Web path for image source
+	URL         string `json:"url,omitempty"`         // Link URL
 }
 
+// CanvasData represents the top-level structure of an Obsidian Canvas file.
 type CanvasData struct {
 	Nodes []CanvasNode     `json:"nodes"`
 	Edges []map[string]any `json:"edges"`
 }
 
+// render processes the canvas file and writes the final HTML to disk.
+// It returns the web-accessible path of the generated page.
 func (c *CanvasNoteRenderer) render() string {
 	source, err := os.ReadFile(c.path)
 	if err != nil {
 		log.Printf("Failed to create canvas note. Error: %s", err.Error())
 	}
 
-	// Parse the Canvas JSON
+	// Parse the raw Canvas JSON
 	var canvasData CanvasData
 	if err := json.Unmarshal(source, &canvasData); err == nil {
-		// Iterate over nodes to hydrate them
+
+		// Hydrate nodes: Read linked files and inject content directly into the JSON
 		for i, node := range canvasData.Nodes {
 			if node.Type == "file" && node.File != "" {
+
 				// Resolve full path to the linked file
 				linkedFilePath := filepath.Join(InputDir, node.File)
 				linkedExt := strings.ToLower(filepath.Ext(linkedFilePath))
 
-				// Check if file exists
+				// Verify file exists before processing
 				if _, err := os.Stat(linkedFilePath); err == nil {
-					// Image handling
+
+					// Case 1: Handle Images
 					if isImageExt(linkedExt) {
 						canvasData.Nodes[i].IsImage = true
-						// Generate the public web path for the image
-						// Since the walker copies assets to outputDir structure, we replicate that path logic
+
+						// Generate web path (must match the logic used by the static asset copier)
 						relImgPath, _ := filepath.Rel(InputDir, linkedFilePath)
 						parts := strings.Split(relImgPath, string(os.PathSeparator))
 						for k, p := range parts {
 							parts[k] = slugify(p)
 						}
-						// Reconstruct as web path
+
+						// TODO: Check if c.baseURL path needs to be prepended here if site is not at root
 						canvasData.Nodes[i].Src = "/" + strings.Join(parts, "/")
+
+						// Case 2: Handle Markdown Notes
 					} else if linkedExt == ".md" {
-						// Markdown handling
 						noteContent, err := os.ReadFile(linkedFilePath)
 						if err == nil {
-							// Parse Markdown to HTML
+							// Render Markdown to HTML using the shared renderer
 							var buf bytes.Buffer
-							// Use existing MD parser context
 							if err := c.renderer.Convert(noteContent, &buf); err == nil {
 								htmlContent := buf.String()
-								// Apply Post-processing (Callouts, etc)
+
+								// Apply post-processing hooks
 								htmlContent = transformCallouts(htmlContent)
 								htmlContent = transformMermaid(htmlContent)
 								htmlContent = transformHighlights(htmlContent)
+
 								canvasData.Nodes[i].HtmlContent = htmlContent
 							}
 						}
@@ -99,17 +112,23 @@ func (c *CanvasNoteRenderer) render() string {
 				}
 			}
 		}
-		// Re-marshal the hydrated data back to JSON string
+
+		// Re-marshal the hydrated data to inject into the template
 		if hydratedJson, err := json.Marshal(canvasData); err == nil {
 			source = hydratedJson
 		}
 	}
 
+	// Prepare output paths and navigation
 	outPath, webPath := getOutputPaths(c.relPath, c.nameWithoutExt, ".canvas")
 	breadcrumbs := getBreadcrumbs(c.relPath, c.nameWithoutExt)
 	setTreeActive(c.rootNode.Children, webPath)
+
+	// Open output file
 	f, _ := os.Create(outPath)
 	defer f.Close()
+
+	// Wrap writer with minifier
 	mw := c.minifier.Writer("text/html", f)
 	defer mw.Close()
 
@@ -117,13 +136,14 @@ func (c *CanvasNoteRenderer) render() string {
 		Title:         c.nameWithoutExt,
 		BaseURL:       c.baseURL,
 		SiteName:      c.siteName,
-		CanvasContent: template.JS(string(source)),
+		CanvasContent: template.JS(string(source)), // Inject JSON as raw JS
 		Breadcrumbs:   breadcrumbs,
 		IsCanvas:      true,
 		IsGraph:       false,
 		Sidebar:       c.rootNode.Children,
 		Font:          c.theme.Font,
 	}
+
 	c.template.Execute(mw, data)
 	return webPath
 }

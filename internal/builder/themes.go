@@ -9,15 +9,19 @@ import (
 	"github.com/otaleghani/kiln/assets"
 )
 
+// ThemeColors defines the specific color palette for a UI state (Light or Dark).
+// It includes semantic colors (used for specific UI elements) and a generic palette.
 type ThemeColors struct {
-	Bg            string
-	Text          string
-	SidebarBg     string
-	SidebarBorder string
-	Accent        string
-	Hover         string
-	Comment       string
-	// Palette
+	// Semantic UI Colors
+	Bg            string // Main background color
+	Text          string // Main text color
+	SidebarBg     string // Background color for navigation sidebars
+	SidebarBorder string // Border color separating sidebar from content
+	Accent        string // Primary accent color for links and active states
+	Hover         string // Background color for hovered elements
+	Comment       string // Text color for code comments or secondary text
+
+	// Generic Palette (used for syntax highlighting or custom badges)
 	Red    string
 	Orange string
 	Yellow string
@@ -27,19 +31,23 @@ type ThemeColors struct {
 	Cyan   string
 }
 
+// Theme represents a complete visual style configuration.
+// It bundles color schemas for both Light and Dark modes, along with typography settings.
 type Theme struct {
 	Light ThemeColors
 	Dark  ThemeColors
 	Font  FontData
 }
 
+// FontData holds the metadata and CSS required to render a specific font family.
 type FontData struct {
-	Family   string
-	Files    []string
-	FontFace string
+	Family   string   // The CSS font-family string (e.g., "'Inter', sans-serif")
+	Files    []string // List of filenames (e.g., .woff2) that need to be extracted
+	FontFace string   // The raw CSS @font-face declaration to inject into the stylesheet
 }
 
-// Define the fonts map
+// fonts is a registry of available font configurations supported by the builder.
+// It maps a short string ID to the specific FontData.
 var fonts = map[string]FontData{
 	"inter": {
 		Family: "'Inter', sans-serif",
@@ -50,14 +58,14 @@ var fonts = map[string]FontData{
 				font-style: normal;
 				font-weight: 400;
 				font-display: swap;
-				src: url('./fonts/Inter-Regular.woff2') format('woff2');
+				src: url('./Inter-Regular.woff2') format('woff2');
 			}
 			@font-face {
 				font-family: 'Inter';
 				font-style: normal;
 				font-weight: 700;
 				font-display: swap;
-				src: url('./fonts/Inter-Bold.woff2') format('woff2');
+				src: url('./Inter-Bold.woff2') format('woff2');
 			}
 		`,
 	},
@@ -70,14 +78,14 @@ var fonts = map[string]FontData{
 				font-style: normal;
 				font-weight: 400;
 				font-display: swap;
-				src: url('./fonts/Lato-Regular.woff2') format('woff2');
+				src: url('./Lato-Regular.woff2') format('woff2');
 			}
 			@font-face {
 				font-family: 'Lato';
 				font-style: normal;
 				font-weight: 700;
 				font-display: swap;
-				src: url('./fonts/Lato-Bold.woff2') format('woff2');
+				src: url('./Lato-Bold.woff2') format('woff2');
 			}
 		`,
 	},
@@ -90,17 +98,18 @@ var fonts = map[string]FontData{
 				font-style: normal;
 				font-weight: 400;
 				font-display: swap;
-				src: url('./fonts/Merriweather-Regular.woff2') format('woff2');
+				src: url('./Merriweather-Regular.woff2') format('woff2');
 			}
 			@font-face {
 				font-family: 'Merriweather';
 				font-style: normal;
 				font-weight: 700;
 				font-display: swap;
-				src: url('./fonts/Merriweather-Bold.woff2') format('woff2');
+				src: url('./Merriweather-Bold.woff2') format('woff2');
 			}
 		`,
 	},
+	// System fonts rely on the OS font stack and require no external files.
 	"system": {
 		Family:   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 		Files:    []string{},
@@ -108,6 +117,7 @@ var fonts = map[string]FontData{
 	},
 }
 
+// themes is a registry of predefined color schemes.
 var themes = map[string]Theme{
 	"default": {
 		Light: ThemeColors{
@@ -151,6 +161,9 @@ var themes = map[string]Theme{
 	},
 }
 
+// resolveTheme looks up a theme by name.
+// If the theme is not found, it defaults to "default" and logs a warning.
+// It also resolves the associated font using resolveFont.
 func resolveTheme(themeName, fontName string) Theme {
 	theme, ok := themes[strings.ToLower(themeName)]
 	if !ok {
@@ -161,6 +174,8 @@ func resolveTheme(themeName, fontName string) Theme {
 	return theme
 }
 
+// resolveFont looks up font data by name.
+// If the font is not found, it defaults to "inter" and logs a warning.
 func resolveFont(name string) FontData {
 	font, ok := fonts[strings.ToLower(name)]
 	if !ok {
@@ -170,24 +185,27 @@ func resolveFont(name string) FontData {
 	return font
 }
 
-func extractFonts(data FontData) {
+// extractFonts writes the font files associated with the given FontData to disk.
+// It reads the files from the embedded assets filesystem and writes them to fontsDir.
+func extractFonts(data FontData, fontsDir string) {
+	// If the font has no associated files (e.g., System fonts), return immediately.
 	if len(data.Files) == 0 {
 		return
 	}
 
-	fontsDir := filepath.Join(OutputDir, "fonts")
+	// Ensure the target directory exists.
 	if err := os.MkdirAll(fontsDir, 0755); err != nil {
 		log.Printf("Failed to create fonts directory: %s\n", err.Error())
 	}
 
 	for _, fileName := range data.Files {
-		// Read from embedded FS
+		// Read the binary content from the embedded assets FS.
 		content, err := assets.TemplateFS.ReadFile(fileName)
 		if err != nil {
 			log.Printf("Failed to read embedded font %s: %s", fileName, err.Error())
 		}
 
-		// Write to disk
+		// Write the binary content to the user's filesystem.
 		destPath := filepath.Join(fontsDir, fileName)
 		if err := os.WriteFile(destPath, content, 0644); err != nil {
 			log.Printf("Failed to write font file %s: %s", fileName, err.Error())

@@ -8,14 +8,19 @@ import (
 	// "golang.org/x/text/cases"
 )
 
-// Contains logic for transforming specific tags
+// Contains logic for transforming specific markdown extensions into rich HTML components.
 
+// transformHighlights converts Obsidian-style highlight syntax (==text==)
+// into standard HTML <mark> tags.
 func transformHighlights(htmlStr string) string {
 	re := regexp.MustCompile(`==([^=]+)==`)
 	return re.ReplaceAllString(htmlStr, `<mark>$1</mark>`)
 }
 
+// transformMermaid locates code blocks designated as "mermaid" diagrams
+// and converts them into a container div suitable for client-side rendering (e.g., via mermaid.js).
 func transformMermaid(htmlStr string) string {
+	// Regex looks for: <pre><code class="language-mermaid"> ...content... </code></pre>
 	re := regexp.MustCompile(
 		`(?s)<pre[^>]*>\s*<code class="language-mermaid"[^>]*>(.*?)</code>\s*</pre>`,
 	)
@@ -25,18 +30,23 @@ func transformMermaid(htmlStr string) string {
 			return match
 		}
 		content := submatches[1]
-		// Store original content in data-original so we can re-render on theme change
+
+		// We store the original un-rendered Mermaid syntax in 'data-original'.
+		// This is crucial for themes that support dynamic re-rendering (e.g., switching between light/dark mode diagrams).
 		encoded := template.HTMLEscapeString(content)
 		return fmt.Sprintf(`<div class="mermaid" data-original="%s">%s</div>`, encoded, content)
 	})
 }
 
+// transformCallouts processes Obsidian-style "admonition" or "callout" blocks.
+// Syntax: > [!type]+/- Title
+// It supports collapsible sections (<details>) and static boxes (<div>).
 func transformCallouts(htmlStr string) string {
-	// Updated regex to capture:
-	// Group 1: Type (e.g., "faq")
-	// Group 2: Fold Modifier ("+" or "-" or empty)
-	// Group 3: Title (text remaining on the first line)
-	// Group 4: Body (everything after the title line until blockquote ends)
+	// Regex breakdown:
+	// Group 1: Type (e.g., "info", "warning") -> `\[!([\w-]+)\]`
+	// Group 2: Fold Modifier ("+" for open, "-" for closed, or empty) -> `([-+]?)`
+	// Group 3: Title (text remaining on the first line) -> `(.*?)`
+	// Group 4: Body (everything after the title line until blockquote ends) -> `(.*?)`
 	re := regexp.MustCompile(
 		`(?s)<blockquote[^>]*>\s*<p>\s*\[!([\w-]+)\]([-+]?)\s*(.*?)(?:</p>|<br\s*/?>|\n)(.*?)</blockquote>`,
 	)
@@ -52,30 +62,33 @@ func transformCallouts(htmlStr string) string {
 		cTitle := strings.TrimSpace(submatches[3])
 		cBody := strings.TrimSpace(submatches[4])
 
-		// Use title casing for the default title if none provided
+		// Fallback: Use the callout type as the title if no specific title is provided.
+		// e.g., > [!info] -> Title becomes "Info"
 		if cTitle == "" {
-			// cTitle = cases.Title(cType)
+			// Note: strings.Title is deprecated in favor of cases.Title, but used here for simplicity/legacy support.
 			cTitle = strings.Title(cType)
 		}
 
-		// Cleanup body: If the regex split at a <br>, the closing </p> might still be in the body.
-		// We ensure the body is reasonably wrapped or clean.
+		// HTML Cleanup:
+		// Because the regex splits the content at the first newline/<br>, we might break the surrounding <p> tags.
+		// This check ensures the body starts with a <p> if it ends with </p> but lost its opener.
 		if strings.HasSuffix(cBody, "</p>") && !strings.HasPrefix(cBody, "<p>") {
-			// Prepend a p tag if we cut off the opening one via the regex split on <br>
 			cBody = "<p>" + cBody
 		}
 
 		iconName := getCalloutIcon(cType)
 
-		// Determine collapsible state
-		// Obsidian: "-" means collapsed by default. "+" means open.
-		// If neither, usually it's just a block, but we can treat it as open <details> for consistency.
+		// Determine collapsible state based on modifiers:
+		// "-" : Collapsed by default
+		// "+" : Expanded by default
+		// ""  : Static block (or expanded details depending on styling preference)
 		isCollapsible := foldParams == "-" || foldParams == "+"
-		isOpen := foldParams != "-" // Open by default unless explicitly "-"
+		isOpen := foldParams != "-" // Open unless explicitly set to collapsed ("-")
 
 		var sb strings.Builder
 
-		// We use HTML5 <details> for native collapse behavior
+		// Construct the container.
+		// We use HTML5 <details> for native collapse behavior if modifiers are present.
 		if isCollapsible {
 			sb.WriteString(`<details class="callout" data-callout="` + cType + `"`)
 			if isOpen {
@@ -88,11 +101,11 @@ func transformCallouts(htmlStr string) string {
 			sb.WriteString(`<div class="callout-title">`)
 		}
 
-		// Title Content
+		// Render Title with Icon
 		sb.WriteString(`<div class="callout-icon"><i data-lucide="` + iconName + `"></i></div>`)
 		sb.WriteString(`<div class="callout-title-inner">` + cTitle + `</div>`)
 
-		// Add fold icon if collapsible (optional visual indicator)
+		// Add a chevron icon if the element is collapsible
 		if isCollapsible {
 			sb.WriteString(
 				`<div class="callout-fold-icon"><i data-lucide="chevron-down"></i></div>`,
@@ -102,11 +115,12 @@ func transformCallouts(htmlStr string) string {
 			sb.WriteString(`</div>`)
 		}
 
-		// Body Content
+		// Render Body Content
 		sb.WriteString(`<div class="callout-content">`)
 		sb.WriteString(cBody)
 		sb.WriteString(`</div>`)
 
+		// Close tags
 		if isCollapsible {
 			sb.WriteString(`</details>`)
 		} else {
@@ -117,6 +131,8 @@ func transformCallouts(htmlStr string) string {
 	})
 }
 
+// getCalloutIcon maps a callout type string (e.g., "info", "bug") to a corresponding Lucide icon name.
+// It supports various aliases common in markdown ecosystems.
 func getCalloutIcon(cType string) string {
 	switch cType {
 	case "abstract", "summary", "tldr":

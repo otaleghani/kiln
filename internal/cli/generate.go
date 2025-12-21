@@ -5,13 +5,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var themeName string
-var fontName string
-var baseURL string
-var siteName string
-var inputDir string
-var outputDir string
-
+// cmdGenerate represents the primary build command.
+// It triggers the static site generation process, converting Markdown to HTML.
 var cmdGenerate = &cobra.Command{
 	Use:   "generate",
 	Short: "Builds the static site from your vault",
@@ -19,6 +14,8 @@ var cmdGenerate = &cobra.Command{
 }
 
 func init() {
+	// Register flags to allow users to customize the build without changing code.
+	// We support short flags (e.g., -t) and long flags (e.g., --theme).
 	cmdGenerate.Flags().
 		StringVarP(&themeName, "theme", "t", "default", "Color theme (default, dracula, catppuccin, nord)")
 	cmdGenerate.Flags().
@@ -33,7 +30,10 @@ func init() {
 		StringVarP(&outputDir, "output", "o", "", "Name of the output directory (defaults to ./public)")
 }
 
+// runGenerate executes the build logic.
 func runGenerate(cmd *cobra.Command, args []string) {
+	// 1. Apply overrides
+	// If the user specified custom directories via flags, update the builder configuration.
 	if outputDir != "" {
 		builder.OutputDir = outputDir
 	}
@@ -41,5 +41,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		builder.InputDir = inputDir
 	}
 
+	// 2. Trigger the build
+	// Pass the cosmetic and metadata configurations to the builder.
 	builder.Build(themeName, fontName, baseURL, siteName)
 }

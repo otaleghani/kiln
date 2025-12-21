@@ -19,109 +19,29 @@ import (
 	"go.abhg.dev/goldmark/wikilink"
 )
 
-//
-// type GraphLink struct {
-// 	Source string `json:"source"`
-// 	Target string `json:"target"`
-// }
-//
-// type IndexResolver struct {
-// 	Index         map[string]string
-// 	Links         []GraphLink
-// 	CurrentSource string
-// }
-//
-// // ResolveWikilink is an helper function to resolve the different kinds of wikilinks in obsidian
-// func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
-// 	dest := string(n.Target)
-// 	dest = strings.TrimSpace(dest)
-// 	if len(n.Fragment) > 0 {
-// 		dest += "#" + string(n.Fragment)
-// 	}
-// 	anchor := ""
-// 	if idx := strings.Index(dest, "#"); idx != -1 {
-// 		anchor = dest[idx:]
-// 		dest = dest[:idx]
-// 	}
-//
-// 	// Graph Linking Logic
-// 	cleanDest := dest
-// 	ext := filepath.Ext(cleanDest)
-// 	if ext == ".md" || ext == ".canvas" {
-// 		cleanDest = strings.TrimSuffix(cleanDest, ext)
-// 	}
-//
-// 	// Record the link for the graph
-// 	if r.CurrentSource != "" && cleanDest != "" {
-// 		// Only record if we aren't linking to self
-// 		if !strings.EqualFold(r.CurrentSource, cleanDest) {
-// 			r.Links = append(r.Links, GraphLink{
-// 				Source: r.CurrentSource,
-// 				Target: cleanDest,
-// 			})
-// 		}
-// 	}
-//
-// 	if dest == "" {
-// 		return []byte(anchor), nil
-// 	}
-//
-// 	if link, ok := r.Index[cleanDest]; ok {
-// 		return []byte(link + anchor), nil
-// 	}
-// 	return []byte("/" + slugify(dest) + anchor), nil
-// }
-//
-// // newMarkdownParser creates a new markdown and index resolver
-// func newMarkdownParser(fileIndex map[string]string) (goldmark.Markdown, *IndexResolver) {
-// 	resolver := &IndexResolver{
-// 		Index: fileIndex,
-// 		Links: []GraphLink{}, // Initialize empty links
-// 	}
-//
-// 	md := goldmark.New(
-// 		goldmark.WithExtensions(
-// 			extension.GFM,
-// 			meta.Meta,
-// 			&wikilink.Extender{Resolver: resolver},
-// 			highlighting.NewHighlighting(
-// 				highlighting.WithFormatOptions(
-// 					chromaHTML.WithClasses(true),
-// 				),
-// 			),
-// 			mathjax.NewMathJax(
-// 				mathjax.WithInlineDelim("$", "$"),
-// 				mathjax.WithBlockDelim("$$", "$$"),
-// 			),
-// 		),
-// 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
-// 		goldmark.WithRendererOptions(
-// 			htmlRenderer.WithUnsafe(),
-// 			htmlRenderer.WithHardWraps(),
-// 		),
-// 	)
-//
-// 	return md, resolver
-// }
-
+// GraphLink represents a directed edge in the note graph.
 type GraphLink struct {
 	Source string `json:"source"`
 	Target string `json:"target"`
 }
 
-// IndexResolver handles Wikilinks, Standard Links, and Graph tracking
+// IndexResolver handles link resolution and graph tracking.
+// It intercepts both Wikilinks ([[...]]) and standard Markdown links to ensure
+// they point to the correct URL, respecting the site's BasePath.
 type IndexResolver struct {
 	Index         map[string]string
 	Links         []GraphLink
 	CurrentSource string
-	BasePath      string // The path prefix (e.g., "/kiln")
+	BasePath      string
 }
 
-// --- 1. WIKILINK RESOLVER (Implements wikilink.Resolver) ---
-
+// ResolveWikilink implements wikilink.Resolver.
+// It maps Obsidian-style [[links]] to their final HTML paths and records the relationship.
 func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 	dest := string(n.Target)
 	dest = strings.TrimSpace(dest)
+
+	// Handle anchors (e.g., [[Page#Section]])
 	if len(n.Fragment) > 0 {
 		dest += "#" + string(n.Fragment)
 	}
@@ -137,36 +57,32 @@ func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 		cleanDest = strings.TrimSuffix(cleanDest, ext)
 	}
 
-	// Track this link for the Graph
+	// Track this connection for the graph view
 	r.recordLink(cleanDest)
 
 	if dest == "" {
 		return []byte(anchor), nil
 	}
 
-	// Check the File Index first
+	// Check if the file exists in our pre-calculated index
 	if link, ok := r.Index[cleanDest]; ok {
-		// If index has a full path, ensure it respects BasePath if it's relative?
-		// Usually index stores the slug. Let's prepend BasePath safely.
 		finalLink := path.Join(r.BasePath, link)
 		return []byte(finalLink + anchor), nil
 	}
 
-	// Fallback: construct slugified path
-	// OLD: return []byte("/" + slugify(dest) + anchor), nil
-	// NEW: Join with BasePath
+	// Fallback: assume the slug matches the destination
 	finalPath := path.Join(r.BasePath, slugify(dest))
 	return []byte(finalPath + anchor), nil
 }
 
-// --- 2. STANDARD NODE RENDERER (Implements renderer.NodeRenderer) ---
-// This intercepts [Link](/foo) and ![Image](/foo.png)
-
+// RegisterFuncs registers custom renderers for standard links and images.
+// This allows us to intercept [text](url) and ![alt](url) to fix paths.
 func (r *IndexResolver) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(ast.KindLink, r.renderLink)
 	reg.Register(ast.KindImage, r.renderImage)
 }
 
+// renderLink writes the HTML for standard markdown links.
 func (r *IndexResolver) renderLink(
 	w util.BufWriter,
 	source []byte,
@@ -175,11 +91,7 @@ func (r *IndexResolver) renderLink(
 ) (ast.WalkStatus, error) {
 	n := node.(*ast.Link)
 	if entering {
-		// Resolve path using BaseURL logic
 		newDest := r.resolvePath(string(n.Destination))
-
-		// Optional: Track standard links in graph too?
-		// If yes: r.recordLink(cleanPath(string(n.Destination)))
 
 		w.WriteString("<a href=\"")
 		w.WriteString(newDest)
@@ -196,6 +108,7 @@ func (r *IndexResolver) renderLink(
 	return ast.WalkContinue, nil
 }
 
+// renderImage writes the HTML for standard markdown images.
 func (r *IndexResolver) renderImage(
 	w util.BufWriter,
 	source []byte,
@@ -221,19 +134,17 @@ func (r *IndexResolver) renderImage(
 	return ast.WalkSkipChildren, nil
 }
 
-// --- 3. HELPER FUNCTIONS ---
-
-// resolvePath prepends BasePath to absolute links (starting with /)
+// resolvePath ensures internal links respect the site's BasePath.
+// It leaves external links, mailto, and anchors untouched.
 func (r *IndexResolver) resolvePath(dest string) string {
 	if strings.Contains(dest, "://") || strings.HasPrefix(dest, "mailto:") ||
 		strings.HasPrefix(dest, "#") {
 		return dest
 	}
 
-	// If it starts with /, it's absolute to the site root. Prepend BasePath.
+	// If it's an absolute path to the site root, prepend BasePath.
+	// e.g. /style.css -> /kiln/style.css
 	if strings.HasPrefix(dest, "/") {
-		// Prevent double-prefixing if BasePath is already there
-		// e.g. BasePath=/kiln, dest=/kiln/style.css
 		if r.BasePath != "/" && strings.HasPrefix(dest, r.BasePath+"/") {
 			return dest
 		}
@@ -243,7 +154,7 @@ func (r *IndexResolver) resolvePath(dest string) string {
 	return dest
 }
 
-// recordLink centralized logic for graph recording
+// recordLink adds a directed edge to the graph if the source and target differ.
 func (r *IndexResolver) recordLink(target string) {
 	if r.CurrentSource != "" && target != "" {
 		if !strings.EqualFold(r.CurrentSource, target) {
@@ -255,13 +166,13 @@ func (r *IndexResolver) recordLink(target string) {
 	}
 }
 
-// Updated signature: accepts basePath
+// newMarkdownParser creates a Goldmark instance configured for Obsidian compatibility.
+// It enables GFM, MathJax, syntax highlighting, and custom link resolution.
 func newMarkdownParser(
 	fileIndex map[string]string,
 	basePath string,
 ) (goldmark.Markdown, *IndexResolver) {
 
-	// Ensure BasePath is clean for usage (not empty)
 	if basePath == "" {
 		basePath = "/"
 	}
@@ -269,7 +180,7 @@ func newMarkdownParser(
 	resolver := &IndexResolver{
 		Index:    fileIndex,
 		Links:    []GraphLink{},
-		BasePath: basePath, // Set the path prefix
+		BasePath: basePath,
 	}
 
 	md := goldmark.New(
@@ -293,7 +204,7 @@ func newMarkdownParser(
 			htmlRenderer.WithHardWraps(),
 			// Hook 2: Standard Links & Images
 			renderer.WithNodeRenderers(
-				util.Prioritized(resolver, 1000), // High priority to override default HTML renderer
+				util.Prioritized(resolver, 1000),
 			),
 		),
 	)

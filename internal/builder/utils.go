@@ -11,21 +11,24 @@ import (
 	"time"
 )
 
+// Init checks if the input directory (vault) exists.
+// If not, it creates the directory and a default "Home.md" welcome note.
 func Init() {
 	if _, err := os.Stat(InputDir); os.IsNotExist(err) {
 		os.Mkdir(InputDir, 0755)
 		log.Println("Created vault directory.")
 
-		// Create a welcome note
+		// Create a welcome note to get the user started
 		welcomeText := "# Welcome to Kiln\n\nThis is your new vault. Run `kiln generate` to build it!"
 		os.WriteFile(filepath.Join(InputDir, "Home.md"), []byte(welcomeText), 0644)
 	} else {
 		log.Println("Vault directory already exists.")
 	}
 	log.Println("Initialization complete.")
-
 }
 
+// CleanOutDir removes the entire output directory to ensure a clean build.
+// This prevents stale files from persisting in the generated site.
 func CleanOutDir() {
 	err := os.RemoveAll(OutputDir)
 	if err != nil {
@@ -35,13 +38,16 @@ func CleanOutDir() {
 	}
 }
 
-// initBuild clears the output directory, copies over specific files and returns the file index and graph nodes
+// initBuild prepares the environment for a new build.
+// It cleans the output directory, copies global assets (favicon, CNAME),
+// and traverses the input directory to build a file index and a graph of nodes.
 func initBuild() (map[string]string, []GraphNode) {
-	// Remove output directory
+	// 1. Reset output state
 	CleanOutDir()
 	os.MkdirAll(OutputDir, 0755)
 
-	// Copy over favicon.ico if it exists
+	// 2. Copy Global Assets
+	// Copy over favicon.ico if it exists in the root
 	faviconSrc := filepath.Join(InputDir, "favicon.ico")
 	if _, err := os.Stat(faviconSrc); err == nil {
 		if err := copyFile(faviconSrc, filepath.Join(OutputDir, "favicon.ico")); err != nil {
@@ -51,7 +57,7 @@ func initBuild() (map[string]string, []GraphNode) {
 		}
 	}
 
-	// Copy over CNAME file if it exists
+	// Copy over CNAME file (for custom domains on GitHub Pages/Netlify) if it exists
 	cnameSrc := filepath.Join(InputDir, "CNAME")
 	if _, err := os.Stat(cnameSrc); err == nil {
 		if err := copyFile(cnameSrc, filepath.Join(OutputDir, "CNAME")); err != nil {
@@ -61,11 +67,12 @@ func initBuild() (map[string]string, []GraphNode) {
 		}
 	}
 
-	// Creates file index and file nodes by traversing the input directory
+	// 3. Index Content
+	// Creates file index (name -> url) and file nodes (for the graph view)
 	fileIndex := make(map[string]string)
 	graphNodes := []GraphNode{}
 
-	// Map to ensure unique nodes
+	// Map to track unique nodes and avoid duplicates in the graph
 	nodeSet := make(map[string]bool)
 
 	filepath.WalkDir(InputDir, func(path string, d fs.DirEntry, err error) error {
@@ -74,6 +81,7 @@ func initBuild() (map[string]string, []GraphNode) {
 		}
 
 		// Skip hidden files and folders (e.g. .obsidian, .trash, .git)
+		// We check if the name starts with "." but ensure we aren't skipping the root directory itself.
 		if strings.HasPrefix(d.Name(), ".") && path != InputDir {
 			if d.IsDir() {
 				return filepath.SkipDir
@@ -81,6 +89,7 @@ func initBuild() (map[string]string, []GraphNode) {
 			return nil
 		}
 
+		// We only process files in this pass, not directories
 		if d.IsDir() {
 			return nil
 		}
@@ -88,40 +97,46 @@ func initBuild() (map[string]string, []GraphNode) {
 		ext := filepath.Ext(path)
 		relPath, _ := filepath.Rel(InputDir, path)
 
-		// Replicate Step 8 logic for consistent URL generation
+		// Normalize paths for URLs (slugify every component of the path)
 		parts := strings.Split(relPath, string(os.PathSeparator))
 		for i, p := range parts {
 			parts[i] = slugify(p)
 		}
-		// slugPath here might contain the extension in the last part (e.g. "note-md")
+
+		// Join parts back together. Note: slugPath currently includes the extension (e.g., "my-note-md")
 		slugPath := filepath.Join(parts...)
 		webPath := "/" + strings.ReplaceAll(slugPath, string(os.PathSeparator), "/")
 
 		key := d.Name()
+
+		// Handle Content Files (Markdown and Canvas)
 		if ext == ".md" || ext == ".canvas" {
 			key = strings.TrimSuffix(key, ext)
 
-			// Fix: Strip extension from URL for content files
-			// We remove the slugified extension from the end of the slugPath
+			// Remove the extension from the web path to create clean URLs
+			// e.g., "notes/my-note-md" -> "notes/my-note"
 			slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
 			webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
 
+			// Special handling for index/Home notes to map them to the root URL "/"
 			if strings.EqualFold(key, "Home") || strings.EqualFold(key, "index") {
 				webPath = "/"
 			}
 
-			// Add to Graph Nodes
+			// Add to Graph Nodes list
 			if !nodeSet[key] {
 				graphNodes = append(graphNodes, GraphNode{
 					ID:    key,
 					Label: key,
 					URL:   webPath,
-					Val:   1, // Default weight
+					Val:   1, // Default weight for visualization
 				})
 				nodeSet[key] = true
 			}
 		}
 
+		// Register the file in the global index (filename -> public URL)
+		// This is used later for resolving [[WikiLinks]].
 		if _, exists := fileIndex[key]; !exists {
 			fileIndex[key] = webPath
 		}
@@ -131,7 +146,7 @@ func initBuild() (map[string]string, []GraphNode) {
 	return fileIndex, graphNodes
 }
 
-// copyFile is a simple wrapper to copy files
+// copyFile is a simple wrapper to copy files from src to dst.
 func copyFile(src, dst string) error {
 	source, err := os.Open(src)
 	if err != nil {
@@ -149,15 +164,16 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-// slugify converts a string to a URL-friendly format:
-// "My Note" -> "my-note"
+// slugify converts a string to a URL-friendly format.
+// It lowercases the string and replaces spaces with dashes.
+// Example: "My Note" -> "my-note"
 func slugify(s string) string {
 	s = strings.ToLower(s)
 	s = strings.ReplaceAll(s, " ", "-")
 	return s
 }
 
-// isImageExt tells you if the given extension is an image or not
+// isImageExt checks if the given file extension corresponds to a supported image format.
 func isImageExt(ext string) bool {
 	switch strings.ToLower(ext) {
 	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg":
@@ -167,44 +183,67 @@ func isImageExt(ext string) bool {
 	}
 }
 
-// Based on the relative path returns the slugify version of it
+// getSlugPath converts a relative file path into a slugified path string.
+// It iterates through every directory in the path and slugifies it.
 func getSlugPath(relPath string) string {
-	// Determine output path
 	parts := strings.Split(relPath, string(os.PathSeparator))
 	for i, p := range parts {
 		parts[i] = slugify(p)
 	}
 	slugPath := filepath.Join(parts...)
-
 	return slugPath
 }
 
-// Given the name of the file, the extension and the relative path, returns the output path and the web path
+// getOutputPaths determines the filesystem output location and the public web URL for a file.
+// It handles "Pretty URLs" by creating index.html files inside named directories.
+// Returns:
+// - outPath: where to write the file on disk (e.g., ./public/notes/my-note/index.html)
+// - webPath: the URL path (e.g., /notes/my-note/)
 func getOutputPaths(relPath, nameWithoutExt, ext string) (outPath string, webPath string) {
 	slugPath := getSlugPath(relPath)
 
+	// Case 1: Root files (Home or index) -> ./public/index.html
 	if strings.EqualFold(nameWithoutExt, "Home") ||
 		strings.EqualFold(nameWithoutExt, "index") {
 		outPath = filepath.Join(OutputDir, "index.html")
 		webPath = "/"
 	} else {
-		slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
-		outPath = filepath.Join(OutputDir, slugFolder, "index.html")
-		webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
+		// DEPRECATED: Regular files -> ./public/folder/note-name/index.html
+		// slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
+		// outPath = filepath.Join(OutputDir, slugFolder, "index.html")
+		// webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
+
+		// Case 2: Regular files -> ./public/folder/note-name.html
+		// Remove the extension from the slug (e.g. "my-note-md" -> "my-note")
+		slugName := strings.TrimSuffix(slugPath, slugify(ext))
+
+		// Change 1: Create the file directly with .html extension
+		outPath = filepath.Join(OutputDir, slugName+".html")
+
+		// Change 2 (Optional): Do you want the URL to look like "/note.html" or just "/note"?
+		// If you want clean URLs (server hides .html), keep it as is.
+		// If you want explicit URLs, append ".html".
+		webPath = "/" + strings.ReplaceAll(slugName, string(os.PathSeparator), "/")
 	}
 
+	// Ensure the parent directory exists before returning
 	os.MkdirAll(filepath.Dir(outPath), 0755)
 	return
 }
 
-// Returns the breadcrumbs for the given note
+// getBreadcrumbs constructs a list of navigation steps for the current page.
+// It walks up the directory tree from the current file location.
 func getBreadcrumbs(relPath, nameWithoutExt string) []string {
 	var breadcrumbs []string
 	breadcrumbs = append(breadcrumbs, "Home")
+
+	// Add intermediate directories
 	dir := filepath.Dir(relPath)
 	if dir != "." && dir != "" {
 		breadcrumbs = append(breadcrumbs, strings.Split(dir, string(os.PathSeparator))...)
 	}
+
+	// Add current page (unless it is the home page itself)
 	if !strings.EqualFold(nameWithoutExt, "index") &&
 		!strings.EqualFold(nameWithoutExt, "Home") {
 		breadcrumbs = append(breadcrumbs, nameWithoutExt)
@@ -212,12 +251,15 @@ func getBreadcrumbs(relPath, nameWithoutExt string) []string {
 	return breadcrumbs
 }
 
+// SitemapEntry represents a single URL entry in the sitemap.xml.
 type SitemapEntry struct {
 	XMLName xml.Name `xml:"url"`
-	Loc     string   `xml:"loc"`
-	LastMod string   `xml:"lastmod"`
+	Loc     string   `xml:"loc"`     // The absolute URL
+	LastMod string   `xml:"lastmod"` // The last modification date
 }
 
+// addToSitemap appends a new entry to the sitemap slice.
+// It retrieves the file's modification time to populate 'lastmod'.
 func addToSitemap(d fs.DirEntry, baseURL, webPath string, sitemapEntries *[]SitemapEntry) {
 	info, err := d.Info()
 	modTime := time.Now()
@@ -230,9 +272,10 @@ func addToSitemap(d fs.DirEntry, baseURL, webPath string, sitemapEntries *[]Site
 		Loc:     fullURL,
 		LastMod: modTime.Format("2006-01-02"),
 	})
-
 }
 
+// generateRobots creates a robots.txt file in the output directory.
+// It points crawlers to the Sitemap location.
 func generateRobots(baseURL string) {
 	robotsFile, _ := os.Create(filepath.Join(OutputDir, "robots.txt"))
 	defer robotsFile.Close()
@@ -241,6 +284,8 @@ func generateRobots(baseURL string) {
 	robotsFile.WriteString("Sitemap: " + strings.TrimRight(baseURL, "/") + "/sitemap.xml\n")
 }
 
+// generateSitemap marshals the list of sitemap entries into XML format
+// and writes it to sitemap.xml in the output directory.
 func generateSitemap(sitemapEntries []SitemapEntry) {
 	sitemapFile, _ := os.Create(filepath.Join(OutputDir, "sitemap.xml"))
 	defer sitemapFile.Close()
@@ -256,5 +301,4 @@ func generateSitemap(sitemapEntries []SitemapEntry) {
 	sitemapFile.WriteString(`</urlset>`)
 
 	log.Println("Generated sitemap.xml and robots.txt")
-
 }
