@@ -2,7 +2,6 @@
 title: Roadmap
 description: Explore the future of Kiln. A list of upcoming features, planned fixes, and long-term goals for the project.
 ---
-
 # Roadmap
 
 Kiln is an evolving project. Below is the current plan for upcoming features and improvements.
@@ -16,7 +15,9 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 - [ ] **UI Polish:** Fix hover colors and table of contents styling (borders/colors).
 - [ ] **Mobile Experience:** Ensure sidebars auto-close correctly on small screens.
 - [ ] **CLI Integrity:** Fix the `doctor` command (currently unstable).
-- [ ] **URL generation**: Fix URLs generation when `.md` wikilinks that do not have the same case as the page name
+- [ ] **URL generation**: Fix URLs generation when `.md` wikilinks that do not have the same case as the page name.
+- [ ] **Heading Links**: Fix the anchor links `something#features` (the [[Table of Contents]] creates slugified ids, but the rendered links are not).
+- [ ] **Local Graph Links**: Fix the navigation in the local graph because it does not update the history correctly.
 
 ## Core Features
 *Major functionality upgrades.*
@@ -53,3 +54,4 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 - [ ] **Social Cards:** Auto-generated Open Graph images for social sharing.
 - [ ] **Custom 404:** Support for a user-defined `404.md`.
 - [ ] **Layouts:** Support for alternative page layouts (e.g., full-width, landing page).
+- [ ] **Custom layouts**: Create custom layouts for specific folders.
