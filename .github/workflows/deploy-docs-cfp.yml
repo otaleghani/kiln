@@ -2,9 +2,18 @@ name: Deploy Release to Cloudflare Pages
 
 # This workflow runs ONLY when you publish a new Release in GitHub.
 # It ignores normal pushes to main.
+# on:
+#   release:
+#     types: [published]
 on:
-  release:
-    types: [published]
+  push:
+    branches: ["main"]
+    paths:
+      - 'docs/**'
+      - '**.go'
+      - 'assets/**'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
