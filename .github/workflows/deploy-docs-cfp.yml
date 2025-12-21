@@ -55,6 +55,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: kiln-documentation
+          projectName: kiln-docs
           directory: public
           commitMessage: "Deploying Release ${{ github.event.release.tag_name }}"
