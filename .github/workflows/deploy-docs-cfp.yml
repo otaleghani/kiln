@@ -26,16 +26,20 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: Download Kiln Binary
+      - name: Download Latest Kiln Binary
         run: |
-          TAG=${{ github.event.release.tag_name }}
-          URL="https://github.com/otaleghani/kiln/releases/download/${TAG}/kiln_linux_amd64"
-          echo "Downloading Kiln version ${TAG} from ${URL}..."
+          LATEST_TAG=$(curl -s https://api.github.com/repos/otaleghani/kiln/releases/latest | jq -r .tag_name)
+          if [ "$LATEST_TAG" == "null" ]; then
+            echo "Error: Could not find a latest release."
+            exit 1
+          fi
+          echo "Detected latest Kiln version: $LATEST_TAG"
+          URL="https://github.com/otaleghani/kiln/releases/download/${LATEST_TAG}/kiln_linux_amd64"
+          echo "Downloading from $URL..."
           sudo curl -L -o /usr/local/bin/kiln $URL
           sudo chmod +x /usr/local/bin/kiln
           kiln --help
 
-      # Build site
       - name: Build Site
         run: |
           echo "Building release ${{ github.event.release.tag_name }}"
