@@ -1,6 +1,7 @@
 #!/bin/bash
 
 INPUT_DIR="./docs"
+DEPLOYMENT_URL="https://kiln.talesign.com"
 
 # Exit immediately if any command fails
 set -e
@@ -31,7 +32,7 @@ echo "Building site..."
   --input "$INPUT_DIR" \
   --output ./public \
   --flat-urls=true \
-  --url "$CF_PAGES_URL"
+  --url "$DEPLOYMENT_URL"
 
 # Note: CF_PAGES_URL is a magic variable provided automatically by Cloudflare
 
