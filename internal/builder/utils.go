@@ -208,22 +208,15 @@ func getOutputPaths(relPath, nameWithoutExt, ext string) (outPath string, webPat
 		outPath = filepath.Join(OutputDir, "index.html")
 		webPath = "/"
 	} else {
-		// DEPRECATED: Regular files -> ./public/folder/note-name/index.html
-		// slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
-		// outPath = filepath.Join(OutputDir, slugFolder, "index.html")
-		// webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
+		// Regular files -> ./public/folder/note-name/index.html
+		slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
+		outPath = filepath.Join(OutputDir, slugFolder, "index.html")
+		webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
 
-		// Case 2: Regular files -> ./public/folder/note-name.html
-		// Remove the extension from the slug (e.g. "my-note-md" -> "my-note")
-		slugName := strings.TrimSuffix(slugPath, slugify(ext))
-
-		// Change 1: Create the file directly with .html extension
-		outPath = filepath.Join(OutputDir, slugName+".html")
-
-		// Change 2 (Optional): Do you want the URL to look like "/note.html" or just "/note"?
-		// If you want clean URLs (server hides .html), keep it as is.
-		// If you want explicit URLs, append ".html".
-		webPath = "/" + strings.ReplaceAll(slugName, string(os.PathSeparator), "/")
+		// Regular files -> ./public/folder/note-name.html
+		// slugName := strings.TrimSuffix(slugPath, slugify(ext))
+		// outPath = filepath.Join(OutputDir, slugName+".html")
+		// webPath = "/" + strings.ReplaceAll(slugName, string(os.PathSeparator), "/")
 	}
 
 	// Ensure the parent directory exists before returning
