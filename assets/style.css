@@ -698,6 +698,7 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
 @media (max-width: 768px) {
     /* General Mobile Sidebar */
     .sidebar {
+        display: none;
         position: absolute;
         height: 100%;
         width: 100%; /* Force full width on mobile */
@@ -713,8 +714,9 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
         left: 0;
     }
     .sidebar.left-sidebar.collapsed {
-        transform: translateX(-100%);
-        margin-left: 0;
+        display: flex !important;
+        /* transform: translateX(-100%); */
+        /* margin-left: 0; */
     }
 
     /* Right Sidebar Mobile */
@@ -724,8 +726,9 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
         margin-right: 0;
     }
     .sidebar.right-sidebar.collapsed {
-        transform: translateX(100%);
-        margin-right: 0;
+        display: flex !important;
+        /* transform: translateX(100%); */
+        /* margin-right: 0; */
     }
 
     .content-wrapper { padding-top: 3.5rem; padding-left: 2rem; padding-right: 2rem; }
