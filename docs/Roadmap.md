@@ -18,7 +18,7 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 - [x] **URL generation**: Fix URLs generation when `.md` wikilinks that do not have the same case as the page name.
 - [x] **Heading Links**: Fix the anchor links `something#features` (the [[Table of Contents]] creates slugified ids, but the rendered links are not).
 - [x] **Local Graph Links**: Fix the navigation in the local graph because it does not update the history correctly.
-- [ ] **Cloudflare Pages**: Add the documentation for Cloudflare Pages deployment.
+- [x] **Cloudflare Pages**: Add the documentation for Cloudflare Pages deployment.
 
 ## Core Features
 *Major functionality upgrades.*

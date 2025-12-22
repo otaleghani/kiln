@@ -2,7 +2,6 @@
 title: Deploy on GitHub Pages
 description: A step-by-step guide to automatically building and hosting your Kiln site using GitHub Actions.
 ---
-
 # Deploy on GitHub Pages
 
 The most robust way to deploy Kiln is using **GitHub Actions**. This method allows you to keep your repository clean (just your notes) and have GitHub's servers automatically download Kiln, build your site, and publish it whenever you push changes.
