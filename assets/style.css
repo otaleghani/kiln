@@ -257,7 +257,8 @@ body {
 }
 
 .sidebar ul li a:hover {
-    color: var(--hover-color);
+    color: var(--text-color);
+    opacity: 0.5;
 }
 
 .sidebar ul li a.active {
@@ -652,15 +653,14 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
 .toc a {
     text-decoration: none;
     color: var(--accent-color);
-    opacity: 0.85;
+    opacity: 1;
     display: block;
-    padding: 0.35rem 0;
+    /* padding: 0.35rem 0; */
     /* transition: all 0.2s ease; */
 }
 
 .toc a:hover {
-    opacity: 1;
-    color: var(--text-color);
+    opacity: 0.5 !important;
 }
 
 .toc-level-1 {
@@ -671,17 +671,23 @@ details.callout[open] > summary .callout-title::after { transform: rotate(90deg)
     /* opacity: 0.9; */
 }
 
-.toc-level-2 {
-    border-left: 2px solid var(--sidebar-border);
-    margin-left: 0.25rem;
+.toc-level-1 a {
+    padding-left: 0 !important;
 }
-.toc-level-2 a { margin-left: 1.5rem; }
+
+.toc-level-2 {}
+.toc-level-2 a { 
+    padding-left: 0 !important;
+    margin-left: 1.5rem; 
+}
 
 .toc-level-3 {
-    border-left: 2px solid var(--sidebar-border);
-    margin-left: 0.25rem;
+    margin-left: 1.5rem !important;
 }
-.toc-level-3 a { margin-left: 1.75rem; padding-left: 1.5rem; border-left: 2px solid var(--sidebar-border); }
+.toc-level-3 a { 
+    padding-left: 0 !important;
+    margin-left: 1.5rem; 
+}
 
 .toc-level-4, .toc-level-5, .toc-level-6 { display: none; }
 

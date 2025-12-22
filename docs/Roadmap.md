@@ -12,8 +12,8 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 ## Immediate Fixes
 *Priority items to stabilize the current beta.*
 
-- [ ] **UI Polish:** Fix hover colors and table of contents styling (borders/colors).
-- [ ] **Mobile Experience:** Ensure sidebars auto-close correctly on small screens.
+- [x] **UI Polish:** Fix hover colors and table of contents styling (borders/colors).
+- [x] **Mobile Experience:** Ensure sidebars auto-close correctly on small screens.
 - [ ] **CLI Integrity:** Fix the `doctor` command (currently unstable).
 - [ ] **URL generation**: Fix URLs generation when `.md` wikilinks that do not have the same case as the page name.
 - [ ] **Heading Links**: Fix the anchor links `something#features` (the [[Table of Contents]] creates slugified ids, but the rendered links are not).

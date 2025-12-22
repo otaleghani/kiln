@@ -183,8 +183,8 @@ window.setupMobileAutoClose = function () {
         // Close Sidebars
         ['sidebar', 'right-sidebar'].forEach(id => {
             const el = document.getElementById(id);
-            if (el && !el.classList.contains('collapsed')) {
-                el.classList.add('collapsed');
+            if (el && el.classList.contains('collapsed')) {
+                el.classList.remove('collapsed');
                 localStorage.setItem(id === 'sidebar' ? 'sidebar-collapsed' : 'right-sidebar-collapsed', 'true');
             }
         });
