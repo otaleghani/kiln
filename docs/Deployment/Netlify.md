@@ -16,7 +16,7 @@ Add a file named `build.sh` to the root of your repository. This script download
 #!/bin/bash
 
 # 1. Download Kiln (Replace URL with your actual Linux binary release URL)
-curl -L -o kiln [https://github.com/YOUR_ORG/kiln/releases/latest/download/kiln_linux_amd64](https://github.com/YOUR_ORG/kiln/releases/latest/download/kiln_linux_amd64)
+curl -L -o kiln [https://github.com/otaleghani/kiln/releases/latest/download/kiln_linux_amd64](https://github.com/otaleghani/kiln/releases/latest/download/kiln_linux_amd64)
 
 # 2. Make it executable
 chmod +x kiln

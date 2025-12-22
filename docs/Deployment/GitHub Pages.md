@@ -54,7 +54,7 @@ jobs:
 
       - name: Build Site
         # Replace the URL below with your actual GitHub Pages URL
-        run: ./kiln generate --url "[https://username.github.io/repo](https://username.github.io/repo)"
+        run: ./kiln generate --url "https://username.github.io/repo"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -91,7 +91,6 @@ In the `Build Site` step, you must update the `--url` flag to match your specifi
 
 - **Format:** `https://<username>.github.io/<repository-name>`
 - **Why?** If this is incorrect, your CSS and links will break because GitHub hosts project sites in a sub-folder.
-- 
 
 ## Step 3: Enable Actions
 
