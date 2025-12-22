@@ -143,14 +143,13 @@
         return { nodes: validNodes, links: validLinks };
     }
 
-    function renderGraph(container, data, isLocal) {
+  function renderGraph(container, data, isLocal) {
         const rect = container.getBoundingClientRect();
         const width = rect.width || 800;
         const height = rect.height || 600;
 
         // --- THEME INTEGRATION ---
         const style = getComputedStyle(document.documentElement);
-        
         const accentColor = style.getPropertyValue('--accent-color').trim() || '#7e6df7';
         const textColor = style.getPropertyValue('--text-color').trim() || '#ccc';
         const neutralNodeColor = style.getPropertyValue('--color-comment').trim() || '#888';
@@ -172,9 +171,8 @@
             .on("dblclick.zoom", null);
 
         const svgGroup = svg.append("g");
-
-        // Helper to calculate radius based on connections
-        // Base size 4 + square root of degree * 2 (prevents huge nodes)
+        
+        // Helper to calculate radius
         const getNodeRadius = (d) => 4 + (Math.sqrt(d.degree || 0) * 2);
 
         // Force Simulation
@@ -182,7 +180,7 @@
             .force("link", d3.forceLink(data.links).id(d => d.id).distance(isLocal ? 100 : 50))
             .force("charge", d3.forceManyBody().strength(isLocal ? -300 : -100))
             .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("collide", d3.forceCollide().radius(d => getNodeRadius(d) + 2)); // Dynamic collision radius
+            .force("collide", d3.forceCollide().radius(d => getNodeRadius(d) + 2));
 
         const link = svgGroup.append("g")
             .attr("stroke", neutralLinkColor)
@@ -192,12 +190,32 @@
             .join("line")
             .attr("stroke-width", 1);
 
-        const node = svgGroup.append("g")
-            .selectAll("circle")
+        // Create Anchors (<a>) first
+        const nodeGroup = svgGroup.append("g")
+            .selectAll("a")
             .data(data.nodes)
-            .join("circle")
+            .join("a")
+            .attr("cursor", "pointer")
+            // 1. Calculate the Href
+            .attr("href", d => {
+                const targetPath = d.url.startsWith('/') ? d.url : '/' + d.url;
+                if (BASE_URL && targetPath.startsWith(BASE_URL)) {
+                    return targetPath;
+                }
+                return BASE_URL + targetPath;
+            })
+            // 2. Apply HTMX Attributes directly to the link
+            // .attr("hx-boost", "true") 
+            // .attr("hx-target", "#kiln-main")
+            // .attr("hx-swap", "outerHTML")
+            // .attr("hx-select", "#kiln-main, #right-sidebar-content")
+            // .attr("hx-push-url", "true"); // Explicitly ensure URL is pushed
+
+        // Append Circles to the Anchors
+        // We assign this to 'node' so the tick function and hover effects still work on the circle
+        const node = nodeGroup.append("circle")
             .attr("r", d => getNodeRadius(d)) 
-            .attr("fill", neutralNodeColor) // Always start neutral
+            .attr("fill", neutralNodeColor)
             .call(drag(simulation));
 
         const label = svgGroup.append("g")
@@ -212,65 +230,34 @@
             .style("pointer-events", "none")
             .style("opacity", isLocal ? 1 : 0.7);
 
-        // Hover & Interaction
+        // Hover Effects (Unchanged)
         node.on("mouseover", function(event, d) {
-            // Highlight Node (Scale up slightly)
             const currentR = getNodeRadius(d);
             d3.select(this)
                 .attr("r", currentR * 1.2)
                 .attr("fill", accentColor);
             
-            // Highlight Connected Links
             link.style('stroke', l => (l.source === d || l.target === d) ? accentColor : neutralLinkColor);
             link.style('stroke-opacity', l => (l.source === d || l.target === d) ? 1 : 0.2);
-            link.attr('stroke-width', l => (l.source === d || l.target === d) ? 2 : 1);
+            link.style('stroke-width', l => (l.source === d || l.target === d) ? 2 : 1);
 
-            // Highlight Label
             label.filter(l => l === d).style("opacity", 1).style("font-weight", "bold");
         })
         .on("mouseout", function(event, d) {
-            // Reset Node
             const currentR = getNodeRadius(d);
             d3.select(this)
                 .attr("r", currentR)
                 .attr("fill", neutralNodeColor);
             
-            // Reset Links
             link.style('stroke', neutralLinkColor);
             link.style('stroke-opacity', 0.6);
             link.attr('stroke-width', 1);
 
-            // Reset Label
             label.filter(l => l === d).style("opacity", isLocal ? 1 : 0.7).style("font-weight", "normal");
-        })
-        .on("click", function(event, d) {
-            // Calculate the final URL (Existing logic)
-            // Ensure the target path starts with a slash
-            const targetPath = d.url.startsWith('/') ? d.url : '/' + d.url;
-            let finalUrl;
-
-            // Prevent double-stacking if the JSON already includes the base URL
-            if (BASE_URL && targetPath.startsWith(BASE_URL)) {
-                finalUrl = targetPath;
-            } else {
-                finalUrl = BASE_URL + targetPath;
-            }
-
-            if (typeof htmx !== 'undefined') {
-                htmx.ajax('GET', finalUrl, {
-                    target: '#kiln-main',  // Matches your body hx-target
-                    swap: 'outerHTML',     // Matches your body hx-swap
-                    
-                    // IMPORTANT: Matches your body hx-select to get both content + sidebar
-                    select: '#kiln-main, #right-sidebar-content', 
-                    
-                    pushUrl: true          // Updates the browser URL bar (History API)
-                });
-            } else {
-                // Fallback in case HTMX didn't load
-                window.location.href = finalUrl;
-            }
         });
+        
+        // REMOVED: The manual .on("click") handler is gone. 
+        // The <a> tag handles it natively now.
 
         simulation.on("tick", () => {
             link
@@ -287,6 +274,11 @@
                 .attr("x", d => d.x)
                 .attr("y", d => d.y);
         });
+
+        // --- NEW: Tell HTMX to process the new DOM elements ---
+        if (typeof htmx !== 'undefined') {
+            htmx.process(container);
+        }
 
         function drag(simulation) {
             function dragstarted(event) {
@@ -310,6 +302,10 @@
                 .on("start", dragstarted)
                 .on("drag", dragged)
                 .on("end", dragended);
+        }
+
+        if (typeof htmx !== 'undefined') {
+            htmx.process(container);
         }
     }
 })();
