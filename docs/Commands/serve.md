@@ -34,4 +34,4 @@ Once running, you can view your site by opening `http://localhost:8080` in your 
 
 While this command is perfect for local development and previewing, it is **not recommended** for high-traffic production environments.
 
-For deploying to the live web, it is recommended to upload the contents of your `public` folder to a dedicated static host (like [[GitHub Pages]], [[Netlify]], or [[Vercel]]) or serve them using a production-grade server like [[Web Servers#Nginx|Nginx]], [[Web Servers#Caddy|Caddy]] or [[Web Servers#Apache|Apache]].
+For deploying to the live web, it is recommended to upload the contents of your `public` folder to a dedicated static host (like [[GitHub Pages]], [[Netlify]], or [[Deployment/Vercel]]) or serve them using a production-grade server like [[Web Servers#Nginx|Nginx]], [[Web Servers#Caddy|Caddy]] or [[Web Servers#Apache|Apache]].

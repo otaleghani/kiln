@@ -42,7 +42,7 @@ Kiln is packed with features designed to bridge the gap between your personal kn
 We support the tools you use to think.
 
 - **[[Obsidian Markdown|Obsidian Parity]]**: Full support for **[[Wikilinks]]**, **[[Callouts]]**, and standard Markdown.
-- **[[Obsidian Canvas|Interactive Canvas]]**: Render `.canvas` files as zoomable, pan-able diagrams directly on your site.
+- **[[Obsidian Canvas|Interactive Canvas]]**: Render `.canvas` files as zoomable, pan-able diagrams directly on your site. Check it out [[Canvas.canvas|Canvas]]
 - **[[Mermaid Graphs]]**: Native support for flowcharts, sequence diagrams, and Gantt charts.
 - **[[Math|Math & LaTeX]]**: Beautiful equation rendering via MathJax.
 - **[[Syntax Highlighting]]**: Automatic language detection and coloring for code blocks.
@@ -72,7 +72,7 @@ Built for performance and discoverability.
 
 ## Deployment
 
-The output of Kiln is a static website, which makes it really easy to deploy on your server. You can follow one of our guide for some popular services, like [[GitHub Pages]], [[Vercel]], [[Netlify]] or just one of the many [[Web Servers]].
+The output of Kiln is a static website, which makes it really easy to deploy on your server. You can follow one of our guide for some popular services, like [[GitHub Pages]], [[Deployment/Vercel]], [[Netlify]] or just one of the many [[Web Servers]].
 
 ## Contributing
 

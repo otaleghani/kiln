@@ -41,7 +41,7 @@ func CleanOutDir() {
 // initBuild prepares the environment for a new build.
 // It cleans the output directory, copies global assets (favicon, CNAME),
 // and traverses the input directory to build a file index and a graph of nodes.
-func initBuild() (map[string]string, []GraphNode) {
+func initBuild() (map[string][]string, []GraphNode) {
 	// 1. Reset output state
 	CleanOutDir()
 	os.MkdirAll(OutputDir, 0755)
@@ -69,7 +69,7 @@ func initBuild() (map[string]string, []GraphNode) {
 
 	// 3. Index Content
 	// Creates file index (name -> url) and file nodes (for the graph view)
-	fileIndex := make(map[string]string)
+	fileIndex := make(map[string][]string)
 	graphNodes := []GraphNode{}
 
 	// Map to track unique nodes and avoid duplicates in the graph
@@ -138,8 +138,10 @@ func initBuild() (map[string]string, []GraphNode) {
 		// Register the file in the global index (filename -> public URL)
 		// This is used later for resolving [[WikiLinks]].
 		if _, exists := fileIndex[key]; !exists {
-			fileIndex[key] = webPath
+			fileIndex[key] = []string{}
 		}
+		fileIndex[key] = append(fileIndex[key], webPath)
+
 		return nil
 	})
 

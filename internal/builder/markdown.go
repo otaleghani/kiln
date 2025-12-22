@@ -29,7 +29,7 @@ type GraphLink struct {
 // It intercepts both Wikilinks ([[...]]) and standard Markdown links to ensure
 // they point to the correct URL, respecting the site's BasePath.
 type IndexResolver struct {
-	Index         map[string]string
+	Index         map[string][]string
 	Links         []GraphLink
 	CurrentSource string
 	BasePath      string
@@ -64,9 +64,34 @@ func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 		return []byte(anchor), nil
 	}
 
-	// Check if the file exists in our pre-calculated index
-	if link, ok := r.Index[cleanDest]; ok {
-		finalLink := path.Join(r.BasePath, link)
+	// Logic to handle multiple matches
+	if candidates, ok := r.Index[cleanDest]; ok && len(candidates) > 0 {
+		var bestMatch string
+
+		// 1. Priority: Check for Root Match
+		// If the file is simply "Page.md", it lives in root.
+		// If it is "Folder/Page.md", it does not.
+		for _, pathStr := range candidates {
+			// Check if path has no directory separators
+			if !strings.Contains(pathStr, "/") && !strings.Contains(pathStr, "\\") {
+				bestMatch = pathStr
+				break
+			}
+		}
+
+		// 2. Priority: If no root match, find the shortest path (closest to root)
+		if bestMatch == "" {
+			shortest := candidates[0]
+			for _, pathStr := range candidates {
+				// Simply comparing string length is a good proxy for folder depth here
+				if len(pathStr) < len(shortest) {
+					shortest = pathStr
+				}
+			}
+			bestMatch = shortest
+		}
+
+		finalLink := path.Join(r.BasePath, bestMatch)
 		return []byte(finalLink + anchor), nil
 	}
 
@@ -169,7 +194,8 @@ func (r *IndexResolver) recordLink(target string) {
 // newMarkdownParser creates a Goldmark instance configured for Obsidian compatibility.
 // It enables GFM, MathJax, syntax highlighting, and custom link resolution.
 func newMarkdownParser(
-	fileIndex map[string]string,
+	// CHANGED: Update this type to match the output of initBuild
+	fileIndex map[string][]string,
 	basePath string,
 ) (goldmark.Markdown, *IndexResolver) {
 
