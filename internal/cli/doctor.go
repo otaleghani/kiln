@@ -33,8 +33,8 @@ func runDoctor(cmd *cobra.Command, args []string) {
 	}
 
 	// 1. Collect all valid note paths to build a reference index.
-	notes := linter.CollectNotes(builder.OutputDir)
+	notes := linter.CollectNotes(builder.InputDir)
 
 	// 2. Scan content for links that point to non-existent notes.
-	linter.BrokenLinks(builder.OutputDir, notes)
+	linter.BrokenLinks(builder.InputDir, notes)
 }
