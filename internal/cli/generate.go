@@ -25,26 +25,28 @@ func init() {
 	cmdGenerate.Flags().
 		StringVarP(&siteName, "name", "n", "My Notes", "Name of the website (e.g. 'My Obsidian Vault')")
 	cmdGenerate.Flags().
-		StringVarP(&inputDir, "input", "i", "", "Name of the input directory (defaults to ./vault)")
+		StringVarP(&inputDir, "input", "i", "./vault", "Name of the input directory (defaults to ./vault)")
 	cmdGenerate.Flags().
-		StringVarP(&outputDir, "output", "o", "", "Name of the output directory (defaults to ./public)")
+		StringVarP(&outputDir, "output", "o", "./public", "Name of the output directory (defaults to ./public)")
 	cmdGenerate.Flags().
 		BoolVar(&flatUrls, "flat-urls", false, "Generate flat HTML files (note.html) instead of pretty directories (note/index.html)")
+	cmdGenerate.Flags().
+		StringVarP(&mode, "mode", "m", "default", "The mode to use for the generation. Available modes 'default' and 'custom' (defaults to 'default')")
 }
 
 // runGenerate executes the build logic.
 func runGenerate(cmd *cobra.Command, args []string) {
 	// Apply overrides
 	// If the user specified custom directories via flags, update the builder configuration.
-	if outputDir != "" {
-		builder.OutputDir = outputDir
-	}
-	if inputDir != "" {
-		builder.InputDir = inputDir
-	}
+	builder.OutputDir = outputDir
+	builder.InputDir = inputDir
 	builder.FlatUrls = flatUrls
+	builder.ThemeName = themeName
+	builder.FontName = fontName
+	builder.BaseURL = baseURL
+	builder.SiteName = siteName
+	builder.Mode = mode
 
 	// Trigger the build
-	// Pass the cosmetic and metadata configurations to the builder.
-	builder.Build(themeName, fontName, baseURL, siteName)
+	builder.Build()
 }

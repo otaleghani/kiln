@@ -68,7 +68,7 @@ func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 	if candidates, ok := r.Index[cleanDest]; ok && len(candidates) > 0 {
 		var bestMatch string
 
-		// 1. Priority: Check for Root Match
+		// Priority: Check for Root Match
 		// If the file is simply "Page.md", it lives in root.
 		// If it is "Folder/Page.md", it does not.
 		for _, pathStr := range candidates {
@@ -92,11 +92,13 @@ func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 		}
 
 		finalLink := path.Join(r.BasePath, bestMatch)
+		finalLink = strings.TrimSuffix(finalLink, "/index") // Trim /index for folder pages
 		return []byte(finalLink + anchor), nil
 	}
 
 	// Fallback: assume the slug matches the destination
 	finalPath := path.Join(r.BasePath, slugify(dest))
+	finalPath = strings.TrimSuffix(finalPath, "/index") // Trim /index for folder pages
 	return []byte(finalPath + anchor), nil
 }
 
@@ -176,6 +178,10 @@ func (r *IndexResolver) resolvePath(dest string) string {
 		return path.Join(r.BasePath, dest)
 	}
 
+	if dest == "index" {
+		return ""
+	}
+
 	return dest
 }
 
@@ -194,7 +200,7 @@ func (r *IndexResolver) recordLink(target string) {
 // newMarkdownParser creates a Goldmark instance configured for Obsidian compatibility.
 // It enables GFM, MathJax, syntax highlighting, and custom link resolution.
 func newMarkdownParser(
-	// CHANGED: Update this type to match the output of initBuild
+	// Update this type to match the output of initBuild
 	fileIndex map[string][]string,
 	basePath string,
 ) (goldmark.Markdown, *IndexResolver) {

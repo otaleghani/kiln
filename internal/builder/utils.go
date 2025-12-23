@@ -221,7 +221,6 @@ func getOutputPaths(relPath, nameWithoutExt, ext string) (outPath string, webPat
 			outPath = filepath.Join(OutputDir, slugName+".html")
 			webPath = "/" + strings.ReplaceAll(slugName, string(os.PathSeparator), "/")
 		}
-
 	}
 
 	// Ensure the parent directory exists before returning
