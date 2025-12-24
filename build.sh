@@ -32,6 +32,7 @@ echo "Building site..."
   --input "$INPUT_DIR" \
   --output ./public \
   --flat-urls=true \
+  --name "Kiln" \
   --url "$DEPLOYMENT_URL"
 
 # Note: CF_PAGES_URL is a magic variable provided automatically by Cloudflare

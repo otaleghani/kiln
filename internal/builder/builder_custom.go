@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -46,7 +47,7 @@ func buildCustom() error {
 	fileIndex, _ := initBuild()
 	u, _ := url.Parse(BaseURL)
 	basePath := u.Path
-	mdParser, resolver := newMarkdownParser(fileIndex, basePath)
+	mdParser, _ := newMarkdownParser(fileIndex, basePath)
 
 	site := &CustomSite{
 		Pages:      make(map[string]*CustomPage),
@@ -110,7 +111,7 @@ func buildCustom() error {
 		log.Fatalln("PHASE 1: Failed to scan configs and assets")
 	}
 
-	fmt.Println("--- PHASE 2: Indexing Pages ---")
+	log.Println("PHASE 2: Indexing Pages")
 
 	err = filepath.Walk(InputDir, func(path string, d fs.FileInfo, err error) error {
 		if err != nil || d.IsDir() || filepath.Ext(path) != ".md" {
@@ -128,6 +129,7 @@ func buildCustom() error {
 		cleanName := strings.TrimSuffix(filepath.Base(path), ".md")
 		outPath := strings.Replace(relPath, ".md", ".html", 1)
 
+		// Generates perma link for the page
 		permLink := "/" + filepath.ToSlash(outPath)
 		if strings.HasSuffix(permLink, "/index.html") {
 			permLink = strings.TrimSuffix(permLink, "index.html")
@@ -139,20 +141,18 @@ func buildCustom() error {
 			ID:           relPath,
 			Path:         path,
 			Title:        cleanName,
-			RelPermalink: permLink,
+			RelPermalink: strings.TrimSuffix(slugify(permLink), ".html"),
 			Frontmatter:  fm,
 			IsIndex:      cleanName == "index",
 		}
 
+		// If the field title is present in the frontmatter, use that as the page Title
 		if val, ok := fm["title"]; ok {
 			page.Title = fmt.Sprintf("%v", val)
 		}
 
+		// Generates the HTML of the body of the note
 		var buf bytes.Buffer
-
-		ext := filepath.Ext(path)
-		nameWithoutExt := strings.TrimSuffix(d.Name(), ext)
-		resolver.CurrentSource = nameWithoutExt
 		if err := mdParser.Convert(rawContent, &buf); err != nil {
 			return err
 		}
@@ -162,6 +162,7 @@ func buildCustom() error {
 		finalHTML = transformHighlights(finalHTML)
 		page.Content = template.HTML(finalHTML)
 
+		// Adds the page to the site
 		site.Pages[relPath] = page
 		site.NameLookup[cleanName] = page
 
@@ -169,10 +170,10 @@ func buildCustom() error {
 	})
 
 	if err != nil {
-		return err
+		log.Fatal("PHASE 2 failed")
 	}
 
-	fmt.Println("--- PHASE 3: Merging & Relation Resolution ---")
+	log.Println("PHASE 3: Merging & Relation Resolution")
 
 	for path, page := range site.Pages {
 		// 3a. Merge Configs
@@ -193,15 +194,17 @@ func buildCustom() error {
 			}
 
 			if cfg, ok := site.Configs[currentPath]; ok {
-				for k, v := range cfg {
-					page.Params[k] = v
-				}
+				maps.Copy(page.Params, cfg)
+				// for k, v := range cfg {
+				// 	page.Params[k] = v
+				// }
 			}
 		}
 
-		for k, v := range page.Frontmatter {
-			page.Params[k] = v
-		}
+		maps.Copy(page.Params, page.Frontmatter)
+		// for k, v := range page.Frontmatter {
+		// 	page.Params[k] = v
+		// }
 
 		// 3b. Resolve Linked Notes in Frontmatter
 		for key, value := range page.Params {
