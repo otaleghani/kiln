@@ -22,6 +22,7 @@ Paste the following script into it. This script automatically fetches the latest
 #!/bin/bash
 
 # --- CONFIGURATION START ---
+SITE_NAME="Kiln"
 INPUT_DIR="./docs"
 DEPLOYMENT_URL="https://kiln.talesign.com"
 # --- CONFIGURATION END ---
@@ -54,6 +55,7 @@ echo "Building site..."
   --input "$INPUT_DIR" \
   --output ./public \
   --flat-urls=true \
+  --name "$SITE_NAME" \
   --url "$DEPLOYMENT_URL"
 
 echo "Kiln build complete successfully"
@@ -76,6 +78,10 @@ Change `DEPLOYMENT_URL` to the actual address where your site will be hosted.
 
 - **Why?** Kiln uses this to generate the [[Sitemap xml|sitemap.xml]], [[Robots txt|robots.txt]], and canonical meta tags.
 - **Tip:** Cloudflare provides a `*.pages.dev` subdomain (e.g., `https://my-site.pages.dev`), or you can use your own custom domain.
+
+### The Website Name (`SITE_NAME`)
+
+Change `SITE_NAME` to change the navbar name and site meta tags.
 
 ## Step 3: Configure Cloudflare Pages
 
