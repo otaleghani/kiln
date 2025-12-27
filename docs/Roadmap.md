@@ -9,11 +9,12 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 > [!note] Contributing
 > Have a suggestion? Feel free to open an issue or contribute to the discussion on our GitHub repository.
 
-## Immediate Fixes
+## Planned immediate enhancements 
 *Priority items to stabilize the current beta.*
 
-- [ ] **Better logs**: Create better logs management using `slog`
+- [ ] **Better logs**: Create better logs management using `charm/log`
 - [ ] **Support bases**: Support for Obsidian bases.
+- [ ] **Custom mode**: Bake static website by using Obsidian as a CMS.
 
 ## Core Features
 *Major functionality upgrades.*
