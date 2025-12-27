@@ -41,7 +41,7 @@ func CleanOutDir() {
 // initBuild prepares the environment for a new build.
 // It cleans the output directory, copies global assets (favicon, CNAME),
 // and traverses the input directory to build a file index and a graph of nodes.
-func initBuild() (map[string][]string, []GraphNode) {
+func initBuild() (fileIndex map[string][]string, sourceMap map[string]string, graphNodes []GraphNode) {
 	// 1. Reset output state
 	CleanOutDir()
 	os.MkdirAll(OutputDir, 0755)
@@ -69,8 +69,9 @@ func initBuild() (map[string][]string, []GraphNode) {
 
 	// 3. Index Content
 	// Creates file index (name -> url) and file nodes (for the graph view)
-	fileIndex := make(map[string][]string)
-	graphNodes := []GraphNode{}
+	fileIndex = make(map[string][]string)
+	graphNodes = []GraphNode{}
+	sourceMap = make(map[string]string)
 
 	// Map to track unique nodes and avoid duplicates in the graph
 	nodeSet := make(map[string]bool)
@@ -141,11 +142,12 @@ func initBuild() (map[string][]string, []GraphNode) {
 			fileIndex[key] = []string{}
 		}
 		fileIndex[key] = append(fileIndex[key], webPath)
+		sourceMap[webPath] = relPath
 
 		return nil
 	})
 
-	return fileIndex, graphNodes
+	return
 }
 
 // copyFile is a simple wrapper to copy files from src to dst.
@@ -196,12 +198,12 @@ func getSlugPath(relPath string) string {
 	return slugPath
 }
 
-// getOutputPaths determines the filesystem output location and the public web URL for a file.
+// getPageOutputPath determines the filesystem output location and the public web URL for a file.
 // It handles "Pretty URLs" by creating index.html files inside named directories.
 // Returns:
 // - outPath: where to write the file on disk (e.g., ./public/notes/my-note/index.html)
 // - webPath: the URL path (e.g., /notes/my-note/)
-func getOutputPaths(relPath, nameWithoutExt, ext string) (outPath string, webPath string) {
+func getPageOutputPath(relPath, nameWithoutExt, ext string) (outPath string, webPath string) {
 	slugPath := getSlugPath(relPath)
 
 	// Case 1: Root files (Home or index) -> ./public/index.html
@@ -222,6 +224,22 @@ func getOutputPaths(relPath, nameWithoutExt, ext string) (outPath string, webPat
 			webPath = "/" + strings.ReplaceAll(slugName, string(os.PathSeparator), "/")
 		}
 	}
+
+	// Ensure the parent directory exists before returning
+	os.MkdirAll(filepath.Dir(outPath), 0755)
+	return
+}
+
+// getAssetOutputPath gives you the webpath and the output path for a given relative path
+func getAssetOutputPath(relPath string) (outPath string, webPath string) {
+	// ext := filepath.Ext(relPath)
+	// nameWithoutExt := strings.TrimSuffix(relPath, ext)
+	slugPath := getSlugPath(relPath)
+
+	// Regular files -> ./public/folder/note-name.html
+	// slugName := strings.TrimSuffix(slugPath, slugify(ext))
+	outPath = filepath.Join(OutputDir, slugPath)
+	webPath = "/" + strings.ReplaceAll(slugPath, string(os.PathSeparator), "/")
 
 	// Ensure the parent directory exists before returning
 	os.MkdirAll(filepath.Dir(outPath), 0755)

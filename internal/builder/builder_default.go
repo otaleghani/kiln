@@ -23,7 +23,7 @@ func buildDefault() {
 	start := time.Now()
 
 	theme := resolveTheme(ThemeName, FontName)
-	fileIndex, graphNodes := initBuild()
+	fileIndex, sourceMap, graphNodes := initBuild()
 	rootNode := getRootNode(InputDir, BaseURL)
 
 	// Load and parse the base HTML layout
@@ -62,7 +62,15 @@ func buildDefault() {
 	// Determine the base path for link resolution (e.g., "/kiln" from "https://domain.com/kiln")
 	u, _ := url.Parse(BaseURL)
 	basePath := u.Path
-	markdownRenderer, resolver := newMarkdownParser(fileIndex, basePath)
+	markdownRenderer, resolver := newMarkdownParser(
+		fileIndex,
+		sourceMap,
+		basePath,
+		func(path string) ([]byte, error) {
+			// Point this to your content folder
+			return os.ReadFile(filepath.Join(InputDir, path))
+		},
+	)
 
 	// Configure the HTML minifier
 	minifier := minify.New()

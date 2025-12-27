@@ -47,6 +47,9 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	builder.SiteName = siteName
 	builder.Mode = mode
 
+	// TODO: Set verbosity level here based on the requested level
+	// logger.SetLevel()
+
 	// Trigger the build
 	builder.Build()
 }

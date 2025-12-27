@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
 	htmlRenderer "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 	"go.abhg.dev/goldmark/wikilink"
 )
@@ -30,76 +32,67 @@ type GraphLink struct {
 // they point to the correct URL, respecting the site's BasePath.
 type IndexResolver struct {
 	Index         map[string][]string
+	SourceMap     map[string]string
 	Links         []GraphLink
 	CurrentSource string
 	BasePath      string
+
+	// TEST: Wikilink text embedding
+	Engine   goldmark.Markdown                 // Needed for recursion
+	ReadFile func(path string) ([]byte, error) // Needed for loading files
 }
 
-// ResolveWikilink implements wikilink.Resolver.
-// It maps Obsidian-style [[links]] to their final HTML paths and records the relationship.
 func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
-	dest := string(n.Target)
-	dest = strings.TrimSpace(dest)
-
-	// Handle anchors (e.g., [[Page#Section]])
+	// RECONSTRUCT INPUT: Combine Target + Fragment
+	// The parser splits them, but our logic expects to handle the whole reference.
+	rawInput := n.Target
 	if len(n.Fragment) > 0 {
-		dest += "#" + string(n.Fragment)
-	}
-	anchor := ""
-	if idx := strings.Index(dest, "#"); idx != -1 {
-		anchor = dest[idx:]
-		dest = dest[:idx]
+		// Use append to create "Target#Fragment"
+		rawInput = append(rawInput, '#')
+		rawInput = append(rawInput, n.Fragment...)
 	}
 
-	cleanDest := dest
-	ext := filepath.Ext(cleanDest)
-	if ext == ".md" || ext == ".canvas" {
-		cleanDest = strings.TrimSuffix(cleanDest, ext)
-	}
+	// 1. Find the real file using our helper (now passing the FULL input)
+	filePath, anchor := r.FindFilePath(rawInput)
 
-	// Track this connection for the graph view
+	// Track connection for the graph (using clean name)
+	cleanDest := strings.TrimSuffix(filePath, filepath.Ext(filePath))
 	r.recordLink(cleanDest)
 
-	if dest == "" {
+	if filePath == "" {
 		return []byte(anchor), nil
 	}
 
-	// Logic to handle multiple matches
-	if candidates, ok := r.Index[cleanDest]; ok && len(candidates) > 0 {
-		var bestMatch string
+	// 2. Transform the REAL file path into a WEB URL
+	ext := filepath.Ext(filePath)
+	isContentFile := ext == ".md" || ext == ".canvas"
+	pathNoExt := strings.TrimSuffix(filePath, ext)
 
-		// Priority: Check for Root Match
-		// If the file is simply "Page.md", it lives in root.
-		// If it is "Folder/Page.md", it does not.
-		for _, pathStr := range candidates {
-			// Check if path has no directory separators
-			if !strings.Contains(pathStr, "/") && !strings.Contains(pathStr, "\\") {
-				bestMatch = pathStr
-				break
-			}
-		}
+	// Slugify
+	urlPath := slugifyPath(pathNoExt)
 
-		// 2. Priority: If no root match, find the shortest path (closest to root)
-		if bestMatch == "" {
-			shortest := candidates[0]
-			for _, pathStr := range candidates {
-				// Simply comparing string length is a good proxy for folder depth here
-				if len(pathStr) < len(shortest) {
-					shortest = pathStr
-				}
-			}
-			bestMatch = shortest
-		}
-
-		finalLink := path.Join(r.BasePath, bestMatch)
-		finalLink = strings.TrimSuffix(finalLink, "/index") // Trim /index for folder pages
-		return []byte(finalLink + anchor), nil
+	// Add extension back if it's an asset (image/pdf)
+	if !isContentFile && ext != "" {
+		urlPath += strings.ToLower(ext)
 	}
 
-	// Fallback: assume the slug matches the destination
-	finalPath := path.Join(r.BasePath, slugify(dest))
-	finalPath = strings.TrimSuffix(finalPath, "/index") // Trim /index for folder pages
-	return []byte(finalPath + anchor), nil
+	// Finalize Path
+	finalLink := path.Join(r.BasePath, urlPath)
+	if isContentFile {
+		finalLink = strings.TrimSuffix(finalLink, "/index")
+	}
+
+	return []byte(finalLink + anchor), nil
+}
+
+// Simple helper
+func slugifyPath(p string) string {
+	// Split by slash, slugify each component, join back
+	parts := strings.Split(p, "/")
+	for i, part := range parts {
+		parts[i] = slugify(part) // Assuming you have the slugify function from your original code
+	}
+	return strings.Join(parts, "/")
 }
 
 // RegisterFuncs registers custom renderers for standard links and images.
@@ -107,6 +100,8 @@ func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 func (r *IndexResolver) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(ast.KindLink, r.renderLink)
 	reg.Register(ast.KindImage, r.renderImage)
+	// TEST:
+	reg.Register(wikilink.Kind, r.renderWikilink)
 }
 
 // renderLink writes the HTML for standard markdown links.
@@ -136,29 +131,64 @@ func (r *IndexResolver) renderLink(
 }
 
 // renderImage writes the HTML for standard markdown images.
+// func (r *IndexResolver) renderImage(
+//
+//	w util.BufWriter,
+//	source []byte,
+//	node ast.Node,
+//	entering bool,
+//
+//	) (ast.WalkStatus, error) {
+//		n := node.(*ast.Image)
+//		if entering {
+//			newDest := r.resolvePath(string(n.Destination))
+//
+//			w.WriteString("<img src=\"")
+//			w.WriteString(newDest)
+//			w.WriteString("\" alt=\"")
+//			w.Write(n.Text(source))
+//			w.WriteString("\"")
+//			if n.Title != nil {
+//				w.WriteString(" title=\"")
+//				w.Write(n.Title)
+//				w.WriteString("\"")
+//			}
+//			w.WriteString(">")
+//		}
+//		return ast.WalkSkipChildren, nil
+//	}
 func (r *IndexResolver) renderImage(
 	w util.BufWriter,
 	source []byte,
 	node ast.Node,
 	entering bool,
 ) (ast.WalkStatus, error) {
-	n := node.(*ast.Image)
-	if entering {
-		newDest := r.resolvePath(string(n.Destination))
-
-		w.WriteString("<img src=\"")
-		w.WriteString(newDest)
-		w.WriteString("\" alt=\"")
-		w.Write(n.Text(source))
-		w.WriteString("\"")
-		if n.Title != nil {
-			w.WriteString(" title=\"")
-			w.Write(n.Title)
-			w.WriteString("\"")
-		}
-		w.WriteString(">")
+	if !entering {
+		return ast.WalkSkipChildren, nil
 	}
+	n := node.(*ast.Image)
+	newDest := r.resolvePath(string(n.Destination))
+
+	// Use the helper
+	r.writeImage(w, newDest, n.Text(source), n.Title)
+
 	return ast.WalkSkipChildren, nil
+}
+
+// writeImage is a helper to ensure consistent image rendering for both
+// standard markdown images and Obsidian wikilink images.
+func (r *IndexResolver) writeImage(w util.BufWriter, src string, alt []byte, title []byte) {
+	w.WriteString("<img src=\"")
+	w.WriteString(src)
+	w.WriteString("\" alt=\"")
+	w.Write(alt)
+	w.WriteString("\"")
+	if len(title) > 0 {
+		w.WriteString(" title=\"")
+		w.Write(title)
+		w.WriteString("\"")
+	}
+	w.WriteString(">")
 }
 
 // resolvePath ensures internal links respect the site's BasePath.
@@ -202,7 +232,9 @@ func (r *IndexResolver) recordLink(target string) {
 func newMarkdownParser(
 	// Update this type to match the output of initBuild
 	fileIndex map[string][]string,
+	sourceMap map[string]string,
 	basePath string,
+	loader func(path string) ([]byte, error),
 ) (goldmark.Markdown, *IndexResolver) {
 
 	if basePath == "" {
@@ -210,9 +242,11 @@ func newMarkdownParser(
 	}
 
 	resolver := &IndexResolver{
-		Index:    fileIndex,
-		Links:    []GraphLink{},
-		BasePath: basePath,
+		Index:     fileIndex,
+		SourceMap: sourceMap,
+		Links:     []GraphLink{},
+		BasePath:  basePath,
+		ReadFile:  loader,
 	}
 
 	md := goldmark.New(
@@ -236,10 +270,325 @@ func newMarkdownParser(
 			htmlRenderer.WithHardWraps(),
 			// Hook 2: Standard Links & Images
 			renderer.WithNodeRenderers(
-				util.Prioritized(resolver, 1000),
+				// util.Prioritized(resolver, 1000),
+				util.Prioritized(resolver, 0),
 			),
 		),
 	)
 
+	resolver.Engine = md
+
 	return md, resolver
+}
+
+// TEST
+func (r *IndexResolver) renderWikilink(
+	w util.BufWriter,
+	source []byte,
+	node ast.Node,
+	entering bool,
+) (ast.WalkStatus, error) {
+	n := node.(*wikilink.Node)
+
+	if !entering {
+		return ast.WalkContinue, nil
+	}
+
+	// 1. Get the Web Path (e.g. "/books/harry-potter")
+	// This is correct for the browser <a href="..."> or <img src="...">
+	destBytes, err := r.ResolveWikilink(n)
+	if err != nil {
+		return ast.WalkStop, err
+	}
+	webPath := string(destBytes)
+
+	// --- IF LINK (NOT EMBED) ---
+	// Check for the "!" hack on previous sibling
+	isEmbed := n.Embed
+	if !isEmbed {
+		prev := n.PreviousSibling()
+		if prev != nil && prev.Kind() == ast.KindText {
+			textBytes := prev.Text(source)
+			if len(textBytes) > 0 && textBytes[len(textBytes)-1] == '!' {
+				isEmbed = true
+				segment := prev.Lines().At(prev.Lines().Len() - 1)
+				prev.Lines().
+					Set(prev.Lines().Len()-1, text.NewSegment(segment.Start, segment.Stop-1))
+			}
+		}
+	}
+
+	if !isEmbed {
+		w.WriteString("<a href=\"")
+		w.WriteString(webPath)
+		w.WriteString("\" class=\"internal-link\">")
+		w.Write(n.Target)
+		w.WriteString("</a>")
+		return ast.WalkSkipChildren, nil
+	}
+
+	// --- IF EMBED (Transclusion) ---
+
+	// 2. Resolve the REAL Disk Path using the SourceMap
+	// We strip the hash (#header) from the webPath for the lookup
+	cleanWebPath := webPath
+	var fragment string
+	if idx := strings.Index(webPath, "#"); idx != -1 {
+		fragment = webPath[idx:]
+		cleanWebPath = webPath[:idx]
+	}
+
+	// KEY FIX: Look up the real file path!
+	// Default to webPath if not found (fallback)
+	realFilePath := cleanWebPath
+	if src, ok := r.SourceMap[cleanWebPath]; ok {
+		realFilePath = src
+	} else {
+		// Try adding/removing BasePath if lookup failed
+		// (Depends on how you populate SourceMap vs BasePath)
+		altKey := path.Join(r.BasePath, cleanWebPath)
+		if src, ok := r.SourceMap[altKey]; ok {
+			realFilePath = src
+		}
+	}
+
+	fmt.Printf("DEBUG: Web: %s | Disk: %s\n", cleanWebPath, realFilePath)
+
+	// 3. Handle Images
+	// For images, we usually want to render the tag with the WEB PATH (for the browser),
+	// NOT the file path.
+	ext := strings.ToLower(filepath.Ext(realFilePath))
+	if isImageFile(ext) {
+		// Extract Alt Text: In Wikilinks ([[Image.png|Alt Text]]),
+		// the text after the pipe is stored as the node's children.
+		var altText []byte
+		if n.HasChildren() {
+			// Iterate over children to reconstruct the label/alt text
+			for child := n.FirstChild(); child != nil; child = child.NextSibling() {
+				// We assume text nodes here; simpler than full recursion
+				if child.Kind() == ast.KindText {
+					altText = append(altText, child.Text(source)...)
+				}
+			}
+		} else {
+			// If no alt text is provided, some people prefer using the filename,
+			// others prefer empty. Obsidian uses the filename often.
+			altText = n.Target
+		}
+
+		// Note: Wikilinks don't officially support "Title" attributes (tooltip),
+		// so we pass nil. If you want title, you'd have to parse it from the alt text manually.
+		r.writeImage(w, webPath, altText, nil)
+		return ast.WalkSkipChildren, nil
+	}
+
+	// 4. Handle Markdown Notes
+	// Now we use realFilePath to read from disk
+	content, err := r.ReadFile(realFilePath)
+	if err != nil {
+		fmt.Printf("ERROR: ReadFile failed for '%s' -> '%s' (%v)\n", webPath, realFilePath, err)
+		w.WriteString(
+			"<a href=\"" + webPath + "\" class=\"broken-embed\">" + string(n.Target) + "</a>",
+		)
+		return ast.WalkSkipChildren, nil
+	}
+
+	// w.WriteString(
+	// 	"<a href=\"" + webPath + "\" class=\"\">" + string(n.Target) + "</a>",
+	// )
+	if err := r.renderSelection(w, content, fragment, webPath, string(n.Target)); err != nil {
+		w.WriteString("")
+	}
+	// if err := r.renderSelection(w, content, fragment); err != nil {
+	// 	w.WriteString("")
+	// }
+
+	return ast.WalkSkipChildren, nil
+}
+
+func isImageFile(ext string) bool {
+	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+		ext == ".gif" || ext == ".svg" || ext == ".webp"
+}
+
+// Update the function signature
+func (r *IndexResolver) renderSelection(
+	w util.BufWriter,
+	source []byte,
+	fragment string,
+	destUrl string, // New: The href for the links
+	displayName string, // New: The text to display (n.Target)
+) error {
+	reader := text.NewReader(source)
+	doc := r.Engine.Parser().Parse(reader)
+
+	nodes := r.extractNodes(doc, source, fragment)
+
+	if len(nodes) > 0 {
+		w.WriteString("<div class=\"markdown-embed\">")
+
+		// --- EMBED HEADER (Title + Button) ---
+		w.WriteString("<div class=\"markdown-embed-header\">")
+
+		// 1. Left Side: Title or Link
+		if fragment == "" {
+			// Case A: Whole Page -> Display Link to Page
+			w.WriteString("<a href=\"" + destUrl + "\" class=\"markdown-embed-title\">")
+			w.WriteString(displayName)
+			w.WriteString("</a>")
+		} else {
+			// Case B: Fragment -> Display Section Name (or displayName > fragment)
+			w.WriteString("<div class=\"markdown-embed-title\">")
+			w.WriteString(strings.TrimPrefix(fragment, "#"))
+			w.WriteString("</div>")
+		}
+
+		// 2. Right Side: Maximize Button (Always visible)
+		// Links to the specific anchor or page
+		w.WriteString(
+			"<a href=\"" + slugify(
+				destUrl,
+			) + "\" class=\"markdown-embed-link\" title=\"Open Original\">",
+		)
+		w.WriteString("<i class=\"\" data-lucide=\"maximize-2\"></i>")
+		w.WriteString("</a>")
+
+		w.WriteString("</div>") // End Header
+		// -------------------------------------
+
+		w.WriteString("<div class=\"markdown-embed-content\">")
+
+		renderer := r.Engine.Renderer()
+		for _, n := range nodes {
+			if err := renderer.Render(w, source, n); err != nil {
+				return err
+			}
+		}
+
+		w.WriteString("</div></div>")
+	}
+	return nil
+}
+
+// extractNodes finds the specific Heading or BlockID within the AST.
+func (r *IndexResolver) extractNodes(root ast.Node, source []byte, fragment string) []ast.Node {
+	if fragment == "" {
+		return []ast.Node{root}
+	}
+
+	fragment = strings.TrimPrefix(fragment, "#")
+
+	// 1. Block ID Lookup (^blockid)
+	if strings.HasPrefix(fragment, "^") {
+		targetID := fragment[1:]
+		var found ast.Node
+
+		ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+			if !entering || n.Type() != ast.TypeBlock {
+				return ast.WalkContinue, nil
+			}
+			// Look for ^id in the raw text of the block
+			raw := string(n.Text(source))
+			if strings.Contains(raw, "^"+targetID) {
+				found = n
+				return ast.WalkStop, nil
+			}
+			return ast.WalkContinue, nil
+		})
+
+		if found != nil {
+			return []ast.Node{found}
+		}
+		return nil
+	}
+
+	// 2. Heading Lookup (Header Text)
+	var startNode ast.Node
+	ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering || n.Kind() != ast.KindHeading {
+			return ast.WalkContinue, nil
+		}
+		h := n.(*ast.Heading)
+
+		// Match by text content (case insensitive)
+		// Note: A more robust approach handles slugification matching here
+		headerText := string(h.Text(source))
+		if strings.EqualFold(headerText, fragment) {
+			startNode = n
+			return ast.WalkStop, nil
+		}
+		return ast.WalkContinue, nil
+	})
+
+	if startNode != nil {
+		results := []ast.Node{startNode}
+		startLevel := startNode.(*ast.Heading).Level
+
+		// Collect siblings until next header of same level
+		curr := startNode.NextSibling()
+		for curr != nil {
+			if h, ok := curr.(*ast.Heading); ok {
+				if h.Level <= startLevel {
+					break
+				}
+			}
+			results = append(results, curr)
+			curr = curr.NextSibling()
+		}
+		return results
+	}
+
+	return nil
+}
+
+// FindFilePath searches the index for the best matching file path.
+// It returns the filesystem path (e.g. "books/Harry Potter.md") and the anchor (e.g. "#summary").
+func (r *IndexResolver) FindFilePath(target []byte) (string, string) {
+	dest := string(target)
+	dest = strings.TrimSpace(dest)
+
+	// 1. Handle anchors (e.g., [[Page#Section]])
+	anchor := ""
+	if idx := strings.Index(dest, "#"); idx != -1 {
+		anchor = dest[idx:]
+		dest = dest[:idx]
+	}
+
+	cleanDest := dest
+	ext := filepath.Ext(cleanDest)
+	if ext == ".md" || ext == ".canvas" {
+		cleanDest = strings.TrimSuffix(cleanDest, ext)
+	}
+
+	// 2. Logic to handle multiple matches (Your existing logic)
+	if candidates, ok := r.Index[cleanDest]; ok && len(candidates) > 0 {
+		var bestMatch string
+
+		// Priority A: Check for Root Match
+		for _, pathStr := range candidates {
+			if !strings.Contains(pathStr, "/") && !strings.Contains(pathStr, "\\") {
+				bestMatch = pathStr
+				break
+			}
+		}
+
+		// Priority B: Shortest Path
+		if bestMatch == "" {
+			shortest := candidates[0]
+			for _, pathStr := range candidates {
+				if len(pathStr) < len(shortest) {
+					shortest = pathStr
+				}
+			}
+			bestMatch = shortest
+		}
+
+		return bestMatch, anchor
+	}
+
+	// 3. Fallback: If not in index, return as is (maybe it's a direct path)
+	// We return the cleanDest + ext if it was stripped, or just cleanDest
+	// But since we stripped extension for lookup, we might need to add it back if we assume .md
+	// For now, let's just return what we have.
+	return dest, anchor
 }

@@ -12,13 +12,8 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 ## Immediate Fixes
 *Priority items to stabilize the current beta.*
 
-- [x] **UI Polish:** Fix hover colors and table of contents styling (borders/colors).
-- [x] **Mobile Experience:** Ensure sidebars auto-close correctly on small screens.
-- [x] **CLI Integrity:** Fix the `doctor` command (currently unstable).
-- [x] **URL generation**: Fix URLs generation when `.md` wikilinks that do not have the same case as the page name.
-- [x] **Heading Links**: Fix the anchor links `something#features` (the [[Table of Contents]] creates slugified ids, but the rendered links are not).
-- [x] **Local Graph Links**: Fix the navigation in the local graph because it does not update the history correctly.
-- [x] **Cloudflare Pages**: Add the documentation for Cloudflare Pages deployment.
+- [ ] **Better logs**: Create better logs management using `slog`
+- [ ] **Support bases**: Support for Obsidian bases.
 
 ## Core Features
 *Major functionality upgrades.*

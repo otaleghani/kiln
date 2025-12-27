@@ -120,7 +120,7 @@ func (c *CanvasNoteRenderer) render() string {
 	}
 
 	// Prepare output paths and navigation
-	outPath, webPath := getOutputPaths(c.relPath, c.nameWithoutExt, ".canvas")
+	outPath, webPath := getPageOutputPath(c.relPath, c.nameWithoutExt, ".canvas")
 	breadcrumbs := getBreadcrumbs(c.relPath, c.nameWithoutExt)
 	setTreeActive(c.rootNode.Children, webPath)
 

@@ -1038,3 +1038,31 @@ path.edge { fill: none; stroke: #9ca3af; stroke-width: 3px; marker-end: url(#arr
     font-size: 0.75rem;
     pointer-events: auto;
 }
+
+.markdown-embed {
+    border-left: 2px solid var(--accent-color);
+    padding-left: 2rem;
+}
+
+.markdown-embed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.markdown-embed-title {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.markdown-embed-link {
+  display: flex;
+  align-items: center;
+  padding: 0.15rem;
+  border-radius: 4px;
+}
+
+.markdown-embed-link:hover {
+  background-color: var(--sidebar-border);
+}

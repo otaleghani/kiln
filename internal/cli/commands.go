@@ -3,6 +3,9 @@
 package cli
 
 import (
+	"os"
+
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +26,7 @@ var (
 	outputDir string // Custom path for the build output
 	mode      string // Choose the mode of generation
 	flatUrls  bool   // Choose between pretty (e.g. note/index.html) or flat URLs (e.g. note.html)
+	logger    *log.Logger
 )
 
 // Init constructs and returns the root command for the application.
@@ -43,6 +47,13 @@ It supports wikilinks, callouts, mermaid diagrams, and graph visualization.`,
 	rootCmd.AddCommand(cmdClean)    // Removes generated artifacts
 	rootCmd.AddCommand(cmdDoctor)   // Checks for common issues
 	rootCmd.AddCommand(cmdStats)    // Displays vault statistics
+
+	logger = log.NewWithOptions(os.Stderr, log.Options{
+		// Prefix:          "kiln",
+		ReportTimestamp: true,
+		Level:           log.DebugLevel,
+	})
+	log.SetDefault(logger)
 
 	return rootCmd
 }

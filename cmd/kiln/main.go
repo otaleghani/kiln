@@ -1,18 +1,11 @@
 package main
 
 import (
-	"log"
 	"os"
 
+	"github.com/charmbracelet/log"
 	"github.com/otaleghani/kiln/internal/cli"
 )
-
-// init runs before main() and sets up global application defaults.
-// Here, it configures the standard logger to prefix all output with "kiln: ",
-// making it easier to distinguish Kiln's logs from other system output.
-func init() {
-	log.SetPrefix("kiln: ")
-}
 
 // main is the entry point of the application.
 // It initializes the Cobra command hierarchy via the cli package and executes the root command.

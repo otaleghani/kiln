@@ -57,7 +57,7 @@ func (m *MarkdownNoteRenderer) render() string {
 		return ""
 	}
 
-	outPath, webPath := getOutputPaths(m.relPath, m.nameWithoutExt, ".md")
+	outPath, webPath := getPageOutputPath(m.relPath, m.nameWithoutExt, ".md")
 
 	// We separate Parsing and Rendering to inspect the AST (Abstract Syntax Tree)
 	// This allows us to extract metadata (Frontmatter) and generate the TOC before rendering HTML.
