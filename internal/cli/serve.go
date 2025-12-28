@@ -20,17 +20,15 @@ var port string
 func init() {
 	// Register flags for the serve command.
 	// Users can customize the listening port and the directory being served.
-	cmdServe.Flags().StringVarP(&port, "port", "p", "8080", "Port to serve on")
+	cmdServe.Flags().StringVarP(&port, FlagPort, FlagPortShort, DefaultPort, "Port to serve on")
 	cmdServe.Flags().
-		StringVarP(&outputDir, "output", "o", "", "Name of the output directory to serve(defaults to ./public)")
+		StringVarP(&outputDir, FlagOutputDir, FlagOutputDirShort, DefaultOutputDir, "Name of the output directory to serve(defaults to ./public)")
 }
 
 // runServe executes the server logic.
 func runServe(cmd *cobra.Command, args []string) {
 	// If the user specified a custom output directory via flags, update the builder config.
-	if outputDir != "" {
-		builder.OutputDir = outputDir
-	}
+	builder.OutputDir = outputDir
 
 	// Construct the local base URL (e.g., http://localhost:8080).
 	// This helps ensure absolute links or assets resolve correctly during local preview.

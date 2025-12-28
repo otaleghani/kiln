@@ -11,8 +11,36 @@ import (
 
 // Default configuration constants for the build process.
 const (
-	OutputDir  = "./public" // The target directory for the generated static site
-	InputVault = "./vault"  // The default source directory containing Obsidian markdown files
+	DefaultOutputDir = "./public" // The target directory for the generated static site
+	DefaultInputDir  = "./vault"  // The default source directory containing Obsidian markdown files
+	DefaultSiteName  = "My Notes"
+	DefaultBaseURL   = ""
+	DefaultThemeName = "default"
+	DefaultFontName  = "inter"
+	DefaultFlatURLS  = false
+	DefaultMode      = "default"
+	DefaultPort      = "8080"
+)
+
+// Flag names
+const (
+	FlagTheme          = "theme"
+	FlagThemeShort     = "t"
+	FlagFont           = "font"
+	FlagFontShort      = "f"
+	FlagUrl            = "url"
+	FlagUrlShort       = "u"
+	FlagSiteName       = "name"
+	FlagSiteNameShort  = "n"
+	FlagInputDir       = "input"
+	FlagInputDirShort  = "i"
+	FlagOutputDir      = "output"
+	FlagOutputDirShort = "o"
+	FlagFlatURLS       = "flat-urls"
+	FlagMode           = "mode"
+	FlagModeShort      = "m"
+	FlagPort           = "port"
+	FlagPortShort      = "p"
 )
 
 // Global variables to store the values of command-line flags.

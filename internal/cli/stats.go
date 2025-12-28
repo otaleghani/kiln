@@ -17,7 +17,7 @@ func init() {
 	// Register flags for the stats command.
 	// Allows running statistics on a custom vault location.
 	cmdStats.Flags().
-		StringVarP(&inputDir, "input", "i", "", "Name of the input directory (defaults to ./vault)")
+		StringVarP(&inputDir, FlagInputDir, FlagInputDirShort, DefaultInputDir, "Name of the input directory (defaults to ./vault)")
 }
 
 // runStats executes the statistics calculation logic.

@@ -4,9 +4,9 @@ import "log"
 
 var (
 	// OutputDir is the destination directory for the generated site.
-	OutputDir string = "./public"
+	OutputDir string
 	// InputDir is the source directory containing the Obsidian vault.
-	InputDir string = "./vault"
+	InputDir string
 	// FlatUrls defines if the user opted in for flat urls.
 	FlatUrls  bool
 	ThemeName string

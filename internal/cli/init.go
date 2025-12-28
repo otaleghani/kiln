@@ -17,7 +17,7 @@ func init() {
 	// Register flags for the init command.
 	// Allows the user to specify a custom directory name for their new vault.
 	cmdInit.Flags().
-		StringVarP(&inputDir, "input", "i", "", "Name of the input directory (defaults to ./vault)")
+		StringVarP(&inputDir, FlagInputDir, FlagInputDirShort, DefaultInputDir, "Name of the input directory (defaults to ./vault)")
 }
 
 // runInit executes the initialization logic.

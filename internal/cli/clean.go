@@ -18,7 +18,7 @@ func init() {
 	// We allow the user to specify a custom output directory to clean,
 	// in case they generated their site into a non-standard location.
 	cmdClean.Flags().
-		StringVarP(&outputDir, "output", "o", "", "Name of the output directory (defaults to ./public)")
+		StringVarP(&outputDir, FlagOutputDir, FlagOutputDirShort, DefaultOutputDir, "Name of the output directory (defaults to ./public)")
 }
 
 // runClean executes the cleanup logic.

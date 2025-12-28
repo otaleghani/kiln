@@ -20,7 +20,7 @@ func init() {
 	// Register flags for the doctor command.
 	// Allows running diagnostics on a custom vault location.
 	cmdDoctor.Flags().
-		StringVarP(&inputDir, "input", "i", "", "Name of the input directory (defaults to ./vault)")
+		StringVarP(&inputDir, FlagInputDir, FlagInputDirShort, DefaultInputDir, "Name of the input directory (defaults to ./vault)")
 }
 
 // runDoctor executes the linting logic.

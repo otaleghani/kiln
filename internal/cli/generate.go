@@ -17,21 +17,21 @@ func init() {
 	// Register flags to allow users to customize the build without changing code.
 	// We support short flags (e.g., -t) and long flags (e.g., --theme).
 	cmdGenerate.Flags().
-		StringVarP(&themeName, "theme", "t", "default", "Color theme (default, dracula, catppuccin, nord)")
+		StringVarP(&themeName, FlagTheme, FlagThemeShort, DefaultThemeName, "Color theme (default, dracula, catppuccin, nord)")
 	cmdGenerate.Flags().
-		StringVarP(&fontName, "font", "f", "inter", "Font family (inter, merriweather, lato, system)")
+		StringVarP(&fontName, FlagFont, FlagFontShort, DefaultFontName, "Font family (inter, merriweather, lato, system)")
 	cmdGenerate.Flags().
-		StringVarP(&baseURL, "url", "u", "", "Base URL for sitemap generation (e.g. https://example.com)")
+		StringVarP(&baseURL, FlagUrl, FlagUrlShort, DefaultBaseURL, "Base URL for sitemap generation (e.g. https://example.com)")
 	cmdGenerate.Flags().
-		StringVarP(&siteName, "name", "n", "My Notes", "Name of the website (e.g. 'My Obsidian Vault')")
+		StringVarP(&siteName, FlagSiteName, FlagSiteNameShort, DefaultSiteName, "Name of the website (e.g. 'My Obsidian Vault')")
 	cmdGenerate.Flags().
-		StringVarP(&inputDir, "input", "i", "./vault", "Name of the input directory (defaults to ./vault)")
+		StringVarP(&inputDir, FlagInputDir, FlagInputDirShort, DefaultInputDir, "Name of the input directory (defaults to ./vault)")
 	cmdGenerate.Flags().
-		StringVarP(&outputDir, "output", "o", "./public", "Name of the output directory (defaults to ./public)")
+		StringVarP(&outputDir, FlagOutputDir, FlagOutputDirShort, DefaultOutputDir, "Name of the output directory (defaults to ./public)")
 	cmdGenerate.Flags().
-		BoolVar(&flatUrls, "flat-urls", false, "Generate flat HTML files (note.html) instead of pretty directories (note/index.html)")
+		BoolVar(&flatUrls, FlagFlatURLS, DefaultFlatURLS, "Generate flat HTML files (note.html) instead of pretty directories (note/index.html)")
 	cmdGenerate.Flags().
-		StringVarP(&mode, "mode", "m", "default", "The mode to use for the generation. Available modes 'default' and 'custom' (defaults to 'default')")
+		StringVarP(&mode, FlagMode, FlagModeShort, DefaultMode, "The mode to use for the generation. Available modes 'default' and 'custom' (defaults to 'default')")
 }
 
 // runGenerate executes the build logic.
