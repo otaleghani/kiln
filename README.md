@@ -8,8 +8,3 @@
 **Kiln** is a static site generator designed specifically for [Obsidian](https://obsidian.md/). It takes your Markdown vault—images, canvases, graphs, and math included—and "bakes" it into a highly optimized, interactive HTML website. 
 
 Take a look at the [documentation](https://kiln.talesign.com/) to get started.
-
-## WIP: Custom mode
-
-### steps:
-1. Create an asset folder
