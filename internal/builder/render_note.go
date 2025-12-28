@@ -20,6 +20,7 @@ type PageData struct {
 	Title         string
 	Content       template.HTML
 	SiteName      string
+	WebPath       string
 	CanvasContent template.JS // Raw JS JSON for canvas hydration
 	IsCanvas      bool
 	IsGraph       bool
@@ -97,6 +98,7 @@ func (m *MarkdownNoteRenderer) render() string {
 	data := PageData{
 		BaseURL:     m.baseURL,
 		Title:       m.nameWithoutExt,
+		WebPath:     webPath,
 		SiteName:    m.siteName,
 		Content:     template.HTML(finalHTML),
 		Breadcrumbs: breadcrumbs,

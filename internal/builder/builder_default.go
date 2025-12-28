@@ -99,11 +99,13 @@ func buildDefault() {
 		nameWithoutExt := strings.TrimSuffix(d.Name(), ext)
 
 		// Set the current file context for the link resolver
-		resolver.CurrentSource = nameWithoutExt
+		// resolver.CurrentSource = nameWithoutExt
 
 		switch ext {
 		case ".md":
 			fileCount++
+			_, webPath := getPageOutputPath(relPath, nameWithoutExt, ".md")
+			resolver.CurrentSource = webPath
 			m := MarkdownNoteRenderer{
 				path:           path,
 				nameWithoutExt: nameWithoutExt,
@@ -116,12 +118,15 @@ func buildDefault() {
 				minifier:       minifier,
 				theme:          theme,
 			}
-			webPath := m.render()
+			// webPath := c.render()
+			m.render()
 			if BaseURL != "" {
 				addToSitemap(d, BaseURL, webPath, &sitemapEntries)
 			}
 		case ".canvas":
 			fileCount++
+			_, webPath := getPageOutputPath(relPath, nameWithoutExt, ".canvas")
+			resolver.CurrentSource = webPath
 			c := CanvasNoteRenderer{
 				path:           path,
 				relPath:        relPath,
@@ -134,7 +139,7 @@ func buildDefault() {
 				rootNode:       rootNode,
 				theme:          theme,
 			}
-			webPath := c.render()
+			c.render()
 			if BaseURL != "" {
 				addToSitemap(d, BaseURL, webPath, &sitemapEntries)
 			}

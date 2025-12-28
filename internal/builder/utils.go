@@ -127,7 +127,8 @@ func initBuild() (fileIndex map[string][]string, sourceMap map[string]string, gr
 			// Add to Graph Nodes list
 			if !nodeSet[key] {
 				graphNodes = append(graphNodes, GraphNode{
-					ID:    key,
+					// ID:    key,
+					ID:    webPath,
 					Label: key,
 					URL:   webPath,
 					Val:   1, // Default weight for visualization

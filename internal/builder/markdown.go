@@ -32,6 +32,7 @@ type GraphLink struct {
 // they point to the correct URL, respecting the site's BasePath.
 type IndexResolver struct {
 	Index         map[string][]string
+	RefMap        map[string][]string // Lowercase Filename -> Real Paths
 	SourceMap     map[string]string
 	Links         []GraphLink
 	CurrentSource string
@@ -42,28 +43,68 @@ type IndexResolver struct {
 	ReadFile func(path string) ([]byte, error) // Needed for loading files
 }
 
+//	func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
+//		rawInput := n.Target
+//		if len(n.Fragment) > 0 {
+//			rawInput = append(rawInput, '#')
+//			rawInput = append(rawInput, n.Fragment...)
+//		}
+//
+//		// 1. Find the REAL file path (e.g. "content/Credits.md")
+//		filePath, anchor := r.FindFilePath(rawInput)
+//
+//		// --- GRAPH FIX ---
+//		if filePath != "" {
+//			// "content/Credits.md" -> "Credits"
+//			filename := filepath.Base(filePath)
+//			nodeID := strings.TrimSuffix(filename, filepath.Ext(filename))
+//
+//			// This now records "Credits" (matching your graph node), even if user typed "credits"
+//			r.recordLink(nodeID)
+//		}
+//		// -----------------
+//
+//		if filePath == "" {
+//			return []byte(anchor), nil
+//		}
+//
+//		// 2. Transform into Web URL
+//		ext := filepath.Ext(filePath)
+//		isContentFile := ext == ".md" || ext == ".canvas"
+//		pathNoExt := strings.TrimSuffix(filePath, ext)
+//
+//		// Slugify
+//		urlPath := slugifyPath(pathNoExt)
+//
+//		// Keep extension for assets
+//		if !isContentFile && ext != "" {
+//			urlPath += strings.ToLower(ext)
+//		}
+//
+//		finalLink := path.Join(r.BasePath, urlPath)
+//		if isContentFile {
+//			finalLink = strings.TrimSuffix(finalLink, "/index")
+//		}
+//
+//		return []byte(finalLink + anchor), nil
+//	}
 func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
-	// RECONSTRUCT INPUT: Combine Target + Fragment
-	// The parser splits them, but our logic expects to handle the whole reference.
+	// 1. Reconstruct Input
 	rawInput := n.Target
 	if len(n.Fragment) > 0 {
-		// Use append to create "Target#Fragment"
 		rawInput = append(rawInput, '#')
 		rawInput = append(rawInput, n.Fragment...)
 	}
 
-	// 1. Find the real file using our helper (now passing the FULL input)
+	// 2. Find the REAL file path
 	filePath, anchor := r.FindFilePath(rawInput)
 
-	// Track connection for the graph (using clean name)
-	cleanDest := strings.TrimSuffix(filePath, filepath.Ext(filePath))
-	r.recordLink(cleanDest)
-
+	// Default anchor return if not found
 	if filePath == "" {
 		return []byte(anchor), nil
 	}
 
-	// 2. Transform the REAL file path into a WEB URL
+	// 3. Generate the Web URL (The unique ID)
 	ext := filepath.Ext(filePath)
 	isContentFile := ext == ".md" || ext == ".canvas"
 	pathNoExt := strings.TrimSuffix(filePath, ext)
@@ -71,16 +112,36 @@ func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 	// Slugify
 	urlPath := slugifyPath(pathNoExt)
 
-	// Add extension back if it's an asset (image/pdf)
+	// Keep extensions for assets
 	if !isContentFile && ext != "" {
 		urlPath += strings.ToLower(ext)
 	}
 
-	// Finalize Path
+	// Create Final URL
 	finalLink := path.Join(r.BasePath, urlPath)
 	if isContentFile {
 		finalLink = strings.TrimSuffix(finalLink, "/index")
 	}
+
+	// --- FIX: Record the Link using the URL ---
+	// We strip the anchor so the link points to the Page, not the Header
+	graphTarget := finalLink
+
+	// Ensure we don't record self-links if you don't want them (optional)
+	// r.recordLink(graphTarget)
+
+	// DEBUG PRINT
+	// fmt.Printf("DEBUG LINK: Source='%s' Target='%s'\n", r.CurrentSource, graphTarget)
+
+	// Only record if we are dealing with a content file (optional safety)
+	// if isContentFile {
+	// 	r.recordLink(graphTarget)
+	// }
+	// -----------------------------------------
+
+	// TODO: Delete all of the isContentFile logic, because we are only running this in .md and .canvas files
+	// anyways AND we are passing to the resolver the final link
+	r.recordLink(graphTarget)
 
 	return []byte(finalLink + anchor), nil
 }
@@ -240,9 +301,21 @@ func newMarkdownParser(
 	if basePath == "" {
 		basePath = "/"
 	}
+	// --- 1. BUILD THE REFERENCE MAP ---
+	// Maps "credits" -> ["content/Credits.md"]
+	refMap := make(map[string][]string)
+
+	for filename, paths := range fileIndex {
+		// Convert "Credits" -> "credits"
+		lowerName := strings.ToLower(filename)
+
+		// If multiple files have same name (diff casing), append them
+		refMap[lowerName] = append(refMap[lowerName], paths...)
+	}
 
 	resolver := &IndexResolver{
 		Index:     fileIndex,
+		RefMap:    refMap,
 		SourceMap: sourceMap,
 		Links:     []GraphLink{},
 		BasePath:  basePath,
@@ -352,7 +425,7 @@ func (r *IndexResolver) renderWikilink(
 		}
 	}
 
-	fmt.Printf("DEBUG: Web: %s | Disk: %s\n", cleanWebPath, realFilePath)
+	// fmt.Printf("DEBUG: Web: %s | Disk: %s\n", cleanWebPath, realFilePath)
 
 	// 3. Handle Images
 	// For images, we usually want to render the tag with the WEB PATH (for the browser),
@@ -543,35 +616,135 @@ func (r *IndexResolver) extractNodes(root ast.Node, source []byte, fragment stri
 
 // FindFilePath searches the index for the best matching file path.
 // It returns the filesystem path (e.g. "books/Harry Potter.md") and the anchor (e.g. "#summary").
+// func (r *IndexResolver) FindFilePath(target []byte) (string, string) {
+// 	dest := string(target)
+// 	dest = strings.TrimSpace(dest)
+//
+// 	// 1. Handle anchors (e.g., [[Page#Section]])
+// 	anchor := ""
+// 	if idx := strings.Index(dest, "#"); idx != -1 {
+// 		anchor = dest[idx:]
+// 		dest = dest[:idx]
+// 	}
+//
+// 	cleanDest := dest
+// 	ext := filepath.Ext(cleanDest)
+// 	if ext == ".md" || ext == ".canvas" {
+// 		cleanDest = strings.TrimSuffix(cleanDest, ext)
+// 	}
+//
+// 	// 2. Logic to handle multiple matches (Your existing logic)
+// 	if candidates, ok := r.Index[cleanDest]; ok && len(candidates) > 0 {
+// 		var bestMatch string
+//
+// 		// Priority A: Check for Root Match
+// 		for _, pathStr := range candidates {
+// 			if !strings.Contains(pathStr, "/") && !strings.Contains(pathStr, "\\") {
+// 				bestMatch = pathStr
+// 				break
+// 			}
+// 		}
+//
+// 		// Priority B: Shortest Path
+// 		if bestMatch == "" {
+// 			shortest := candidates[0]
+// 			for _, pathStr := range candidates {
+// 				if len(pathStr) < len(shortest) {
+// 					shortest = pathStr
+// 				}
+// 			}
+// 			bestMatch = shortest
+// 		}
+//
+// 		return bestMatch, anchor
+// 	}
+//
+// 	// 3. Fallback: If not in index, return as is (maybe it's a direct path)
+// 	// We return the cleanDest + ext if it was stripped, or just cleanDest
+// 	// But since we stripped extension for lookup, we might need to add it back if we assume .md
+// 	// For now, let's just return what we have.
+// 	return dest, anchor
+// }
+
 func (r *IndexResolver) FindFilePath(target []byte) (string, string) {
 	dest := string(target)
 	dest = strings.TrimSpace(dest)
 
-	// 1. Handle anchors (e.g., [[Page#Section]])
+	// 1. Separate Anchor
 	anchor := ""
 	if idx := strings.Index(dest, "#"); idx != -1 {
 		anchor = dest[idx:]
 		dest = dest[:idx]
 	}
 
-	cleanDest := dest
-	ext := filepath.Ext(cleanDest)
+	// 2. Prepare for Lookup
+	// User Input: "Deployment/Cloudflare Pages"
+
+	// Remove extension
+	ext := filepath.Ext(dest)
 	if ext == ".md" || ext == ".canvas" {
-		cleanDest = strings.TrimSuffix(cleanDest, ext)
+		dest = strings.TrimSuffix(dest, ext)
 	}
 
-	// 2. Logic to handle multiple matches (Your existing logic)
-	if candidates, ok := r.Index[cleanDest]; ok && len(candidates) > 0 {
-		var bestMatch string
+	// 3. Extract Key (Filename) & Lowercase it
+	// "Deployment/Cloudflare Pages" -> base: "Cloudflare Pages" -> lower: "cloudflare pages"
+	baseName := filepath.Base(dest)
+	lowerKey := strings.ToLower(baseName)
 
-		// Priority A: Check for Root Match
+	// 4. Lookup in RefMap (Case Insensitive!)
+	candidates, ok := r.RefMap[lowerKey]
+
+	// Fallback: Try looking up the full path lowercased (rare, but good for safety)
+	if !ok {
+		lowerDest := strings.ToLower(dest)
+		if alt, ok := r.RefMap[lowerDest]; ok {
+			candidates = alt
+		} else {
+			return "", anchor // Not found
+		}
+	}
+
+	// 5. Select Best Match (Path Filtering)
+	var bestMatch string
+
+	// If user provided a path (e.g. "Deployment/Cloudflare Pages")
+	if strings.Contains(dest, "/") || strings.Contains(dest, "\\") {
+		// Normalize input path for comparison
+		searchSuffix := strings.ToLower(filepath.ToSlash(dest))
+
+		// Ensure suffix expects an extension if candidates have one
+		if len(candidates) > 0 && filepath.Ext(candidates[0]) != "" &&
+			filepath.Ext(searchSuffix) == "" {
+			searchSuffix += ".md"
+		}
+
+		for _, pathStr := range candidates {
+			// Compare lowercase suffixes
+			// Candidate: "content/Deployment/Cloudflare Pages.md"
+			// Suffix:    "deployment/cloudflare pages.md"
+			normPath := strings.ToLower(filepath.ToSlash(pathStr))
+
+			if strings.HasSuffix(normPath, searchSuffix) {
+				bestMatch = pathStr
+				break
+			}
+		}
+
+		// Fallback: If strict suffix failed, return first candidate
+		if bestMatch == "" && len(candidates) > 0 {
+			bestMatch = candidates[0]
+		}
+
+	} else {
+		// No path provided (e.g. "Cloudflare Pages"), use standard priority
+
+		// Priority A: Root Match
 		for _, pathStr := range candidates {
 			if !strings.Contains(pathStr, "/") && !strings.Contains(pathStr, "\\") {
 				bestMatch = pathStr
 				break
 			}
 		}
-
 		// Priority B: Shortest Path
 		if bestMatch == "" {
 			shortest := candidates[0]
@@ -582,13 +755,7 @@ func (r *IndexResolver) FindFilePath(target []byte) (string, string) {
 			}
 			bestMatch = shortest
 		}
-
-		return bestMatch, anchor
 	}
 
-	// 3. Fallback: If not in index, return as is (maybe it's a direct path)
-	// We return the cleanDest + ext if it was stripped, or just cleanDest
-	// But since we stripped extension for lookup, we might need to add it back if we assume .md
-	// For now, let's just return what we have.
-	return dest, anchor
+	return bestMatch, anchor
 }
