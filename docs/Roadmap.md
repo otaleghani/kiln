@@ -14,7 +14,7 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 
 - [ ] **Better logs**: Create better logs management using `charm/log`
 - [ ] **Support bases**: Support for Obsidian bases.
-- [ ] **Custom mode**: Bake static website by using Obsidian as a CMS.
+- [x] **Custom mode**: Bake static website by using Obsidian as a CMS.
 
 ## Core Features
 *Major functionality upgrades.*

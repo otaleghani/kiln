@@ -2,6 +2,9 @@
 title: Bake your Obsidian vault into a website
 description: Turn your Obsidian vault into a blazing fast, interactive website. Kiln natively supports Canvas, Graphs, Math, and Wikilinks with zero configuration required.
 ---
+
+> [!Info] New: Custom Mode
+> You can now use the flag `--mode "custom"` to activate custom mode, a feature that allows you to use Obsidian as an headless CMS. Check it out at [[What is Custom Mode]] or follow the [[Quick Start Guide]] to get started building custom static websites with Kiln. 
 # Kiln: an Obsidian static website generator
 
 > **Bake your Obsidian vault into a blazing fast static site.**
@@ -85,5 +88,3 @@ Kiln is open source and distributed under the MIT License. If you spot a bug or 
 ## Credits
 
 Check out the [[credits]] page for a full list of credits.
-[[Deployment/Cloudflare Pages]]
-[[Deployment/Vercel]]

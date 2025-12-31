@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
-	"gopkg.in/yaml.v3"
+	"regexp"
+	"sort"
+
 	"html/template"
 	"io/fs"
 	"net/url"
@@ -17,152 +17,459 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/otaleghani/kiln/internal/log"
+	"github.com/yuin/goldmark"
+	"gopkg.in/yaml.v3"
 )
 
-// walk walks the input directory and handles different kinds of files
+// walk the input directory and loads the different kinds of files into s.Files
 func (s *CustomSite) walk() error {
+	s.Files = Files{
+		Env:       FilePaths{},
+		Markdown:  []FilePaths{},
+		Base:      []FilePaths{},
+		Canvas:    []FilePaths{},
+		Config:    []FilePaths{},
+		Layout:    make(map[string]FilePaths),
+		Component: []FilePaths{},
+		Static:    []FilePaths{},
+	}
+
 	err := filepath.Walk(InputDir, func(path string, info fs.FileInfo, err error) error {
+		l := log.Default.WithFile(path)
+		l.Debug("Processing file...")
+
+		// Handle permission errors etc.
+		if err != nil {
+			return err
+		}
+
 		relPath, err := filepath.Rel(InputDir, path)
 		if err != nil {
 			return err
 		}
 
-		log.SetPrefix(relPath)
-		log.Debug("Processing start...")
-		if err != nil {
-			return err
+		// Skip directories
+		if info.IsDir() {
+			l.Debug("Skipping file", log.FieldReason, "File is a directory")
+			return nil
 		}
 
+		// Skip dotfiles
+		if strings.HasPrefix(relPath, ".") && path != InputDir {
+			l.Debug("Skipping file", log.FieldReason, "File is a hidden file (dotfile)")
+			return nil
+		}
+
+		processFile := FilePaths{path, relPath}
 		fileExt := filepath.Ext(path)
 		switch fileExt {
 		case ".md":
-			// Index the page
+			s.Files.Markdown = append(s.Files.Markdown, processFile)
+		case ".base":
+			s.Files.Base = append(s.Files.Base, processFile)
+		case ".canvas":
+			s.Files.Canvas = append(s.Files.Canvas, processFile)
 		case ".json":
-			if path == filepath.Join(InputDir, "env.json") {
-				// handleEnvironment
-			}
 			if filepath.Base(path) == "config.json" {
-				// handleCollection
+				s.Files.Config = append(s.Files.Config, processFile)
+				break
 			}
+			if path == filepath.Join(InputDir, "env.json") {
+				s.Files.Env = processFile
+				break
+			}
+			l.Debug("Found unknown JSON file, added to static files")
+			s.Files.Static = append(s.Files.Static, processFile)
 		case ".html":
-			return nil
+			if filepath.Base(path) == "layout.html" {
+				s.Files.Layout[getConfigDirectory(relPath)] = processFile
+				break
+			}
+			if strings.HasPrefix(filepath.Base(path), "_") {
+				s.Files.Component = append(s.Files.Component, processFile)
+				break
+			}
+			l.Debug("Found unknown HTML file, skipped")
+			// staticPages = append(staticPages, processFile)
 		default:
-			// Copy over
-		}
-
-		// Handle env.json
-		if path == filepath.Join(InputDir, "env.json") {
-			log.SetPrefix(path)
-			log.Debug("Found environment variables file")
-			return nil
-		}
-
-		// Handle other configurations
-		if filepath.Base(path) == "config.json" {
+			s.Files.Static = append(s.Files.Static, processFile)
 		}
 
 		return nil
 	})
+
 	return err
 }
 
-// handleEnvironmentFile saves the data in the env.json file if found
-func (s *CustomSite) handleEnvironmentFile() error {
+// TODO: Handle base files
+// TODO: Handle canvas files
+
+// parseComponentFiles takes every found HTML component and loads it, creating a base template
+func (s *CustomSite) parseComponentFiles() (err error) {
+	log.Info("Loading components...")
+	for _, file := range s.Files.Component {
+		log.Default.WithFile(file.RelPath).Debug("Processing component...")
+
+		s.Template, err = s.Template.ParseFiles(file.Path)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-// handleConfigFile loads the configuration found in the config.json file
-func (s *CustomSite) handleConfigFile(path string, relPath string) error {
-	// log.Debug("Found configuration file")
-	// if filepath.Join(InputDir, "config.json") == path {
-	// 	log.Debug("Configuration file is in root folder. Skipping it.")
-	// 	return nil
-	// }
-	//
-	// data, err := os.ReadFile(path)
-	// if err != nil {
-	// 	log.Error("Coudn't read file", "error", err)
-	// 	return nil
-	// }
-	//
-	// // var configMap map[string]any
-	// // if err := json.Unmarshal(data, &configMap); err != nil {
-	// // 	log.Error("Couldn't unmarshal configuration", "error", err)
-	// // 	return nil
-	// // }
-	//
-	// if filepath.Join(InputDir, "config.json") == path {
-	// 	log.Debug("Found config file in root folder. Skipping it")
-	// 	return nil
-	// }
-	//
-	// log.Debug("Handling configuration")
-	// dir := filepath.Dir(relPath)
-	// if dir == "." {
-	// 	dir = ""
-	// }
-	//
-	// // data, err := os.ReadFile(path)
-	// // if err != nil {
-	// // 	log.Error("Error reading the configuration", "error", err)
-	// // 	return nil
-	// // }
-	//
-	// var rawConfigMap map[string]any
-	// if err := json.Unmarshal(data, &rawConfigMap); err != nil {
-	// 	log.Error("Coudn't unmarshal the configuration", "error", err)
-	// 	return nil
-	// }
-	//
-	// collectionName := ""
-	//
-	// // Parse configuration, check the field and add it to the site.Configs
-	// configMap := make(map[string]FieldConfig)
-	// for key, value := range rawConfigMap {
-	// 	// Skip collection_name
-	// 	if key == "collection_name" {
-	// 		strVal, ok := value.(string)
-	// 		if !ok {
-	// 			log.Error("Missing collection_name field")
-	// 		}
-	// 		collectionName = strVal
-	// 		continue
-	// 	}
-	// 	// Normalize configuration field
-	// 	field, err := normalizeConfigField(value, collections)
-	// 	if err != nil {
-	// 		log.Error("Couldn't normalized field", "name", key, "error", err)
-	// 		continue
-	// 	}
-	// 	configMap[key] = field
-	// }
+// parseLayouts creates for each configuration the specific template to execute
+func (s *CustomSite) parseLayouts() error {
+	log.Info("Parsing layouts...")
+	for _, config := range s.Configs {
+		l := log.Default.WithFile(config.RelPath)
+		l.Debug("Loading 'layout.html'")
+		if layout, exists := s.Files.Layout[getConfigDirectory(config.RelPath)]; exists {
 
-	// config := &Config{Fields: configMap, Name: collectionName}
-	// site.Configs[dir] = config
-	// site.ConfigsLookup[collectionName] = config
-	// log.Info("Configuration validated and loaded")
+			// Clones the base layout (that contains all components)
+			configTemplate, err := s.Template.Clone()
+			if err != nil {
+				return err
+			}
 
-	// // Check if there is a field called "collection_name"
-	// value, exists := configMap["collection_name"]
-	// if !exists {
-	// 	log.Warn("Found config.json without 'collection_name'")
-	// }
-	//
-	// // Parse the "collection_name" field
-	// collectionName, ok := value.(string)
-	// if !ok {
-	// 	log.Error("Couldn't parse 'collection_name' from config")
-	// }
-	//
-	// // Check if there is no other collection with that name
-	// _, exists = collections[collectionName]
-	// if exists {
-	// 	log.Error("Duplicate collection", "name", collectionName)
-	// }
-	//
-	// // Add the collection name to the collections map
-	// collections[collectionName] = struct{}{}
-	log.Info("Successffully loaded config file")
+			// Parses layout.html for the specific config
+			configTemplate, err = configTemplate.ParseFiles(layout.Path)
+			if err != nil {
+				return err
+			}
+
+			config.LayoutPath = layout.Path
+			config.LayoutRelPath = layout.RelPath
+			config.Template = configTemplate
+		} else {
+			return fmt.Errorf("No 'layout.html' file found for the collection %s", config.Name)
+		}
+	}
+	return nil
+}
+
+// parseNotes loops through the pages of the CustomSite and parses the raw data discovered
+// by loadNoteFile.
+func (s *CustomSite) parseNotes() error {
+	log.Info("Parsing notes...")
+	siblings := make(map[string][]*CustomPage)
+
+	for _, page := range s.Pages {
+		l := log.Default.WithFile(page.RelPath)
+
+		// Validate fields
+		fields := make(map[string]*FieldContent)
+		for key, value := range page.RawFrontmatter {
+			// TODO: Fix required
+			content, err := s.validateFrontmatterField(key, value, page)
+			if err != nil {
+				l.Error("Coudn't validate field", log.FieldName, key, log.FieldError, err)
+				return err
+			}
+			fields[key] = &content
+		}
+
+		// Validate required fields
+		if config, ok := s.Configs[getConfigDirectory(page.ID)]; ok && config != nil {
+			for fieldName, field := range config.Fields {
+				_, exists := fields[fieldName]
+				if !exists && field.Required {
+					l.Error("Field is required", log.FieldName, fieldName)
+					return ErrorRequiredField
+				}
+			}
+		}
+
+		ext := filepath.Ext(page.Path)
+		nameWithoutExt := strings.TrimSuffix(page.RelPath, ext)
+		outputPath, webPath := getPageOutputPath(page.RelPath, nameWithoutExt, ext)
+
+		page.OutputPath = outputPath
+		page.WebPath = webPath
+		page.Fields = fields
+		page.IsIndex = strings.TrimSuffix(filepath.Base(page.Path), ".md") == "index"
+
+		// Generates the HTML of the body of the note
+		var buf bytes.Buffer
+		s.Resolver.CurrentSource = page.WebPath
+		if err := s.MarkdownParser.Convert(page.RawContent, &buf); err != nil {
+			l.Error("Coudn't parse markdown content", log.FieldError, err)
+			return err
+		}
+
+		customLayoutPath := strings.TrimSuffix(page.Path, ".md") + ".html"
+		if _, err := os.Stat(customLayoutPath); err == nil {
+			l.Debug("Found custom layout", log.FieldFile, customLayoutPath)
+
+			customTemplate, err := s.Template.Clone()
+			if err != nil {
+				l.Error("Error cloning base layout", log.FieldError, err)
+				return err
+			}
+
+			// Parses layout.html for the specific config
+			customTemplate, err = customTemplate.ParseFiles(customLayoutPath)
+			if err != nil {
+				l.Error(
+					"Error parsing custom layout",
+					log.FieldFile,
+					customLayoutPath,
+					log.FieldError,
+					err,
+				)
+				return err
+			}
+			page.Template = customTemplate
+		}
+
+		finalHTML := buf.String()
+		finalHTML = transformCallouts(finalHTML)
+		finalHTML = transformMermaid(finalHTML)
+		finalHTML = transformHighlights(finalHTML)
+		page.Content = template.HTML(finalHTML)
+
+		// We append the page for the siblings handling
+		if page.Collection != "" && !page.IsIndex {
+			siblings[page.Collection] = append(siblings[page.Collection], page)
+		}
+	}
+
+	// Handling siblings
+	for _, page := range s.Pages {
+		if siblings, collectionExists := siblings[page.Collection]; collectionExists {
+			page.Siblings = siblings
+		}
+	}
+
+	return nil
+}
+
+// parseConfigs loops through the configs of the CustomSite and parses the raw data
+// discovered by loadConfigFile.
+func (s *CustomSite) parseConfigs() error {
+	log.Info("Parsing configurations...")
+
+	for _, config := range s.Configs {
+		l := log.Default.WithFile(config.RelPath)
+		if filepath.Join(InputDir, "config.json") == config.Path {
+			l.Debug("Found config file in root folder, skipping it")
+			return nil
+		}
+
+		// Parse the configuration and check the fields
+		configMap := make(map[string]FieldConfig)
+		for key, value := range config.RawFields {
+			// Normalize configuration field
+			if key == "collection_name" {
+				l.Debug("Skipped", log.FieldName, key)
+				continue
+			}
+			field, err := s.normalizeConfigField(value)
+			if err != nil {
+				l.Error("Couldn't normalized field", log.FieldName, key, log.FieldError, err)
+				continue
+			}
+			configMap[key] = field
+			l.Debug("Added field", log.FieldName, key, log.FieldType, field.Type)
+		}
+
+		config.Fields = configMap
+
+		l.Info("Configuration validated and loaded")
+	}
+	return nil
+}
+
+// parseStaticFiles creates a rappresentation of the given static file and copies the file over
+// the output directory
+func (s *CustomSite) parseStaticFiles() error {
+	log.Info("Parsing static files...")
+	for _, file := range s.Files.Static {
+		// Index the asset
+		cleanName := filepath.Base(file.Path)
+		finalOutPath, webPath := getAssetOutputPath(file.RelPath)
+
+		// Index the file
+		asset := &Asset{
+			ID:           cleanName,
+			Path:         file.Path,
+			RelPath:      file.RelPath,
+			RelPermalink: webPath,
+			OutputPath:   finalOutPath,
+		}
+
+		if err := os.MkdirAll(filepath.Dir(finalOutPath), 0755); err != nil {
+			return err
+		}
+
+		err := copyFile(asset.Path, finalOutPath)
+		if err != nil {
+			return err
+		}
+
+		s.Assets[cleanName] = asset
+
+		log.Default.WithFile(asset.RelPath).Info("Static file parsed correctly")
+	}
+	return nil
+}
+
+// loadNoteFile creates the initial rappresentation of the file (discovery phase)
+func (s *CustomSite) loadNoteFiles() error {
+	log.Info("Loading notes...")
+	for _, file := range s.Files.Markdown {
+		cleanName := strings.TrimSuffix(filepath.Base(file.Path), ".md")
+		config := s.Configs[getConfigDirectory(file.RelPath)]
+
+		data, err := os.ReadFile(file.Path)
+		if err != nil {
+			return err
+		}
+		rawFrontmatter, rawContent := parseFrontmatter(data)
+
+		page := &CustomPage{
+			ID:             file.RelPath,
+			Title:          cleanName,
+			Path:           file.Path,
+			RelPath:        file.RelPath,
+			RawFrontmatter: rawFrontmatter,
+			RawContent:     rawContent,
+		}
+		if config != nil {
+			page.Collection = config.Name
+		}
+		s.Pages[file.RelPath] = page
+		s.PagesLookup[cleanName] = page
+
+		log.Default.WithFile(page.RelPath).Info("Markdown note parsed correctly")
+	}
+	return nil
+}
+
+// parseEnvFile saves the data in the env.json file if found
+func (s *CustomSite) parseEnvFile() error {
+	log.Info("Loading environment...")
+	if s.Files.Env.Path == "" {
+		log.Info("No 'env.json' file found")
+		return nil
+	}
+
+	l := log.Default.WithFile(s.Files.Env.RelPath)
+	// Read file
+	rawData, err := os.ReadFile(s.Files.Env.Path)
+	if err != nil {
+		return err
+	}
+
+	// Unmarshal the data
+	var rawEnvMap map[string]any
+	if err := json.Unmarshal(rawData, &rawEnvMap); err != nil {
+		return err
+	}
+
+	// Validate the data
+	envMap := make(map[string]string)
+	for key, value := range rawEnvMap {
+		strVal, ok := value.(string)
+		if !ok {
+			l.Warn("Couldn't parse field", "name", key)
+			continue
+		}
+		envMap[key] = strVal
+		l.Debug("Added field", "name", key, "value", strVal)
+	}
+	s.Env = envMap
+
+	l.Info("Environment file parsed correctly")
+	return nil
+}
+
+// loadConfigFiles loads the configuration found in the config.json file
+func (s *CustomSite) loadConfigFiles() error {
+	// Configuration files are handled before everything because they are needed (e.g. notes)
+	log.Info("Loading configurations...")
+	for _, file := range s.Files.Config {
+		if filepath.Join(InputDir, "config.json") == file.Path {
+			log.Debug("Configuration file is in root folder, skipping it")
+			return nil
+		}
+
+		rawData, err := os.ReadFile(file.Path)
+		if err != nil {
+			return err
+		}
+
+		var rawConfigMap map[string]any
+		if err := json.Unmarshal(rawData, &rawConfigMap); err != nil {
+			return err
+		}
+
+		collectionName, ok := rawConfigMap["collection_name"].(string)
+		if !ok {
+			return errors.New("Couln't parse 'collection_name' field")
+		}
+
+		// Check if there is another collection with that name
+		if _, exists := s.ConfigsLookup[collectionName]; exists {
+			return fmt.Errorf("Found two collections with the name %s", collectionName)
+		}
+
+		config := &Config{
+			ID:        getConfigDirectory(file.RelPath),
+			Path:      file.Path,
+			RelPath:   file.RelPath,
+			Name:      collectionName,
+			RawFields: rawConfigMap,
+		}
+		s.Configs[config.ID] = config
+		s.ConfigsLookup[collectionName] = config
+
+		log.Default.WithFile(config.RelPath).Info("Configuration file loaded correctly")
+	}
+	return nil
+}
+
+func (s *CustomSite) render() error {
+	for _, page := range s.Pages {
+		l := log.Default.WithFile(page.RelPath)
+
+		var tmpl *template.Template
+		var tmplPath string
+		if page.Template != nil {
+			l.Debug("Using custom template")
+			tmpl = page.Template
+			tmplPath = strings.TrimSuffix(filepath.Base(page.Path), ".md") + ".html"
+		} else {
+			config := s.ConfigsLookup[page.Collection]
+			tmpl = config.Template
+			l.Debug("Using collection template")
+			tmplPath = filepath.Base(config.LayoutPath)
+		}
+
+		if err := os.MkdirAll(filepath.Dir(page.OutputPath), 0755); err != nil {
+			l.Error("Error creating dirs", log.FieldPath, page.OutputPath, log.FieldError, err)
+			return err
+		}
+
+		f, err := os.Create(page.OutputPath)
+		if err != nil {
+			l.Error("Error creating file", log.FieldPath, page.OutputPath, log.FieldError, err)
+			return err
+		}
+		defer f.Close()
+
+		data := &CustomPageData{
+			Page: page,
+			Site: s,
+		}
+
+		if err := tmpl.ExecuteTemplate(f, tmplPath, data); err != nil {
+			l.Error("Error executing template", log.FieldError, err)
+			return err
+		}
+	}
 	return nil
 }
 
@@ -176,492 +483,302 @@ func buildCustom() error {
 		log.Warn("Couldn't parse base URL", "url", BaseURL)
 	}
 	basePath := u.Path
-	mdParser, resolver := newMarkdownParser(fileIndex, sourceMap, basePath,
+	markdownParser, resolver := newMarkdownParser(fileIndex, sourceMap, basePath,
 		func(path string) ([]byte, error) {
 			// Point this to your content folder
 			return os.ReadFile(filepath.Join(basePath, path))
 		})
 
 	site := &CustomSite{
-		Pages:         make(map[string]*CustomPage),
-		PagesLookup:   make(map[string]*CustomPage),
-		Configs:       make(map[string]*Config),
-		ConfigsLookup: make(map[string]*Config),
-		Env:           make(map[string]string),
-		Assets:        make(map[string]*Asset),
+		Pages:          make(map[string]*CustomPage),
+		PagesLookup:    make(map[string]*CustomPage),
+		Configs:        make(map[string]*Config),
+		ConfigsLookup:  make(map[string]*Config),
+		Tags:           make(map[string][]*CustomPage),
+		Assets:         make(map[string]*Asset),
+		Env:            make(map[string]string),
+		MarkdownParser: markdownParser,
+		Resolver:       resolver,
+		Template:       template.New("base"),
 	}
-	collections := make(map[string]struct{})
+	site.Template.Funcs(site.getFuncMap())
 
-	// TODO: Create the Config struct here instead of the next step
-	log.Print(titleStyle.Render("PHASE 0: Find all collection files"))
-	err = filepath.Walk(InputDir, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Handle env.json
-		if path == filepath.Join(InputDir, "env.json") {
-			log.SetPrefix(path)
-			log.Debug("Found environment variables file")
-			return nil
-		}
-
-		// Handle other configurations
-		if filepath.Base(path) == "config.json" {
-			if filepath.Join(InputDir, "config.json") == path {
-				log.Debug("Found config file in root folder. Skipping it")
-				return nil
-			}
-
-			log.SetPrefix(path)
-			log.Debug("Found config file")
-
-			data, err := os.ReadFile(path)
-			if err != nil {
-				log.Error("Coudn't read config", "error", err)
-				return nil
-			}
-
-			var configMap map[string]any
-			if err := json.Unmarshal(data, &configMap); err != nil {
-				log.Error("Couldn't parse config", "error", err)
-				return nil
-			}
-
-			// Check if there is a field called "collection_name"
-			value, exists := configMap["collection_name"]
-			if !exists {
-				log.Warn("Found config.json without 'collection_name'")
-			}
-
-			// Parse the "collection_name" field
-			collectionName, ok := value.(string)
-			if !ok {
-				log.Error("Couldn't parse 'collection_name' from config")
-			}
-
-			// Check if there is no other collection with that name
-			_, exists = collections[collectionName]
-			if exists {
-				log.Error("Duplicate collection", "name", collectionName)
-			}
-
-			// Add the collection name to the collections map
-			collections[collectionName] = struct{}{}
-			log.Info("Successffully loaded config file")
-		}
-
-		return nil
-	})
-	log.SetPrefix("")
+	err = site.walk()
 	if err != nil {
-		log.Fatal("Failed to find all collections configuration")
+		log.Fatal("Error in walk", log.FieldError, err)
 	}
 
-	// TODO: Instead of rescanning the vault, use the Config struct to take the path to the file
-	log.Print(titleStyle.Render("PHASE 1: Scanning configs"))
-	err = filepath.Walk(InputDir, func(path string, info fs.FileInfo, err error) error {
-		relPath, err := filepath.Rel(InputDir, path)
-		if err != nil {
-			return err
-		}
-
-		// Handle env.json
-		if path == filepath.Join(InputDir, "env.json") {
-			log.SetPrefix(path)
-			log.Debug("Found env.json file")
-
-			// Parse the file
-			data, err := os.ReadFile(path)
-			if err != nil {
-				log.Error("Error reading the environment file", "error", err)
-				return nil
-			}
-
-			// Unmarshal the file
-			var rawEnvMap map[string]any
-			if err := json.Unmarshal(data, &rawEnvMap); err != nil {
-				log.Error("Error unmarshaling the environment file", "error", err)
-				return nil
-			}
-
-			envMap := make(map[string]string)
-			for key, value := range rawEnvMap {
-				strVal, ok := value.(string)
-				if !ok {
-					log.Warn("Couldn't parse field", "name", key)
-					continue
-				}
-				envMap[key] = strVal
-				log.Debug("Added field", "name", key, "value", strVal)
-			}
-			site.Env = envMap
-
-			log.Info("Added env.json file to site configuration")
-			return nil
-		}
-
-		// Handle Configs
-		if filepath.Base(path) == "config.json" {
-			log.SetPrefix(path)
-			if filepath.Join(InputDir, "config.json") == path {
-				log.Debug("Found config file in root folder. Skipping it")
-				return nil
-			}
-
-			log.Debug("Handling configuration")
-			dir := filepath.Dir(relPath)
-			if dir == "." {
-				dir = ""
-			}
-
-			data, err := os.ReadFile(path)
-			if err != nil {
-				log.Error("Error reading the configuration", "error", err)
-				return nil
-			}
-
-			var rawConfigMap map[string]any
-			if err := json.Unmarshal(data, &rawConfigMap); err != nil {
-				log.Error("Error unmarshaling the configuration", "error", err)
-				return nil
-			}
-
-			collectionName := ""
-
-			// Parse configuration, check the field and add it to the site.Configs
-			configMap := make(map[string]FieldConfig)
-			for key, value := range rawConfigMap {
-				// Skip collection_name
-				if key == "collection_name" {
-					strVal, ok := value.(string)
-					if !ok {
-						log.Error("Missing collection_name field")
-					}
-					collectionName = strVal
-					continue
-				}
-				// Normalize configuration field
-				field, err := normalizeConfigField(value, collections)
-				if err != nil {
-					log.Error("Couldn't normalized field", "name", key, "error", err)
-					continue
-				}
-				configMap[key] = field
-			}
-
-			config := &Config{Fields: configMap, Name: collectionName}
-			site.Configs[dir] = config
-			site.ConfigsLookup[collectionName] = config
-			log.Info("Configuration validated and loaded")
-		}
-
-		return nil
-	})
-	log.SetPrefix("")
-
+	err = site.parseEnvFile()
 	if err != nil {
-		log.Fatal("PHASE 1 failed")
+		log.Fatal("Error handling the 'env.json'", log.FieldError, err)
 	}
 
-	// TODO: Maybe unite this with the first scan?
-	log.Print(titleStyle.Render("PHASE 2: Copying and indexing static assets"))
-	err = filepath.Walk(InputDir, func(path string, info fs.FileInfo, err error) error {
-		log.SetPrefix(path)
-		log.Debug("Processing file")
-		if err != nil {
-			log.Error("Encountered error", "error", err)
-			return err
-		}
-
-		relPath, err := filepath.Rel(InputDir, path)
-		if err != nil {
-			log.Error("Couldn't create relative path")
-			return err
-		}
-
-		// Handle Assets (Copy CSS, JS, Images)
-		// Skip directories, markdown, html templates, and json configs
-		if !info.IsDir() &&
-			!strings.HasSuffix(path, ".md") &&
-			!strings.HasSuffix(path, ".html") &&
-			!strings.HasSuffix(path, ".json") {
-
-			// destPath := filepath.Join(OutputDir, relPath)
-
-			// Index the asset
-			cleanName := filepath.Base(path)
-			finalOutPath, webPath := getAssetOutputPath(relPath)
-
-			// Index the file
-			file := &Asset{
-				ID:           cleanName,
-				Path:         path,
-				RelPermalink: webPath,
-				OutputPath:   finalOutPath,
-			}
-
-			if err := os.MkdirAll(filepath.Dir(finalOutPath), 0755); err != nil {
-				log.Error(
-					"Coudn't create the directory",
-					"destination",
-					finalOutPath,
-					"error",
-					err,
-				)
-				return err
-			}
-
-			err := copyFile(path, finalOutPath)
-			if err != nil {
-				log.Error(
-					"Coudn't copy file",
-					"destination",
-					finalOutPath,
-					"error",
-					err,
-				)
-			}
-
-			site.Assets[cleanName] = file
-			log.Info("Copied static file to destination", "destination", finalOutPath)
-			return nil
-		}
-
-		log.Debug("File skipped")
-		return nil
-	})
-	log.SetPrefix("")
+	err = site.loadConfigFiles()
 	if err != nil {
-		log.Fatal("PHASE 2: Failed")
+		log.Fatal("Error loading a 'config.json'", log.FieldError, err)
 	}
 
-	// Assign collection to pages!
-	log.Print(titleStyle.Render("PHASE 3: Discover pages"))
-	err = filepath.Walk(InputDir, func(path string, d fs.FileInfo, err error) error {
-		log.SetPrefix(path)
-		if err != nil || d.IsDir() || filepath.Ext(path) != ".md" {
-			log.Debug("File skipped")
-			return nil
-		}
-		relPath, err := filepath.Rel(InputDir, path)
-		cleanName := strings.TrimSuffix(filepath.Base(path), ".md")
-		config := site.Configs[getConfigDirectory(relPath)]
-		page := &CustomPage{
-			ID:   relPath,
-			Path: path,
-		}
-		if config != nil {
-			page.Collection = config.Name
-		}
-		site.Pages[relPath] = page
-		site.PagesLookup[cleanName] = page
-		log.Info("Added file")
-		return nil
-	})
-	log.SetPrefix("")
+	err = site.parseConfigs()
 	if err != nil {
-		log.Fatal("PHASE 3: Failed")
+		log.Fatal("Error parsing a 'config.json'", log.FieldError, err)
 	}
 
-	log.Print(titleStyle.Render("PHASE 4: Indexing pages"))
-	err = filepath.Walk(InputDir, func(path string, d fs.FileInfo, err error) error {
-		log.SetPrefix(path)
-		if err != nil || d.IsDir() || filepath.Ext(path) != ".md" {
-			log.Debug("File skipped")
-			return nil
-		}
-
-		log.Debug("Indexing page")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			log.Error("Couldn't read file")
-			return err
-		}
-
-		relPath, err := filepath.Rel(InputDir, path)
-		if err != nil {
-			log.Debug("Couldn't create relative path")
-			return err
-		}
-		dir := filepath.Dir(relPath)
-		if dir == "." {
-			dir = ""
-		}
-		fm, rawContent := parseFrontmatter(data)
-
-		page := &CustomPage{
-			ID:          relPath,
-			Path:        path,
-			Frontmatter: fm,
-		}
-
-		validFm := make(map[string]FieldContent)
-		// Validate frontmatter
-		for key, value := range fm {
-			content, err := validateFrontmatterField(
-				key,
-				value,
-				site,
-				page,
-			)
-			if err != nil {
-				log.Warn("Coudn't validate field", "name", key, "error", err)
-			}
-			validFm[key] = content
-		}
-
-		//relPath, err := filepath.Rel(InputDir, path)
-		cleanName := strings.TrimSuffix(filepath.Base(path), ".md")
-		ext := filepath.Ext(path)
-		nameWithoutExt := strings.TrimSuffix(relPath, ext)
-		_, webPath := getPageOutputPath(relPath, nameWithoutExt, ext)
-
-		page.Title = cleanName
-		page.RelPermalink = webPath
-		page.Fields = validFm
-		page.IsIndex = cleanName == "index"
-
-		// If the field title is present in the frontmatter, use that as the page Title
-		if val, ok := fm["title"]; ok {
-			page.Title = fmt.Sprintf("%v", val)
-		}
-
-		// Generates the HTML of the body of the note
-		log.Debug("Generating HTML")
-		var buf bytes.Buffer
-		// Set the current file context for the link resolver
-		resolver.CurrentSource = nameWithoutExt
-		if err := mdParser.Convert(rawContent, &buf); err != nil {
-			return err
-		}
-		finalHTML := buf.String()
-		finalHTML = transformCallouts(finalHTML)
-		finalHTML = transformMermaid(finalHTML)
-		finalHTML = transformHighlights(finalHTML)
-		page.Content = template.HTML(finalHTML)
-
-		// Adds the page to the site
-		site.Pages[relPath] = page
-		site.PagesLookup[cleanName] = page
-
-		log.Info("Added")
-
-		return nil
-	})
-	log.SetPrefix("")
+	// Load components files before layouts
+	err = site.parseComponentFiles()
 	if err != nil {
-		log.Fatal("PHASE 4 failed")
+		log.Fatal("Error parsing components", log.FieldError, err)
 	}
 
-	log.Print(titleStyle.Render("PHASE 5: Merging & relation resolution"))
-	// Link siblings pages
-	for path, page := range site.Pages {
-		log.SetPrefix(page.ID)
-		log.Debug("Processing page")
-		// if page.IsIndex {
-		count := 0
-		pageDir := filepath.Dir(path)
-		for otherPath, otherPage := range site.Pages {
-			otherDir := filepath.Dir(otherPath)
-			if pageDir == otherDir && !otherPage.IsIndex {
-				count += 1
-				page.Siblings = append(page.Siblings, otherPage)
-			}
-		}
-		log.Debug("Siblings processed and added", "count", count)
-		// }
+	err = site.parseLayouts()
+	if err != nil {
+		log.Fatal("Error loading layouts", log.FieldError, err)
 	}
 
-	log.SetPrefix("")
-	log.Info("PHASE 6: Rendering")
-	for _, page := range site.Pages {
-		log.SetPrefix(page.ID)
-		dir := filepath.Dir(page.ID)
-
-		tmplName := "layout.html"
-		if page.IsIndex {
-			log.Debug("Using index.html layout")
-			tmplName = "index.html"
-		}
-
-		// Finds a template, if it doesn't exist defaults to an empty page to just render the content
-		tmplPath := findTemplate(InputDir, dir, tmplName)
-		tmplContent := "{{ .Page.Content }}"
-		if tmplPath != "" {
-			b, err := os.ReadFile(tmplPath)
-			if err != nil {
-				log.Error("Couldn't read template", "file", tmplPath)
-			}
-			tmplContent = string(b)
-			log.Debug("Loaded template", "file", tmplPath)
-		} else {
-			log.Warn("No template found for this page. Defaulting to empty layout.")
-		}
-
-		// Create function map
-		funcMap := template.FuncMap{
-			"upper": strings.ToUpper,
-			"param": func(p *CustomPage, key string) any {
-				if v, ok := p.Fields[key]; ok {
-					return v
-				}
-				return nil
-			},
-			"isPageList": func(v any) bool {
-				_, ok := v.([]*CustomPage)
-				return ok
-			},
-			"isPage": func(v any) bool {
-				_, ok := v.(*CustomPage)
-				return ok
-			},
-			"relation": func(v string) *CustomPage {
-				return site.PagesLookup[v]
-			},
-			// TODO: Add new features, like "limit", some data retrieval logic etc.
-		}
-
-		// Parses the template
-		tmpl, err := template.New(tmplName).Funcs(funcMap).Parse(tmplContent)
-		if err != nil {
-			log.Error("Error parsing template", "file", tmplPath, "error", err)
-			continue
-		}
-
-		// Creates the necessary folders and saves the final file
-		ext := filepath.Ext(page.Path)
-		nameWithoutExt := strings.TrimSuffix(page.ID, ext)
-		finalOutPath, _ := getPageOutputPath(page.ID, nameWithoutExt, ext)
-
-		if err := os.MkdirAll(filepath.Dir(finalOutPath), 0755); err != nil {
-			log.Error("Error creating directories", "file", tmplPath, "error", err)
-			return err
-		}
-
-		f, err := os.Create(finalOutPath)
-		if err != nil {
-			log.Error("Error creating file", "path", finalOutPath, "error", err)
-			return err
-		}
-
-		data := struct {
-			Page *CustomPage
-			Site *CustomSite
-		}{
-			Page: page,
-			Site: site,
-		}
-
-		if err := tmpl.Execute(f, data); err != nil {
-			log.Error("Error executing template", "error", err)
-		}
-		f.Close()
+	err = site.loadNoteFiles()
+	if err != nil {
+		log.Fatal("Error loading notes", log.FieldError, err)
 	}
 
-	log.SetPrefix("")
-	log.Info("Rendering finished")
+	err = site.parseStaticFiles()
+	if err != nil {
+		log.Fatal("Error handling static file", log.FieldError, err)
+	}
+
+	err = site.parseNotes()
+	if err != nil {
+		log.Fatal("Error parsing note", log.FieldError, err)
+	}
+
+	err = site.render()
+	if err != nil {
+		log.Fatal("Error rendering pages", log.FieldError, err)
+	}
+
 	return nil
+}
+
+// resolveFieldValue extracts the underlying Go value from a FieldContent wrapper
+func resolveFieldValue(p *CustomPage, key string) any {
+	v, ok := p.Fields[key]
+	if !ok {
+		// Fallback: Check standard struct fields if not in custom Fields map
+		// This allows users to filter by "Title" or "Date" even if they aren't in Fields map
+		switch key {
+		case "Title":
+			return p.Title
+		case "Path":
+			return p.WebPath
+		case "Content":
+			return p.Content
+		case "Collection":
+			return p.Collection
+		case "Siblings":
+			return p.Siblings
+		default:
+			return nil
+		}
+	}
+
+	switch v.Config.Type {
+	case TypeImage:
+		return v.Image
+	case TypeBoolean:
+		return v.Boolean
+	case TypeInteger:
+		return v.Integer
+	case TypeFloat:
+		return v.Float
+	case TypeDate:
+		return v.Date
+	case TypeDateTime:
+		return v.DateTime
+	case TypeEnum:
+		return v.Enum
+	case TypeString:
+		return v.String
+	case TypeTag:
+		return v.Tag
+	case TypeTags:
+		return v.Tags
+	case TypeReference:
+		return v.Reference
+	case TypeReferences:
+		return v.References
+	default:
+		return v.Config.Data
+	}
+}
+
+// getFuncMap creates the functions for the template
+func (s *CustomSite) getFuncMap() template.FuncMap {
+	f := template.FuncMap{}
+
+	f["env"] = tmplFuncEnv
+	f["asset"] = tmplFuncAsset
+	f["tag"] = tmplFuncTag
+	f["page"] = tmplFuncPage
+	f["get"] = tmplFuncGet
+	f["where"] = tmplFuncWhere
+	f["where_not"] = tmplFuncWhereNot
+	f["limit"] = tmplFuncLimit
+	f["offset"] = tmplFuncOffset
+	f["sort"] = tmplFuncSort
+
+	return f
+}
+
+func tmplFuncEnv(key string, s *CustomSite) any {
+	if value, exists := s.Env[key]; exists {
+		return value
+	}
+	return nil
+}
+
+func tmplFuncAsset(key string, s *CustomSite) any {
+	if asset, exists := s.Assets[key]; exists {
+		return asset
+	}
+	return nil
+}
+func tmplFuncTag(key string, s *CustomSite) any {
+	if pages, exists := s.Tags[key]; exists {
+		return pages
+	}
+	return nil
+}
+func tmplFuncPage(key string, s *CustomSite) any {
+	if page, exists := s.PagesLookup[key]; exists {
+		return page
+	}
+	return nil
+}
+
+// get is the accessor for a CustomPage instance
+//
+// Usage: {{ .Page | get "title" }}
+func tmplFuncGet(key string, p *CustomPage) any {
+	if p == nil {
+		return nil
+	}
+	return resolveFieldValue(p, key)
+}
+
+// where filters the given []CustomPage
+//
+// Usage: {{ .Siblings | where "type" "post" }}
+func tmplFuncWhere(key string, value any, list []*CustomPage) []*CustomPage {
+	var result []*CustomPage
+	for _, p := range list {
+		if resolveFieldValue(p, key) == value {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+// Usage: {{ range .Siblings | where_not "draft" true }}
+func tmplFuncWhereNot(key string, value any, list []*CustomPage) []*CustomPage {
+	var result []*CustomPage
+	for _, p := range list {
+		val := resolveFieldValue(p, key)
+		if val != value {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+// limit slices based on the given integer
+//
+// Usage: {{ .Siblings | limit 3 }}
+func tmplFuncLimit(n int, list []*CustomPage) []*CustomPage {
+	if n > len(list) {
+		return list
+	}
+	return list[:n]
+}
+
+// Usage: {{ range .Siblings | offset 2 }}
+func tmplFuncOffset(n int, list []*CustomPage) []*CustomPage {
+	if n >= len(list) {
+		return []*CustomPage{}
+	}
+	return list[n:]
+}
+
+// isLess returns true if value 'a' is strictly less than value 'b'
+//
+// This function is used as the engine for tmplFuncSort
+func isLess(a, b any) bool {
+	if a == nil {
+		return b != nil // if a is nil and b is not, a < b is true (a comes first)
+	}
+	if b == nil {
+		return false // if b is nil, a is not less than b
+	}
+
+	// Type Switch to handle your specific FieldContent types
+	switch va := a.(type) {
+	case int:
+		if vb, ok := b.(int); ok {
+			return va < vb
+		}
+		// Handle int vs float comparison mixed cases
+		if vb, ok := b.(float64); ok {
+			return float64(va) < vb
+		}
+
+	case float64:
+		if vb, ok := b.(float64); ok {
+			return va < vb
+		}
+		if vb, ok := b.(int); ok {
+			return va < float64(vb)
+		}
+
+	case string:
+		if vb, ok := b.(string); ok {
+			return va < vb
+		}
+
+	case time.Time:
+		if vb, ok := b.(time.Time); ok {
+			return va.Before(vb)
+		}
+
+	case bool:
+		if vb, ok := b.(bool); ok {
+			// standard: false (0) < true (1)
+			return !va && vb
+		}
+	}
+
+	// Fallback: If types don't match (e.g. string vs int), compare as strings
+	return fmt.Sprintf("%v", a) < fmt.Sprintf("%v", b)
+}
+
+func tmplFuncSort(key string, direction string, list []*CustomPage) []*CustomPage {
+	if len(list) == 0 {
+		return list
+	}
+
+	sortedList := make([]*CustomPage, len(list))
+	copy(sortedList, list)
+
+	// Determine Sort Direction
+	desc := strings.ToLower(direction) == "desc"
+
+	sort.SliceStable(sortedList, func(i, j int) bool {
+		valI := resolveFieldValue(sortedList[i], key)
+		valJ := resolveFieldValue(sortedList[j], key)
+
+		if desc {
+			return isLess(valJ, valI)
+		}
+		return isLess(valI, valJ)
+	})
+
+	return sortedList
 }
 
 // parseFrontmatter parses the raw markdown data and returns the frontmatter and the content of the note
@@ -679,38 +796,16 @@ func parseFrontmatter(data []byte) (map[string]any, []byte) {
 	return fm, data
 }
 
-// TODO: Change this, every collection should have it's own template
-// findTemplate finds the first template to use
-func findTemplate(root, startDir, filename string) string {
-	curr := startDir
-	for {
-		checkPath := filepath.Join(root, curr, filename)
-		// Handle root specially if curr is empty or dot
-		if curr == "." || curr == "" {
-			checkPath = filepath.Join(root, filename)
-		}
+// Global Regex for WikiLinks [[Link]] or [[Link|Label]]
+var wikiLinkRegex = regexp.MustCompile(`\[\[(.*?)(?:\|(.*?))?\]\]`)
 
-		if _, err := os.Stat(checkPath); err == nil {
-			return checkPath
-		}
-
-		if curr == "." || curr == "" {
-			break
-		}
-		curr = filepath.Dir(curr)
+func extractWikiLink(s string) string {
+	matches := wikiLinkRegex.FindStringSubmatch(s)
+	if len(matches) > 1 {
+		return matches[1]
 	}
 	return ""
 }
-
-// Global Regex for WikiLinks [[Link]] or [[Link|Label]]
-// var wikiLinkRegex = regexp.MustCompile(`\[\[(.*?)(?:\|(.*?))?\]\]`)
-// func extractWikiLink(s string) string {
-// 	matches := wikiLinkRegex.FindStringSubmatch(s)
-// 	if len(matches) > 1 {
-// 		return matches[1]
-// 	}
-// 	return ""
-// }
 
 var (
 	ErrorInvalidField         error = errors.New("Invalid type")
@@ -721,10 +816,8 @@ var (
 )
 
 // normalizeConfigField takes in the raw field from the frontmatter and generates a FieldConfig instance
-// TODO: Logging of found fields
-func normalizeConfigField(
+func (s *CustomSite) normalizeConfigField(
 	input any,
-	collections map[string]struct{},
 ) (FieldConfig, error) {
 	config := FieldConfig{
 		Required: false,
@@ -762,7 +855,7 @@ func normalizeConfigField(
 
 		// Get optional, type specific fields, and ignore everything else
 		switch typeName {
-		case Enum:
+		case TypeEnum:
 			rawValues, ok := v["values"].([]any)
 			if !ok {
 				return FieldConfig{}, ErrorEnumTypeWithNoValues
@@ -776,7 +869,7 @@ func normalizeConfigField(
 				}
 				config.AllowedValues = append(config.AllowedValues, str)
 			}
-		case Reference, References:
+		case TypeReference, TypeReferences:
 			// Parse the reference collection name
 			collectionName, ok := v["reference"].(string)
 			if !ok {
@@ -784,13 +877,13 @@ func normalizeConfigField(
 			}
 
 			// Check if the collections actually exist
-			_, ok = collections[collectionName]
+			_, ok = s.ConfigsLookup[collectionName]
 			if !ok {
 				return FieldConfig{}, ErrorInvalidReference
 			}
 			config.Reference = collectionName
 
-		case Custom:
+		case TypeCustom:
 			rawData, ok := v["data"]
 			if !ok {
 				return FieldConfig{}, ErrorCustomTypeWithNoData
@@ -805,30 +898,24 @@ func normalizeConfigField(
 
 func isValidType(name FieldType) bool {
 	switch name {
-	case String,
-		Date,
-		Boolean,
-		Integer,
-		Float,
-		Image,
-		Tag,
-		Tags,
-		Reference,
-		References,
-		Enum,
-		Custom:
+	case TypeString,
+		TypeDate,
+		TypeDateTime,
+		TypeBoolean,
+		TypeInteger,
+		TypeFloat,
+		TypeImage,
+		TypeTag,
+		TypeTags,
+		TypeReference,
+		TypeReferences,
+		TypeEnum,
+		TypeCustom:
 		return true
 	default:
 		return false
 	}
 }
-
-var titleStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Color("#FAFAFA")).
-	Background(lipgloss.Color("#7D56F4")).
-	PaddingLeft(0).
-	Width(60)
 
 var (
 	ErrorNoConfig        = errors.New("No configuration found.")
@@ -845,13 +932,15 @@ var (
 )
 
 // validateFrontmatter takes in a raw frontmatter field and a configuration and returns a validated frontmatter
-func validateFrontmatterField(
+// TODO: Divide it into different smaller functions
+func (s *CustomSite) validateFrontmatterField(
 	key string,
 	value any,
-	site *CustomSite,
 	currentPage *CustomPage,
 ) (FieldContent, error) {
-	config := site.Configs[getConfigDirectory(currentPage.ID)]
+	l := log.Default.WithFile(currentPage.RelPath)
+
+	config := s.Configs[getConfigDirectory(currentPage.ID)]
 	if config == nil {
 		return FieldContent{}, ErrorNoConfig
 	}
@@ -862,15 +951,13 @@ func validateFrontmatterField(
 		return FieldContent{}, ErrorNoConfigField
 	}
 
-	if fieldConfig.Required && value == "" {
-		return FieldContent{}, ErrorRequiredField
-	}
+	l.Debug("Validating field", log.FieldName, key)
 
-	content := FieldContent{Raw: value}
+	content := FieldContent{Raw: value, Config: &fieldConfig}
 
 	// Based on the type, try to parse it
 	switch fieldConfig.Type {
-	case String:
+	case TypeString:
 		strVal, ok := value.(string)
 		if !ok {
 			return FieldContent{}, ErrorParsing
@@ -878,7 +965,7 @@ func validateFrontmatterField(
 		content.String = strVal
 		return content, nil
 
-	case Boolean:
+	case TypeBoolean:
 		bolVal, ok := value.(bool)
 		if !ok {
 			return FieldContent{}, ErrorParsing
@@ -886,35 +973,25 @@ func validateFrontmatterField(
 		content.Boolean = bolVal
 		return content, nil
 
-	case Date:
-		strVal, ok := value.(string)
-		if !ok {
-			return FieldContent{}, ErrorParsing
+	case TypeDate, TypeDateTime:
+		switch v := value.(type) {
+		case string:
+			// TODO: Support custom date formats
+			dateVal, err := time.Parse("2006-01-02 15:04:05 -0700 MST", v)
+			if err != nil {
+				return FieldContent{}, err
+			}
+			content.Date = dateVal
+			content.DateTime = dateVal
+			return content, nil
+		case time.Time:
+			content.Date = v
+			content.DateTime = v
+			return content, nil
 		}
-		// TODO: Support custom date formats
-		dateVal, err := time.Parse("2000-01-01", strVal)
-		if err != nil {
-			return FieldContent{}, err
-		}
-		content.Date = dateVal
-		content.DateTime = dateVal
-		return content, nil
+		return FieldContent{}, ErrorParsing
 
-	case DateTime:
-		strVal, ok := value.(string)
-		if !ok {
-			return FieldContent{}, ErrorParsing
-		}
-		// TODO: Support custom date-time formats
-		dateVal, err := time.Parse("2000-01-01T12:12:00", strVal)
-		if err != nil {
-			return FieldContent{}, err
-		}
-		content.Date = dateVal
-		content.DateTime = dateVal
-		return content, nil
-
-	case Integer:
+	case TypeInteger:
 		strVal, ok := value.(string)
 		if !ok {
 			return FieldContent{}, ErrorParsing
@@ -926,7 +1003,7 @@ func validateFrontmatterField(
 		content.Integer = intVal
 		return content, nil
 
-	case Float:
+	case TypeFloat:
 		strVal, ok := value.(string)
 		if !ok {
 			return FieldContent{}, ErrorParsing
@@ -938,29 +1015,29 @@ func validateFrontmatterField(
 		content.Float = floatVal
 		return content, nil
 
-	case Image:
+	case TypeImage:
 		strVal, ok := value.(string)
 		if !ok {
 			return FieldContent{}, ErrorParsing
 		}
-		imgVal, ok := site.Assets[strVal]
+		imgVal, ok := s.Assets[extractWikiLink(strVal)]
 		if !ok {
 			return FieldContent{}, ErrorAssetNotFound
 		}
 		content.Image = imgVal
 		return content, nil
 
-	case Tag:
+	case TypeTag:
 		strVal, ok := value.(string)
 		if !ok {
 			return FieldContent{}, ErrorParsing
 		}
 		// Add it to the site-wide tag map
-		site.Tags[strVal] = append(site.Tags[strVal], currentPage)
+		s.Tags[strVal] = append(s.Tags[strVal], currentPage)
 		content.Tag = strVal
 		return content, nil
 
-	case Tags:
+	case TypeTags:
 		sliceVal, ok := value.([]string)
 		if !ok {
 			return FieldContent{}, ErrorParsing
@@ -968,18 +1045,17 @@ func validateFrontmatterField(
 
 		for _, val := range sliceVal {
 			// Add it to the site-wide tag map
-			site.Tags[val] = append(site.Tags[val], currentPage)
+			s.Tags[val] = append(s.Tags[val], currentPage)
 			content.Tags = append(content.Tags, val)
 		}
 		return content, nil
 
-	case Reference:
+	case TypeReference:
 		strVal, ok := value.(string)
 		if !ok {
 			return FieldContent{}, ErrorParsing
 		}
-		// Does the requested link exists?
-		pageVal, ok := site.PagesLookup[strVal]
+		pageVal, ok := s.PagesLookup[extractWikiLink(strVal)]
 		if !ok {
 			return FieldContent{}, ErrorReferenceNotExistant
 		}
@@ -990,13 +1066,14 @@ func validateFrontmatterField(
 		content.Reference = pageVal
 		return content, nil
 
-	case References:
-		sliceVal, ok := value.([]string)
-		if !ok {
+	case TypeReferences:
+		sliceVal, err := extractStringSlice(value)
+		if err != nil {
 			return FieldContent{}, ErrorParsing
 		}
+
 		for _, val := range sliceVal {
-			pageVal, ok := site.PagesLookup[val]
+			pageVal, ok := s.PagesLookup[extractWikiLink(val)]
 			if !ok {
 				return FieldContent{}, ErrorReferenceNotExistant
 			}
@@ -1008,7 +1085,7 @@ func validateFrontmatterField(
 		}
 		return content, nil
 
-	case Enum:
+	case TypeEnum:
 		strVal, ok := value.(string)
 		if !ok {
 			return FieldContent{}, ErrorParsing
@@ -1020,7 +1097,8 @@ func validateFrontmatterField(
 		content.Enum = strVal
 		return content, nil
 
-	case Custom:
+	case TypeCustom:
+		content.Raw = fieldConfig.Data
 		return content, nil
 
 	default:
@@ -1028,6 +1106,37 @@ func validateFrontmatterField(
 	}
 
 	return FieldContent{}, nil
+}
+
+// extractStringSlice parses the list from a frontmatter
+func extractStringSlice(input any) ([]string, error) {
+	if input == nil {
+		return []string{}, nil
+	}
+
+	var result []string
+
+	switch v := input.(type) {
+	case string:
+		// Single string, we append
+		result = append(result, v)
+	case []string:
+		result = v // I don't know if this can actually happen
+	case []any:
+		for _, item := range v {
+			// RECURSION: This handles the nested [[[Link]]] issue
+			// If item is itself a list (due to extra brackets), flatten it
+			subSlice, err := extractStringSlice(item)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, subSlice...)
+		}
+	default:
+		return nil, fmt.Errorf("unexpected type %T", input)
+	}
+
+	return result, nil
 }
 
 // getConfigDirectory get's the configuration directory given a relative path
@@ -1041,17 +1150,20 @@ func getConfigDirectory(relPath string) string {
 
 // CustomPage represents a single markdown file or index in the custom generation mode
 type CustomPage struct {
-	ID           string                  // Unique ID (relative path)
-	Title        string                  // Derived from filename or frontmatter
-	Path         string                  // Original file path
-	RelPermalink string                  // Output URL (e.g., /posts/my-post.html)
-	Content      template.HTML           // Rendered HTML content
-	Frontmatter  map[string]any          // Raw YAML from the file
-	Fields       map[string]FieldContent // Validated collection fields
-	IsIndex      bool                    // Is this an index.md?
-	Siblings     []*CustomPage           // All the other pages in the current collection
-	OutputPath   string                  // Final output path
-	Collection   string                  // The collection that the page is a part of
+	ID             string                   // Unique ID (relative path) // TODO: Delete this, use RelPermalink
+	Title          string                   // Derived from filename or frontmatter
+	Path           string                   // Original file path
+	RelPath        string                   // Original file relative path
+	WebPath        string                   // Output URL (e.g., /posts/my-post.html)
+	Content        template.HTML            // Rendered HTML content
+	RawFrontmatter map[string]any           // Raw YAML from the file
+	RawContent     []byte                   // Raw content of the note
+	Fields         map[string]*FieldContent // Validated collection fields
+	IsIndex        bool                     // Is this an index.md?
+	Siblings       []*CustomPage            // All the other pages in the current collection
+	OutputPath     string                   // Final output path
+	Collection     string                   // The collection that the page is a part of
+	Template       *template.Template       // If the page has a custom template override it will show here
 }
 
 // CustomSite holds the global state for custom generation
@@ -1060,16 +1172,20 @@ type CustomSite struct {
 	PagesLookup      map[string]*CustomPage   // Map of "Clean Filename" -> Page for Wikilink resolution
 	Configs          map[string]*Config       // Map of directory path -> config data
 	ConfigsLookup    map[string]*Config       // Map of collection_name -> Config for references
-	CollectionsNames map[string]struct{}      // Map of the different collections names found in the configs
+	CollectionsNames map[string]struct{}      // TODO: Delete this. We already have the ConfigsLookup for this. Map of the different collections names found in the configs to check
 	Env              map[string]string        // Map of the environment variables
 	Assets           map[string]*Asset        // Map of "Clean Filename" -> Asset for Asset resolution
 	Tags             map[string][]*CustomPage // Map of tag -> array of pages
+	MarkdownParser   goldmark.Markdown        // Custom markdown parser
+	Resolver         *IndexResolver           // Link resolver
+	Template         *template.Template       // Base template with all components loaded
+	Files            Files                    // All the paths to files to process
 }
 
 type Asset struct {
 	ID           string // Unique ID (relative path)
-	Alt          string // Alternative text
-	Path         string // Original file path
+	Path         string // Path of the original path
+	RelPath      string // Relative path of the original file
 	RelPermalink string // Output URL
 	OutputPath   string // Output path of the file
 }
@@ -1077,26 +1193,16 @@ type Asset struct {
 // FieldType is the type of the configuration field. Consts are defined for the supported types
 type FieldType string
 
-const (
-	String     FieldType = "string"
-	Date       FieldType = "date"
-	DateTime   FieldType = "dateTime"
-	Boolean    FieldType = "boolean"
-	Integer    FieldType = "integer"
-	Float      FieldType = "float"
-	Image      FieldType = "image"
-	Tag        FieldType = "tag"
-	Tags       FieldType = "tags"
-	Reference  FieldType = "reference"
-	References FieldType = "references"
-	Enum       FieldType = "enum"
-	Custom     FieldType = "custom"
-)
-
 type Config struct {
-	Name      string
-	Fields    map[string]FieldConfig
-	RawFields map[string]any
+	ID            string                 // The directory where the config.json file is present
+	Name          string                 // The name of the collection
+	Path          string                 // The full path of the configuration
+	RelPath       string                 // The relative path of the configuration
+	Fields        map[string]FieldConfig // The parsed and normalized fields of the configuration
+	RawFields     map[string]any         // The raw fields of the configuration
+	LayoutPath    string                 // The layout path
+	LayoutRelPath string                 // The layout relative path
+	Template      *template.Template     // The specific template to execute for every page of the collection
 }
 
 // FieldConfig describes the field as displayed in a config.json
@@ -1126,3 +1232,43 @@ type FieldContent struct {
 	References []*CustomPage
 	Enum       string
 }
+
+// FilePaths rappresents a file that needs to be processed
+type FilePaths struct {
+	Path    string
+	RelPath string
+}
+
+// Files rappresents all the different kinds of files to process
+type Files struct {
+	Env       FilePaths            // Expected only one 'env.json' file
+	Markdown  []FilePaths          // All found '.md' files
+	Base      []FilePaths          // All found '.base' files
+	Canvas    []FilePaths          // All found '.canvas' files
+	Config    []FilePaths          // All found 'config.json' files
+	Layout    map[string]FilePaths // Layouts  are related to the collection name
+	Component []FilePaths          // All found '_*.html' files
+	Static    []FilePaths          // Other files are treated as static
+}
+
+// CustomPageData is the struct passed to the templates
+type CustomPageData struct {
+	Page *CustomPage
+	Site *CustomSite
+}
+
+const (
+	TypeString     FieldType = "string"
+	TypeDate       FieldType = "date"
+	TypeDateTime   FieldType = "dateTime"
+	TypeBoolean    FieldType = "boolean"
+	TypeInteger    FieldType = "integer"
+	TypeFloat      FieldType = "float"
+	TypeImage      FieldType = "image"
+	TypeTag        FieldType = "tag"
+	TypeTags       FieldType = "tags"
+	TypeReference  FieldType = "reference"
+	TypeReferences FieldType = "references"
+	TypeEnum       FieldType = "enum"
+	TypeCustom     FieldType = "custom"
+)

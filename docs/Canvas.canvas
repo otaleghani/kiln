@@ -1,7 +1,7 @@
 {
 	"nodes":[
-		{"id":"5ff5c80213412956","x":-118,"y":-369,"width":250,"height":60,"type":"text","text":"Does it support canvases?"},
-		{"id":"6c3b4727aa3d96d8","x":157,"y":-241,"width":250,"height":60,"type":"text","text":"Yes!"}
+		{"id":"5ff5c80213412956","type":"text","text":"Does it support canvases?","x":-118,"y":-369,"width":250,"height":60},
+		{"id":"6c3b4727aa3d96d8","type":"text","text":"Yes!","x":240,"y":-200,"width":250,"height":60}
 	],
 	"edges":[
 		{"id":"4a285f72c012176e","fromNode":"5ff5c80213412956","fromSide":"right","toNode":"6c3b4727aa3d96d8","toSide":"left"}

@@ -44,21 +44,21 @@ You can make callouts foldable (collapsible) by adding a `+` or `-` symbol immed
 
 Kiln supports the full set of standard Obsidian callout types and their aliases.
 
-|**Type**|**Aliases**|**Color Profile**|
-|---|---|---|
-|`note`||🔵 Blue|
-|`abstract`|`summary`, `tldr`|🟢 Cyan|
-|`info`||🔵 Blue|
-|`todo`||🔵 Blue|
-|`tip`|`hint`, `important`|🟢 Cyan|
-|`success`|`check`, `done`|🟢 Green|
-|`question`|`help`, `faq`|🟠 Orange|
-|`warning`|`caution`, `attention`|🟠 Orange|
-|`failure`|`fail`, `missing`|🔴 Red|
-|`danger`|`error`|🔴 Red|
-|`bug`||🔴 Red|
-|`example`||🟣 Purple|
-|`quote`|`cite`|⚪ Gray|
+| **Type**   | **Aliases**            | **Color Profile** |
+| ---------- | ---------------------- | ----------------- |
+| `note`     |                        | 🔵 Blue           |
+| `abstract` | `summary`, `tldr`      | 🟢 Cyan           |
+| `info`     |                        | 🔵 Blue           |
+| `todo`     |                        | 🔵 Blue           |
+| `tip`      | `hint`, `important`    | 🟢 Cyan           |
+| `success`  | `check`, `done`        | 🟢 Green          |
+| `question` | `help`, `faq`          | 🟠 Orange         |
+| `warning`  | `caution`, `attention` | 🟠 Orange         |
+| `failure`  | `fail`, `missing`      | 🔴 Red            |
+| `danger`   | `error`                | 🔴 Red            |
+| `bug`      |                        | 🔴 Red            |
+| `example`  |                        | 🟣 Purple         |
+| `quote`    | `cite`                 | ⚪ Gray            |
 
 ### Icons
 
