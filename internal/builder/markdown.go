@@ -2,12 +2,15 @@ package builder
 
 import (
 	"fmt"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
 
 	chromaHTML "github.com/alecthomas/chroma/v2/formatters/html"
 	mathjax "github.com/litao91/goldmark-mathjax"
+
+	// "github.com/otaleghani/kiln/internal/markdown"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	meta "github.com/yuin/goldmark-meta"
@@ -43,51 +46,6 @@ type IndexResolver struct {
 	ReadFile func(path string) ([]byte, error) // Needed for loading files
 }
 
-//	func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
-//		rawInput := n.Target
-//		if len(n.Fragment) > 0 {
-//			rawInput = append(rawInput, '#')
-//			rawInput = append(rawInput, n.Fragment...)
-//		}
-//
-//		// 1. Find the REAL file path (e.g. "content/Credits.md")
-//		filePath, anchor := r.FindFilePath(rawInput)
-//
-//		// --- GRAPH FIX ---
-//		if filePath != "" {
-//			// "content/Credits.md" -> "Credits"
-//			filename := filepath.Base(filePath)
-//			nodeID := strings.TrimSuffix(filename, filepath.Ext(filename))
-//
-//			// This now records "Credits" (matching your graph node), even if user typed "credits"
-//			r.recordLink(nodeID)
-//		}
-//		// -----------------
-//
-//		if filePath == "" {
-//			return []byte(anchor), nil
-//		}
-//
-//		// 2. Transform into Web URL
-//		ext := filepath.Ext(filePath)
-//		isContentFile := ext == ".md" || ext == ".canvas"
-//		pathNoExt := strings.TrimSuffix(filePath, ext)
-//
-//		// Slugify
-//		urlPath := slugifyPath(pathNoExt)
-//
-//		// Keep extension for assets
-//		if !isContentFile && ext != "" {
-//			urlPath += strings.ToLower(ext)
-//		}
-//
-//		finalLink := path.Join(r.BasePath, urlPath)
-//		if isContentFile {
-//			finalLink = strings.TrimSuffix(finalLink, "/index")
-//		}
-//
-//		return []byte(finalLink + anchor), nil
-//	}
 func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 	// 1. Reconstruct Input
 	rawInput := n.Target
@@ -161,7 +119,6 @@ func slugifyPath(p string) string {
 func (r *IndexResolver) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(ast.KindLink, r.renderLink)
 	reg.Register(ast.KindImage, r.renderImage)
-	// TEST:
 	reg.Register(wikilink.Kind, r.renderWikilink)
 }
 
@@ -191,33 +148,6 @@ func (r *IndexResolver) renderLink(
 	return ast.WalkContinue, nil
 }
 
-// renderImage writes the HTML for standard markdown images.
-// func (r *IndexResolver) renderImage(
-//
-//	w util.BufWriter,
-//	source []byte,
-//	node ast.Node,
-//	entering bool,
-//
-//	) (ast.WalkStatus, error) {
-//		n := node.(*ast.Image)
-//		if entering {
-//			newDest := r.resolvePath(string(n.Destination))
-//
-//			w.WriteString("<img src=\"")
-//			w.WriteString(newDest)
-//			w.WriteString("\" alt=\"")
-//			w.Write(n.Text(source))
-//			w.WriteString("\"")
-//			if n.Title != nil {
-//				w.WriteString(" title=\"")
-//				w.Write(n.Title)
-//				w.WriteString("\"")
-//			}
-//			w.WriteString(">")
-//		}
-//		return ast.WalkSkipChildren, nil
-//	}
 func (r *IndexResolver) renderImage(
 	w util.BufWriter,
 	source []byte,
@@ -327,6 +257,13 @@ func newMarkdownParser(
 			extension.GFM,
 			meta.Meta,
 			&wikilink.Extender{Resolver: resolver}, // Hook 1: Wikilinks
+			// markdown.Comments,
+			// markdown.Mermaid,
+			// markdown.Callouts,
+			extension.Footnote,
+			// Highlights,                             // Handles ==text==
+			// Mermaid,                                // Handles Mermaid
+			// Callouts,                               // Handles > [!type] blocks
 			highlighting.NewHighlighting(
 				highlighting.WithFormatOptions(
 					chromaHTML.WithClasses(true),
@@ -419,11 +356,19 @@ func (r *IndexResolver) renderWikilink(
 	} else {
 		// Try adding/removing BasePath if lookup failed
 		// (Depends on how you populate SourceMap vs BasePath)
-		altKey := path.Join(r.BasePath, cleanWebPath)
-		if src, ok := r.SourceMap[altKey]; ok {
+		// altKey := path.Join(r.BasePath, cleanWebPath)
+		// if src, ok := r.SourceMap[altKey]; ok {
+		// 	realFilePath = src
+		// }
+		u, _ := url.Parse(BaseURL)
+		basePath := u.Path
+		if src, ok := r.SourceMap[strings.TrimPrefix(realFilePath, basePath)]; ok {
 			realFilePath = src
+		} else {
+			fmt.Println("Error trimming prefix")
 		}
 	}
+	// Determine the base path for link resolution (e.g., "/kiln" from "https://domain.com/kiln")
 
 	// fmt.Printf("DEBUG: Web: %s | Disk: %s\n", cleanWebPath, realFilePath)
 
@@ -613,58 +558,6 @@ func (r *IndexResolver) extractNodes(root ast.Node, source []byte, fragment stri
 
 	return nil
 }
-
-// FindFilePath searches the index for the best matching file path.
-// It returns the filesystem path (e.g. "books/Harry Potter.md") and the anchor (e.g. "#summary").
-// func (r *IndexResolver) FindFilePath(target []byte) (string, string) {
-// 	dest := string(target)
-// 	dest = strings.TrimSpace(dest)
-//
-// 	// 1. Handle anchors (e.g., [[Page#Section]])
-// 	anchor := ""
-// 	if idx := strings.Index(dest, "#"); idx != -1 {
-// 		anchor = dest[idx:]
-// 		dest = dest[:idx]
-// 	}
-//
-// 	cleanDest := dest
-// 	ext := filepath.Ext(cleanDest)
-// 	if ext == ".md" || ext == ".canvas" {
-// 		cleanDest = strings.TrimSuffix(cleanDest, ext)
-// 	}
-//
-// 	// 2. Logic to handle multiple matches (Your existing logic)
-// 	if candidates, ok := r.Index[cleanDest]; ok && len(candidates) > 0 {
-// 		var bestMatch string
-//
-// 		// Priority A: Check for Root Match
-// 		for _, pathStr := range candidates {
-// 			if !strings.Contains(pathStr, "/") && !strings.Contains(pathStr, "\\") {
-// 				bestMatch = pathStr
-// 				break
-// 			}
-// 		}
-//
-// 		// Priority B: Shortest Path
-// 		if bestMatch == "" {
-// 			shortest := candidates[0]
-// 			for _, pathStr := range candidates {
-// 				if len(pathStr) < len(shortest) {
-// 					shortest = pathStr
-// 				}
-// 			}
-// 			bestMatch = shortest
-// 		}
-//
-// 		return bestMatch, anchor
-// 	}
-//
-// 	// 3. Fallback: If not in index, return as is (maybe it's a direct path)
-// 	// We return the cleanDest + ext if it was stripped, or just cleanDest
-// 	// But since we stripped extension for lookup, we might need to add it back if we assume .md
-// 	// For now, let's just return what we have.
-// 	return dest, anchor
-// }
 
 func (r *IndexResolver) FindFilePath(target []byte) (string, string) {
 	dest := string(target)

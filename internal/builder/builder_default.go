@@ -21,8 +21,8 @@ import (
 // It walks the input directory, processes Markdown/Canvas files, and generates assets.
 func buildDefault() {
 	start := time.Now()
-
 	theme := resolveTheme(ThemeName, FontName)
+
 	fileIndex, sourceMap, graphNodes := initBuild()
 	rootNode := getRootNode(InputDir, BaseURL)
 
@@ -77,6 +77,7 @@ func buildDefault() {
 	minifier.AddFunc("text/html", html.Minify)
 
 	// Walk the input directory to process files
+	// TODO: Create a initial representation of the files and do not walk it again
 	err = filepath.WalkDir(InputDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err

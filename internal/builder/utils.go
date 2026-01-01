@@ -99,6 +99,7 @@ func initBuild() (fileIndex map[string][]string, sourceMap map[string]string, gr
 		relPath, _ := filepath.Rel(InputDir, path)
 
 		// Normalize paths for URLs (slugify every component of the path)
+		// TODO: I actually have a helper function for this in the custom_build.go
 		parts := strings.Split(relPath, string(os.PathSeparator))
 		for i, p := range parts {
 			parts[i] = slugify(p)
