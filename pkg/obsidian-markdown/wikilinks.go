@@ -368,13 +368,28 @@ func (r *IndexResolver) renderWikilink(
 		w.WriteString("<a href=\"")
 		w.WriteString(slugify(webPath))
 		w.WriteString("\" class=\"internal-link\">")
-		w.Write(n.Target)
+
+		// Check if the link has a custom label (children)
+		if n.HasChildren() {
+			// Walk the children to render the label text (e.g. [[Target|Label]])
+			for child := n.FirstChild(); child != nil; child = child.NextSibling() {
+				// We can simply recurse into the engine's renderer for standard text nodes
+				// OR manually extract text if you want to strip formatting.
+				// Using the renderer allows for bold/italic inside labels.
+				if err := r.Engine.Renderer().Render(w, source, child); err != nil {
+					return ast.WalkStop, err
+				}
+			}
+		} else {
+			// No label provided, use the target as the text (e.g. [[Target]])
+			w.Write(n.Target)
+		}
+
 		w.WriteString("</a>")
 		return ast.WalkSkipChildren, nil
 	}
 
 	// If embed
-
 	// Resolve the real disk path using the SourceMap
 	// We strip the hash (#header) from the webPath for the lookup
 	cleanWebPath := webPath
