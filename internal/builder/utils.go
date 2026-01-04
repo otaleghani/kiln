@@ -160,7 +160,7 @@ func loadFavicon() error {
 	if err != nil {
 		return err
 	}
-	log.Debug("'CNAME' file loaded correctly")
+	log.Debug("'favicon.ico' file loaded correctly")
 	return nil
 }
 
@@ -170,11 +170,11 @@ func loadCname() error {
 	if _, err := os.Stat(faviconSrc); err != nil {
 		return err
 	}
-	err := copyFile(faviconSrc, filepath.Join(OutputDir, "favicon.ico"))
+	err := copyFile(faviconSrc, filepath.Join(OutputDir, "CNAME"))
 	if err != nil {
 		return err
 	}
-	log.Debug("'favicon.ico' file loaded correctly")
+	log.Debug("'CNAME' file loaded correctly")
 	return nil
 }
 

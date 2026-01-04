@@ -11,14 +11,14 @@ import (
 
 // resolveLayout looks up a Layout by name.
 func resolveLayout(name string) *Layout {
+	log.Info("Resolving layout...", "name", name)
 	layout, ok := layouts[strings.ToLower(name)]
 	if !ok {
-		log.Debug("Layout not found, using default layout", log.FieldName, "default")
+		log.Warn("Layout not found, using default layout", log.FieldName, "default")
 		name = "default"
 		layout = layouts[name]
 	}
 
-	log.Debug("Layout in use", "layout", name)
 	return layout
 }
 

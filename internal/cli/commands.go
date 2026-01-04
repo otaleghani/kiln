@@ -21,6 +21,7 @@ const (
 	DefaultMode      = "default"
 	DefaultPort      = "8080"
 	DefaultLog       = "info"
+	DefaultLayout    = "default"
 )
 
 // Flag names
@@ -44,6 +45,8 @@ const (
 	FlagPortShort      = "p"
 	FlagLog            = "log"
 	FlagLogShort       = "l"
+	FlagLayout         = "layout"
+	FlagLayoutShort    = "L"
 )
 
 // Global variables to store the values of command-line flags.
@@ -58,6 +61,7 @@ var (
 	mode      string // Choose the mode of generation
 	flatUrls  bool   // Choose between pretty (e.g. note/index.html) or flat URLs (e.g. note.html)
 	logger    string // Choose the level of logging
+	layout    string // The chosen layout
 )
 
 // Init constructs and returns the root command for the application.
