@@ -158,7 +158,7 @@ func (r *IndexResolver) renderSelection(
 		// 1. Left Side: Title or Link
 		if fragment == "" {
 			// Case A: Whole Page -> Display Link to Page
-			w.WriteString("<a href=\"" + destUrl + "\" class=\"markdown-embed-title\">")
+			w.WriteString("<a href=\"" + slugify(destUrl) + "\" class=\"markdown-embed-title\">")
 			w.WriteString(displayName)
 			w.WriteString("</a>")
 		} else {
@@ -171,7 +171,9 @@ func (r *IndexResolver) renderSelection(
 		// 2. Right Side: Maximize Button (Always visible)
 		// Links to the specific anchor or page
 		w.WriteString(
-			"<a href=\"" + destUrl + "\" class=\"markdown-embed-link\" title=\"Open Original\">",
+			"<a href=\"" + slugify(
+				destUrl,
+			) + "\" class=\"markdown-embed-link\" title=\"Open Original\">",
 		)
 		w.WriteString("<i class=\"\" data-lucide=\"maximize-2\"></i>")
 		w.WriteString("</a>")
@@ -276,7 +278,7 @@ func (r *IndexResolver) renderLink(
 		newDest := string(n.Destination)
 
 		w.WriteString("<a href=\"")
-		w.WriteString(newDest)
+		w.WriteString(slugify(newDest))
 		w.WriteString("\"")
 		if n.Title != nil {
 			w.WriteString(" title=\"")
@@ -364,7 +366,7 @@ func (r *IndexResolver) renderWikilink(
 
 	if !isEmbed {
 		w.WriteString("<a href=\"")
-		w.WriteString(webPath)
+		w.WriteString(slugify(webPath))
 		w.WriteString("\" class=\"internal-link\">")
 		w.Write(n.Target)
 		w.WriteString("</a>")
@@ -456,6 +458,17 @@ func SplitExt(path string) (name, ext string) {
 	ext = filepath.Ext(path)
 	name = strings.TrimSuffix(strings.ToLower(filepath.Base(path)), ext)
 	return
+}
+
+// slugify converts a string to a URL-friendly format.
+// It lowercases the string and replaces spaces with dashes.
+// Example: "My Note" -> "my-note"
+//
+// This is a copy from builder/utils.go
+func slugify(s string) string {
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, " ", "-")
+	return s
 }
 
 // GraphLink represents a directed edge in the note graph.
