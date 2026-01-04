@@ -62,14 +62,16 @@ func buildDefault() {
 	rootNode := getSidebarRootNode(InputDir, BaseURL)
 
 	site := &DefaultSite{
-		Scan:            vaultScan,
-		BaseURL:         BaseURL,
-		SiteName:        SiteName,
-		Theme:           theme,
-		Layout:          layout,
-		Markdown:        obsidianMd,
-		Minifier:        minify.New(),
-		SidebarRootNode: rootNode,
+		Scan:              vaultScan,
+		BaseURL:           BaseURL,
+		SiteName:          SiteName,
+		Theme:             theme,
+		Layout:            layout,
+		Markdown:          obsidianMd,
+		Minifier:          minify.New(),
+		SidebarRootNode:   rootNode,
+		DisableLocalGraph: DisableLocalGraph,
+		DisableTOC:        DisableTOC,
 	}
 	site.Minifier.AddFunc("text/html", html.Minify)
 
@@ -383,14 +385,16 @@ func (s *DefaultSite) RenderCanvas(f *File) error {
 
 // DefaultSite holds the global state for a default generation
 type DefaultSite struct {
-	Scan            *VaultScan                 // The result of scanVault
-	BaseURL         string                     // Base URL, used for sitemap.xml, robots.txt etc.
-	SiteName        string                     // The Name of the site
-	Theme           *Theme                     // Selected theme
-	Layout          *Layout                    // Selected and loaded layout
-	SidebarRootNode *SidebarNode               // The root node of the sidebar
-	Markdown        *obsidian.ObsidianMarkdown // Handles the rendering of obsidian markdown
-	Minifier        *minify.M                  // Minifier to minify html pages
+	Scan              *VaultScan                 // The result of scanVault
+	BaseURL           string                     // Base URL, used for sitemap.xml, robots.txt etc.
+	SiteName          string                     // The Name of the site
+	Theme             *Theme                     // Selected theme
+	Layout            *Layout                    // Selected and loaded layout
+	SidebarRootNode   *SidebarNode               // The root node of the sidebar
+	Markdown          *obsidian.ObsidianMarkdown // Handles the rendering of obsidian markdown
+	Minifier          *minify.M                  // Minifier to minify html pages
+	DisableLocalGraph bool                       // If set, disables the local graph
+	DisableTOC        bool                       // If set, disables the Table of contents
 }
 
 // DefaultSitePage represents a page to be generated

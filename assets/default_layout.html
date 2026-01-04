@@ -1,196 +1,316 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{if .Frontmatter.title}}{{.Frontmatter.title}}{{else}}{{.File.Name}}{{end}} • {{ .Site.SiteName}}</title>
-    
-    <meta name="description" content="{{if .Frontmatter.description}}{{.Frontmatter.description}}{{else}}Notes on {{.File.Name}}{{end}}">
-    <meta name="generator" content="Kiln">
-    <meta property="og:title" content="{{.File.Name}}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {{if
+      .Frontmatter.title}}{{.Frontmatter.title}}{{else}}{{.File.Name}}{{end}} •
+      {{ .Site.SiteName}}
+    </title>
 
-    <link rel="preconnect" href="https://unpkg.com">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://d3js.org">
+    <meta
+      name="description"
+      content="{{if .Frontmatter.description}}{{.Frontmatter.description}}{{else}}Notes on {{.File.Name}}{{end}}"
+    />
+    <meta name="generator" content="Kiln" />
+    <meta property="og:title" content="{{.File.Name}}" />
 
-    <link rel="preload" href="{{.Site.BaseURL}}/style.css" as="style">
-    <link rel="stylesheet" href="{{.Site.BaseURL}}/style.css">
-    
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="preconnect" href="https://d3js.org" />
+
+    <link rel="preload" href="{{.Site.BaseURL}}/style.css" as="style" />
+    <link rel="stylesheet" href="{{.Site.BaseURL}}/style.css" />
+
     <script>
-        (function() {
-            try {
-                const savedTheme = localStorage.getItem('theme');
-                if (savedTheme) {
-                    document.documentElement.setAttribute('data-theme', savedTheme);
-                }
-            } catch(e) {}
-        })();
+      (function () {
+        try {
+          const savedTheme = localStorage.getItem("theme");
+          if (savedTheme) {
+            document.documentElement.setAttribute("data-theme", savedTheme);
+          }
+        } catch (e) {}
+      })();
     </script>
 
-    
     <style>
-        .sidebar { transition: none !important; }
-        .sidebar.animate-ready { transition: margin 0.3s ease !important; }
+      .sidebar {
+        transition: none !important;
+      }
+      .sidebar.animate-ready {
+        transition: margin 0.3s ease !important;
+      }
     </style>
 
     <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
     <script src="{{.Site.BaseURL}}/graph.js" defer></script>
     <script src="{{.Site.BaseURL}}/app.js" defer></script>
-    
+
     <script>
-    window.MathJax = {
-      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], processEscapes: true },
-      svg: { fontCache: 'global' }
-    };
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["$", "$"],
+            ["\\(", "\\)"],
+          ],
+          displayMath: [
+            ["$$", "$$"],
+            ["\\[", "\\]"],
+          ],
+          processEscapes: true,
+        },
+        svg: { fontCache: "global" },
+      };
     </script>
-</head>
+  </head>
 
-<body hx-boost="true" hx-select="#kiln-main" hx-target="#kiln-main" hx-swap="outerHTML">
+  <body
+    hx-boost="true"
+    hx-select="#kiln-main"
+    hx-target="#kiln-main"
+    hx-swap="outerHTML"
+  >
     <div class="layout" id="layout">
-        <nav class="sidebar left-sidebar" id="sidebar">
-            <script>
-                try { if (localStorage.getItem('sidebar-collapsed') === 'true') document.getElementById('sidebar').classList.add('collapsed'); } catch(e){}
-            </script>
-            
-            <div class="sidebar-header">
-                <a class="sidebar-home-link" href="{{.Site.BaseURL}}/">{{ .Site.SiteName }}</a>
-                <div class="sidebar-actions">
-                    <button id="theme-toggle" aria-label="Toggle Theme">
-                        <i class="sun-icon" data-lucide="sun"></i>
-                        <i class="moon-icon" data-lucide="moon"></i>
-                    </button>
-                    <button class="sidebar-toggle left-toggle sidebar-toggle-navbar" aria-label="Toggle Sidebar"></button>
-                </div>
-            </div>
-            
-            <div class="sidebar-content">
-                <div class="sidebar-search-container" style="position: sticky; top: 0; background: var(--sidebar-bg); z-index: 10; margin-bottom: 8px;">
-                    <input type="text" id="sidebar-search" placeholder="Search notes..." 
-                        style="width: 100%; padding: 0.5rem; border: 1px solid var(--sidebar-border); border-radius: 4px; background: var(--bg); color: var(--text);">
-                </div>
-                <ul>{{template "tree" .Site.SidebarRootNode.Children}}</ul>
-            </div>
-        </nav>
+      <nav class="sidebar left-sidebar" id="sidebar">
+        <script>
+          try {
+            if (localStorage.getItem("sidebar-collapsed") === "true")
+              document.getElementById("sidebar").classList.add("collapsed");
+          } catch (e) {}
+        </script>
 
-        <div class="center-container">
-            <main id="kiln-main" class="main-wrapper">
-            <div id="page-title-data" data-title="{{ .File.WebPath }}" hidden></div>
+        <div class="sidebar-header">
+          <a class="sidebar-home-link" href="{{.Site.BaseURL}}/"
+            >{{ .Site.SiteName }}</a
+          >
+          <div class="sidebar-actions">
+            <button id="theme-toggle" aria-label="Toggle Theme">
+              <i class="sun-icon" data-lucide="sun"></i>
+              <i class="moon-icon" data-lucide="moon"></i>
+            </button>
+            {{if and (.Site.DisableLocalGraph) (.Site.DisableTOC)}}
+            <a
+              href="{{.Site.BaseURL}}/graph"
+              class="graph-btn"
+              title="Global Graph"
+              ><i data-lucide="globe"></i
+            ></a>
+            {{end}}
 
-            <div class="navbar">
-                <button class="sidebar-toggle left-toggle" aria-label="Toggle Sidebar">☰</button>
-                
-                {{ if .Breadcrumbs }}
-                    <nav class="breadcrumbs">
-                        {{ range $index, $element := .Breadcrumbs }}
-                            {{ if $index }} <span>/</span> {{ end }}
-                            <span class="breadcrumb-item">{{ $element }}</span>
-                        {{ end }}
-                    </nav>
-                {{ end }}
-
-                <button class="sidebar-toggle right-toggle" aria-label="Toggle Right Sidebar">☰</button>
-            </div>
-
-            <div class="content-wrapper {{if .IsCanvas}}canvas-mode{{end}} {{if .IsGraph}}canvas-mode{{end}}">
-                
-                {{if .IsCanvas}}
-                    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-                    <script src="{{.Site.BaseURL}}/canvas.js"></script>
-
-                    <div id="viewport">
-                        <div id="canvas-world">
-                            <svg id="edges-layer"></svg>
-                        </div>
-                    </div>
-
-                    <div id="canvas-controls">
-                        <button onclick="window.renderer.zoomOut()" class="canvas-btn icon-minus" aria-label="Zoom Out"></button>
-                        <button onclick="window.renderer.resetView()" class="canvas-btn icon-maximize" aria-label="Reset View"></button>
-                        <button onclick="window.renderer.zoomIn()" class="canvas-btn icon-plus" aria-label="Zoom In"></button>
-                    </div>
-                    <script>
-                        (function() {
-                            var data = {{.CanvasContent}};
-                            if (window.initCanvasMode) {
-                                // Navigating via HTMX (App is already loaded)
-                                window.initCanvasMode(data);
-                            } else {
-                                // F5 Refresh (App is 'defer' and hasn't loaded yet)
-                                document.addEventListener('DOMContentLoaded', function() {
-                                    if (window.initCanvasMode) window.initCanvasMode(data);
-                                });
-                            }
-                        })();
-                    </script>
-
-                {{else if .IsGraph }}
-                    {{.Content}}
-                {{else}}
-                    <article class="content">
-                        <div class="markdown-body">
-                            {{.Content}}
-                        </div>
-                    </article>
-                    
-                    <footer style="margin-top: 3rem; font-size: 0.8rem; color: #888; text-align: center;">
-                       Generated with <a href="https://kiln.talesign.com" target="_blanc">Kiln</a> • <a href="https://github.com/otaleghani/kiln" target="_blanc">Github</a>
-                    </footer>
-                {{end}}
-
-                <script>
-                   if (window.initAll) window.initAll();
-                </script>
-                </div>
-            </main>
+            <button
+              class="sidebar-toggle left-toggle sidebar-toggle-navbar"
+              aria-label="Toggle Sidebar"
+            ></button>
+          </div>
         </div>
 
-        <aside class="sidebar right-sidebar" id="right-sidebar">
-            <script>
-                try { if (localStorage.getItem('right-sidebar-collapsed') === 'true') document.getElementById('right-sidebar').classList.add('collapsed'); } catch(e){}
-            </script>
-            
-            <div class="sidebar-header">
-                <div class="sidebar-actions">
-                    <a href="{{.Site.BaseURL}}/graph" class="graph-btn" title="Global Graph"><i data-lucide="globe"></i></a>
-                    <button class="sidebar-toggle right-toggle sidebar-toggle-navbar" aria-label="Toggle Sidebar"></button>
-                </div>
-            </div>
-            
-            <div class="sidebar-content">
-                <div id="local-graph-wrapper" class="local-graph-wrapper">
-                    <div class="graph-header">
-                        <span class="sidebar-label">Local Graph</span>
-                        <div class="graph-controls">
-                            <button class="graph-btn" onclick="window.toggleGraphExpand()" title="Expand"><i data-lucide="maximize-2"></i></button>
-                        </div>
-                    </div>
-                    <div id="local-graph-container"></div>
-                </div>
-                
-                <aside class="toc-container" id="toc-container" hx-swap-oob="true">
-                    {{ if .TOC }}
-                        <span class="sidebar-label">On this page</span>
-                        {{ .TOC }}
-                    {{ end }}
-                </aside>
-            </div>
-        </aside>
+        <div class="sidebar-content">
+          <div
+            class="sidebar-search-container"
+            style="
+              position: sticky;
+              top: 0;
+              background: var(--sidebar-bg);
+              z-index: 10;
+              margin-bottom: 8px;
+            "
+          >
+            <input
+              type="text"
+              id="sidebar-search"
+              placeholder="Search notes..."
+              style="
+                width: 100%;
+                padding: 0.5rem;
+                border: 1px solid var(--sidebar-border);
+                border-radius: 4px;
+                background: var(--bg);
+                color: var(--text);
+              "
+            />
+          </div>
+          <ul>
+            {{template "tree" .Site.SidebarRootNode.Children}}
+          </ul>
+        </div>
+      </nav>
 
+      <div class="center-container">
+        <main id="kiln-main" class="main-wrapper">
+          <div
+            id="page-title-data"
+            data-title="{{ .File.WebPath }}"
+            hidden
+          ></div>
+
+          <div class="navbar">
+            <button
+              class="sidebar-toggle left-toggle"
+              aria-label="Toggle Sidebar"
+            >
+              ☰
+            </button>
+
+            {{ if .Breadcrumbs }}
+            <nav class="breadcrumbs">
+              {{ range $index, $element := .Breadcrumbs }} {{ if $index }}
+              <span>/</span> {{ end }}
+              <span class="breadcrumb-item">{{ $element }}</span>
+              {{ end }}
+            </nav>
+            {{ end }} {{if or (not .Site.DisableLocalGraph) (not
+            .Site.DisableTOC)}}
+            <button
+              class="sidebar-toggle right-toggle"
+              aria-label="Toggle Right Sidebar"
+            >
+              ☰
+            </button>
+            {{end}}
+          </div>
+
+          <div
+            class="content-wrapper {{if .IsCanvas}}canvas-mode{{end}} {{if .IsGraph}}canvas-mode{{end}}"
+          >
+            {{if .IsCanvas}}
+            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+            <script src="{{.Site.BaseURL}}/canvas.js"></script>
+
+            <div id="viewport">
+              <div id="canvas-world">
+                <svg id="edges-layer"></svg>
+              </div>
+            </div>
+
+            <div id="canvas-controls">
+              <button
+                onclick="window.renderer.zoomOut()"
+                class="canvas-btn icon-minus"
+                aria-label="Zoom Out"
+              ></button>
+              <button
+                onclick="window.renderer.resetView()"
+                class="canvas-btn icon-maximize"
+                aria-label="Reset View"
+              ></button>
+              <button
+                onclick="window.renderer.zoomIn()"
+                class="canvas-btn icon-plus"
+                aria-label="Zoom In"
+              ></button>
+            </div>
+            <script>
+              (function() {
+                  var data = {{.CanvasContent}};
+                  if (window.initCanvasMode) {
+                      // Navigating via HTMX (App is already loaded)
+                      window.initCanvasMode(data);
+                  } else {
+                      // F5 Refresh (App is 'defer' and hasn't loaded yet)
+                      document.addEventListener('DOMContentLoaded', function() {
+                          if (window.initCanvasMode) window.initCanvasMode(data);
+                      });
+                  }
+              })();
+            </script>
+
+            {{else if .IsGraph }} {{.Content}} {{else}}
+            <article class="content">
+              <div class="markdown-body">{{.Content}}</div>
+            </article>
+
+            <footer
+              style="
+                margin-top: 3rem;
+                font-size: 0.8rem;
+                color: #888;
+                text-align: center;
+              "
+            >
+              Generated with
+              <a href="https://kiln.talesign.com" target="_blanc">Kiln</a> •
+              <a href="https://github.com/otaleghani/kiln" target="_blanc"
+                >Github</a
+              >
+            </footer>
+            {{end}}
+
+            <script>
+              if (window.initAll) window.initAll();
+            </script>
+          </div>
+        </main>
+      </div>
+
+      {{if or (not .Site.DisableLocalGraph) (not .Site.DisableTOC)}}
+      <aside class="sidebar right-sidebar" id="right-sidebar">
+        <script>
+          try {
+            if (localStorage.getItem("right-sidebar-collapsed") === "true")
+              document
+                .getElementById("right-sidebar")
+                .classList.add("collapsed");
+          } catch (e) {}
+        </script>
+
+        <div class="sidebar-header">
+          <div class="sidebar-actions">
+            <a
+              href="{{.Site.BaseURL}}/graph"
+              class="graph-btn"
+              title="Global Graph"
+              ><i data-lucide="globe"></i
+            ></a>
+            <button
+              class="sidebar-toggle right-toggle sidebar-toggle-navbar"
+              aria-label="Toggle Sidebar"
+            ></button>
+          </div>
+        </div>
+
+        <div class="sidebar-content">
+          {{if not .Site.DisableLocalGraph}}
+          <div id="local-graph-wrapper" class="local-graph-wrapper">
+            <div class="graph-header">
+              <span class="sidebar-label">Local Graph</span>
+              <div class="graph-controls">
+                <button
+                  class="graph-btn"
+                  onclick="window.toggleGraphExpand()"
+                  title="Expand"
+                >
+                  <i data-lucide="maximize-2"></i>
+                </button>
+              </div>
+            </div>
+            <div id="local-graph-container"></div>
+          </div>
+          {{end}} {{ if not .Site.DisableTOC }}
+          <aside class="toc-container" id="toc-container" hx-swap-oob="true">
+            {{ if .TOC }}
+            <span class="sidebar-label">On this page</span>
+            {{ .TOC }} {{ end }}
+          </aside>
+          {{ end }}
+        </div>
+      </aside>
+      {{ end }}
     </div>
 
-    {{define "tree"}}
-        {{range .}}
-            <li>
-                {{if .IsFolder}}
-                    <details>
-                        <summary class="folder-name">{{.Name}}</summary>
-                        <ul>{{template "tree" .Children}}</ul>
-                    </details>
-                {{else}}
-                    <a href="{{.Path}}" class="{{if .Active}}active{{end}}">{{.Name}}</a>
-                {{end}}
-            </li>
-        {{end}}
-    {{end}}
-</body>
+    {{define "tree"}} {{range .}}
+    <li>
+      {{if .IsFolder}}
+      <details>
+        <summary class="folder-name">{{.Name}}</summary>
+        <ul>
+          {{template "tree" .Children}}
+        </ul>
+      </details>
+      {{else}}
+      <a href="{{.Path}}" class="{{if .Active}}active{{end}}">{{.Name}}</a>
+      {{end}}
+    </li>
+    {{end}} {{end}}
+  </body>
 </html>

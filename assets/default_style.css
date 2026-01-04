@@ -6,7 +6,7 @@
 
 :root {
     /* --- LIGHT THEME (Default) --- */
-    --bg-color: {{ .Theme.Light.Bg }};
+--bg-color: {{ .Theme.Light.Bg }};
     --text-color: {{ .Theme.Light.Text }};
     --sidebar-bg: {{ .Theme.Light.SidebarBg }};
     --sidebar-border: {{ .Theme.Light.SidebarBorder }};

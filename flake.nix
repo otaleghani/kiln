@@ -22,6 +22,11 @@
           templ
           air
           overmind
+
+          vscode-langservers-extracted
+          typescript-language-server
+          typescript
+          prettier
         ];
 
         shellHook = ''

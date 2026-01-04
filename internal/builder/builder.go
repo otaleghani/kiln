@@ -16,15 +16,17 @@ func Build() {
 }
 
 var (
-	OutputDir  string // Destination directory
-	InputDir   string // Source directory
-	FlatUrls   bool   // Defines if the user opted in for flat urls
-	ThemeName  string // Theme name
-	FontName   string // Font name
-	BaseURL    string // Base URL of the application
-	SiteName   string // Sitename
-	Mode       string // Mode, either default or custom
-	LayoutName string // Layout name
+	OutputDir         string // Destination directory
+	InputDir          string // Source directory
+	FlatUrls          bool   // Defines if the user opted in for flat urls
+	ThemeName         string // Theme name
+	FontName          string // Font name
+	BaseURL           string // Base URL of the application
+	SiteName          string // Sitename
+	Mode              string // Mode, either default or custom
+	LayoutName        string // Layout name
+	DisableTOC        bool   // Disables table of contents
+	DisableLocalGraph bool   // Disables local graph
 )
 
 // GraphNode represents a single node in the interactive graph view.

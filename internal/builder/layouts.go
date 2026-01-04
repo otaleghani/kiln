@@ -102,12 +102,12 @@ func (l *Layout) loadLayout() error {
 // following files: default_layout.html, default_style.css and default_app.js
 type Layout struct {
 	Name             string
-	HtmlPath         string // Path of the HTML file
-	CssPath          string // Path of the CSS file
-	JsPath           string // Path of the JS file
-	HtmlTemplate     *template.Template
+	HtmlPath         string                 // Path of the HTML file
+	CssPath          string                 // Path of the CSS file
+	JsPath           string                 // Path of the JS file
+	HtmlTemplate     *template.Template     // The template
 	CssTemplate      *textTemplate.Template // Used to add the theme variables
-	JsTemplate       *textTemplate.Template
-	JsGraphTemplate  *textTemplate.Template
-	JsCanvasTemplate *textTemplate.Template
+	JsTemplate       *textTemplate.Template // If you need to change some data
+	JsGraphTemplate  *textTemplate.Template // Usually you'll need to update the graph base url
+	JsCanvasTemplate *textTemplate.Template // If you need to change some data
 }

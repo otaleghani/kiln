@@ -36,6 +36,10 @@ func init() {
 		StringVarP(&logger, FlagLog, FlagLogShort, DefaultLog, "Logging level. Choose between 'debug' or 'info'. Defaults to 'info'.")
 	cmdGenerate.Flags().
 		StringVarP(&layout, FlagLayout, FlagLayoutShort, DefaultLayout, "Layout to use. Choose between 'default' and others.")
+	cmdGenerate.Flags().
+		BoolVar(&disableTOC, FlagDisableTOC, DefaultDisableTOC, "Disables the Table of contents on the right sidebar. If the local graph is disabled too, hides the right sidebar.")
+	cmdGenerate.Flags().
+		BoolVar(&disableLocalGraph, FlagDisableLocalGraph, DefaultDisableLocalGraph, "Disables the Local graph. If the table of contents is disabled too, hides the right sidebar.")
 }
 
 // runGenerate executes the build logic.
@@ -51,6 +55,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	builder.SiteName = siteName
 	builder.Mode = mode
 	builder.LayoutName = layout
+	builder.DisableTOC = disableTOC
+	builder.DisableLocalGraph = disableLocalGraph
 
 	setLogger()
 
