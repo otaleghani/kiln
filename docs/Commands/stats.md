@@ -26,6 +26,7 @@ Longest Note  Client Side Navigation.md (412 words)
 
 ## Flags
 
-| Flag       | Short version | Default value | Description                                  |
-| ---------- | ------------- | ------------- | -------------------------------------------- |
-| `--input`  | `-i`          | `"vault"`     | The path to the directory containing your Markdown notes to be analyzed. |
+| Flag      | Short version | Default value | Description                                                              |
+| --------- | ------------- | ------------- | ------------------------------------------------------------------------ |
+| `--input` | `-i`          | `"vault"`     | The path to the directory containing your Markdown notes to be analyzed. |
+| `--log`   | `-l`          | `info`        | Sets the log level. You can choose between `info` or `debug`.            |

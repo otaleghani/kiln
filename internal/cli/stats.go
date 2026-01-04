@@ -18,14 +18,16 @@ func init() {
 	// Allows running statistics on a custom vault location.
 	cmdStats.Flags().
 		StringVarP(&inputDir, FlagInputDir, FlagInputDirShort, DefaultInputDir, "Name of the input directory (defaults to ./vault)")
+	cmdStats.Flags().
+		StringVarP(&logger, FlagLog, FlagLogShort, DefaultLog, "Logging level. Choose between 'debug' or 'info'. Defaults to 'info'.")
 }
 
 // runStats executes the statistics calculation logic.
 func runStats(cmd *cobra.Command, args []string) {
 	// If a custom input directory is provided via flags, update the builder configuration.
-	if inputDir != "" {
-		builder.InputDir = inputDir
-	}
+	builder.InputDir = inputDir
+
+	setLogger()
 
 	// Trigger the stats analysis and print the results to the console.
 	builder.Stats()

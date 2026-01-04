@@ -19,9 +19,10 @@ This is primarily used to ensure a "fresh" build. If you delete or rename a note
 
 You can customize which directory is targeted using the flags below.
 
-| Flag       | Short version | Default value | Description               |
-| ---------- | ------------- | ------------- | ------------------------- |
-| `--output` | `-o`          | `"./public"`  | The path to the directory that should be removed. |
+| Flag       | Short version | Default value | Description                                                   |
+| ---------- | ------------- | ------------- | ------------------------------------------------------------- |
+| `--output` | `-o`          | `"./public"`  | The path to the directory that should be removed.             |
+| `--log`    | `-l`          | `info`        | Sets the log level. You can choose between `info` or `debug`. |
 
 > [!danger] Irreversible Action 
 > This command **permanently deletes** the specified directory and all of its contents.

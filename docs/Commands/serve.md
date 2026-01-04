@@ -25,10 +25,11 @@ Once running, you can view your site by opening `http://localhost:8080` in your 
 
 ## Flags
 
-| Flag       | Short version | Default value | Description                                                                             |
-| ---------- | ------------- | ------------- | --------------------------------------------------------------------------------------- |
-| `--port`   | `-p`          | `"8080"`      | The port number to listen on. Useful if port 8080 is already in use by another application.                                                                        |
-| `--output` | `-o`          | `"./public"`  | The directory to serve. This should match the output folder you specified during the generate step.  |
+| Flag       | Short version | Default value | Description                                                                                         |
+| ---------- | ------------- | ------------- | --------------------------------------------------------------------------------------------------- |
+| `--port`   | `-p`          | `"8080"`      | The port number to listen on. Useful if port 8080 is already in use by another application.         |
+| `--output` | `-o`          | `"./public"`  | The directory to serve. This should match the output folder you specified during the generate step. |
+| `--log`    | `-l`          | `info`        | Sets the log level. You can choose between `info` or `debug`.                                       |
 
 ## Production Note
 

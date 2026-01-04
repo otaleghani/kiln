@@ -19,9 +19,10 @@ The `init` command is designed to help you hit the ground running. It scaffolds 
 
 ## Flags
 
-| Flag      | Short version | Default value | Description                                  |
-| --------- | ------------- | ------------- | -------------------------------------------- |
-| `--input` | `-i`          | `"vault"`     | The name of the directory to be created. |
+| Flag      | Short version | Default value | Description                                                   |
+| --------- | ------------- | ------------- | ------------------------------------------------------------- |
+| `--input` | `-i`          | `"vault"`     | The name of the directory to be created.                      |
+| `--log`   | `-l`          | `info`        | Sets the log level. You can choose between `info` or `debug`. |
 
 ## What it Generates
 

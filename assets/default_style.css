@@ -2,69 +2,69 @@
    1. IMPORTS & VARIABLES
    ========================================================================== */
 
-{{.Font.FontFace}}
+{{.Theme.Font.FontFace}}
 
 :root {
     /* --- LIGHT THEME (Default) --- */
-    --bg-color: {{ .Light.Bg }};
-    --text-color: {{ .Light.Text }};
-    --sidebar-bg: {{ .Light.SidebarBg }};
-    --sidebar-border: {{ .Light.SidebarBorder }};
-    --accent-color: {{ .Light.Accent }};
-    --hover-color: {{ .Light.Hover }};
+    --bg-color: {{ .Theme.Light.Bg }};
+    --text-color: {{ .Theme.Light.Text }};
+    --sidebar-bg: {{ .Theme.Light.SidebarBg }};
+    --sidebar-border: {{ .Theme.Light.SidebarBorder }};
+    --accent-color: {{ .Theme.Light.Accent }};
+    --hover-color: {{ .Theme.Light.Hover }};
 
     /* Palette */
-    --color-red: {{ .Light.Red }};
-    --color-orange: {{ .Light.Orange }};
-    --color-yellow: {{ .Light.Yellow }};
-    --color-green: {{ .Light.Green }};
-    --color-blue: {{ .Light.Blue }};
-    --color-purple: {{ .Light.Purple }};
-    --color-cyan: {{ .Light.Cyan }};
-    --color-comment: {{ .Light.Comment }};
+    --color-red: {{ .Theme.Light.Red }};
+    --color-orange: {{ .Theme.Light.Orange }};
+    --color-yellow: {{ .Theme.Light.Yellow }};
+    --color-green: {{ .Theme.Light.Green }};
+    --color-blue: {{ .Theme.Light.Blue }};
+    --color-purple: {{ .Theme.Light.Purple }};
+    --color-cyan: {{ .Theme.Light.Cyan }};
+    --color-comment: {{ .Theme.Light.Comment }};
 
     --sidebar-width: 280px;
-    --font-main: {{ .Font.Family }}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-main: {{ .Theme.Font.Family }}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* --- DARK THEME OVERRIDES (Data Attribute) --- */
 :root[data-theme="dark"] {
-    --bg-color: {{ .Dark.Bg }};
-    --text-color: {{ .Dark.Text }};
-    --sidebar-bg: {{ .Dark.SidebarBg }};
-    --sidebar-border: {{ .Dark.SidebarBorder }};
-    --accent-color: {{ .Dark.Accent }};
-    --hover-color: {{ .Dark.Hover }};
+    --bg-color: {{ .Theme.Dark.Bg }};
+    --text-color: {{ .Theme.Dark.Text }};
+    --sidebar-bg: {{ .Theme.Dark.SidebarBg }};
+    --sidebar-border: {{ .Theme.Dark.SidebarBorder }};
+    --accent-color: {{ .Theme.Dark.Accent }};
+    --hover-color: {{ .Theme.Dark.Hover }};
 
     /* Palette */
-    --color-red: {{ .Dark.Red }};
-    --color-orange: {{ .Dark.Orange }};
-    --color-yellow: {{ .Dark.Yellow }};
-    --color-green: {{ .Dark.Green }};
-    --color-blue: {{ .Dark.Blue }};
-    --color-purple: {{ .Dark.Purple }};
-    --color-cyan: {{ .Dark.Cyan }};
-    --color-comment: {{ .Dark.Comment }};
+    --color-red: {{ .Theme.Dark.Red }};
+    --color-orange: {{ .Theme.Dark.Orange }};
+    --color-yellow: {{ .Theme.Dark.Yellow }};
+    --color-green: {{ .Theme.Dark.Green }};
+    --color-blue: {{ .Theme.Dark.Blue }};
+    --color-purple: {{ .Theme.Dark.Purple }};
+    --color-cyan: {{ .Theme.Dark.Cyan }};
+    --color-comment: {{ .Theme.Dark.Comment }};
 }
 
 /* --- DARK THEME OVERRIDES (System Preference) --- */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-        --bg-color: {{ .Dark.Bg }};
-        --text-color: {{ .Dark.Text }};
-        --sidebar-bg: {{ .Dark.SidebarBg }};
-        --sidebar-border: {{ .Dark.SidebarBorder }};
-        --accent-color: {{ .Dark.Accent }};
-        --hover-color: {{ .Dark.Hover }};
+        --bg-color: {{ .Theme.Dark.Bg }};
+        --text-color: {{ .Theme.Dark.Text }};
+        --sidebar-bg: {{ .Theme.Dark.SidebarBg }};
+        --sidebar-border: {{ .Theme.Dark.SidebarBorder }};
+        --accent-color: {{ .Theme.Dark.Accent }};
+        --hover-color: {{ .Theme.Dark.Hover }};
 
-        --color-red: {{ .Dark.Red }};
-        --color-orange: {{ .Dark.Orange }};
-        --color-yellow: {{ .Dark.Yellow }};
-        --color-green: {{ .Dark.Green }};
-        --color-blue: {{ .Dark.Blue }};
-        --color-purple: {{ .Dark.Purple }};
-        --color-cyan: {{ .Dark.Cyan }};
-        --color-comment: {{ .Dark.Comment }};
+        --color-red: {{ .Theme.Dark.Red }};
+        --color-orange: {{ .Theme.Dark.Orange }};
+        --color-yellow: {{ .Theme.Dark.Yellow }};
+        --color-green: {{ .Theme.Dark.Green }};
+        --color-blue: {{ .Theme.Dark.Blue }};
+        --color-purple: {{ .Theme.Dark.Purple }};
+        --color-cyan: {{ .Theme.Dark.Cyan }};
+        --color-comment: {{ .Theme.Dark.Comment }};
     }
 }
 

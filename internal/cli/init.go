@@ -18,6 +18,8 @@ func init() {
 	// Allows the user to specify a custom directory name for their new vault.
 	cmdInit.Flags().
 		StringVarP(&inputDir, FlagInputDir, FlagInputDirShort, DefaultInputDir, "Name of the input directory (defaults to ./vault)")
+	cmdInit.Flags().
+		StringVarP(&logger, FlagLog, FlagLogShort, DefaultLog, "Logging level. Choose between 'debug' or 'info'. Defaults to 'info'.")
 }
 
 // runInit executes the initialization logic.
@@ -26,6 +28,8 @@ func runInit(cmd *cobra.Command, args []string) {
 	if inputDir != "" {
 		builder.InputDir = inputDir
 	}
+
+	setLogger()
 
 	// Trigger the creation of the vault directory and default files.
 	builder.Init()

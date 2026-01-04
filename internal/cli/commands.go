@@ -3,7 +3,7 @@
 package cli
 
 import (
-	// "os"
+	"strings"
 
 	"github.com/otaleghani/kiln/internal/log"
 	"github.com/spf13/cobra"
@@ -20,6 +20,7 @@ const (
 	DefaultFlatURLS  = false
 	DefaultMode      = "default"
 	DefaultPort      = "8080"
+	DefaultLog       = "info"
 )
 
 // Flag names
@@ -41,6 +42,8 @@ const (
 	FlagModeShort      = "m"
 	FlagPort           = "port"
 	FlagPortShort      = "p"
+	FlagLog            = "log"
+	FlagLogShort       = "l"
 )
 
 // Global variables to store the values of command-line flags.
@@ -54,7 +57,7 @@ var (
 	outputDir string // Custom path for the build output
 	mode      string // Choose the mode of generation
 	flatUrls  bool   // Choose between pretty (e.g. note/index.html) or flat URLs (e.g. note.html)
-	// logger    string // TODO: handle this flag
+	logger    string // Choose the level of logging
 )
 
 // Init constructs and returns the root command for the application.
@@ -76,16 +79,19 @@ It supports wikilinks, callouts, mermaid diagrams, and graph visualization.`,
 	rootCmd.AddCommand(cmdDoctor)   // Checks for common issues
 	rootCmd.AddCommand(cmdStats)    // Displays vault statistics
 
-	// TODO: Change level based on the logger flag
-	l := log.New(log.LevelDebug)
-	log.SetDefault(l)
-
-	// logger = log.NewWithOptions(os.Stderr, log.Options{
-	// 	// Prefix:          "kiln",
-	// 	ReportTimestamp: true,
-	// 	Level:           log.DebugLevel,
-	// })
-	// log.SetDefault(logger)
-
 	return rootCmd
+}
+
+// setLogger creates a new default logger with the level based on the given log flag
+func setLogger() {
+	var l *log.Logger
+	switch strings.ToLower(logger) {
+	case "debug":
+		l = log.New(log.LevelDebug)
+	case "info":
+		l = log.New(log.LevelInfo)
+	default:
+		l = log.New(log.LevelInfo)
+	}
+	log.SetDefault(l)
 }

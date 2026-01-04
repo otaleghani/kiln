@@ -1,34 +1,28 @@
 package builder
 
 import (
-	"log"
 	"net/url"
 	"os"
 	"path"          // Used for URL path construction (forward slashes)
 	"path/filepath" // Used for OS file system operations
 	"sort"
 	"strings"
+
+	"github.com/otaleghani/kiln/internal/log"
 )
 
-// Node represents a single item (file or folder) in the sidebar navigation tree.
-type Node struct {
-	Name     string
-	Path     string
-	IsFolder bool
-	Active   bool
-	Children []*Node
-}
-
-// getRootNode initializes the navigation tree starting from the input directory.
+// getSidebarRootNode initializes the navigation tree starting from the input directory.
 // It parses the BaseURL to ensure all node paths are prefixed correctly (e.g., "/kiln/foo").
-func getRootNode(dir string, fullURL string) *Node {
+func getSidebarRootNode(dir string, baseURL string) *SidebarNode {
 	// Parse the Base URL to extract the path component.
 	// Input: "https://example.com/kiln" -> basePath: "/kiln"
 	// Input: "http://localhost:8080"    -> basePath: "/"
-	u, err := url.Parse(fullURL)
+	u, err := url.Parse(baseURL)
 	basePath := "/"
 	if err == nil {
 		basePath = u.Path
+	} else {
+		log.Warn("Failed to parse baseURL", log.FieldError, err)
 	}
 
 	// Normalize basePath to ensure it is clean for joining.
@@ -40,29 +34,29 @@ func getRootNode(dir string, fullURL string) *Node {
 		basePath = "/"
 	}
 
-	rootNode := &Node{
+	rootNode := &SidebarNode{
 		Name:     "Home",
 		IsFolder: true,
 		Path:     basePath,
 	}
 
-	// 1. Construct the raw tree from the file system
-	buildTree(dir, rootNode)
+	// Construct the raw tree from the file system
+	buildSidebarTree(dir, rootNode)
 
-	// 2. Remove empty folders
-	rootNode.Children = pruneTree(rootNode.Children)
+	// Remove empty folders
+	rootNode.Children = pruneSidebarTree(rootNode.Children)
 
-	// 3. Sort folders first, then alphabetical
-	sortTree(rootNode.Children)
+	// Sort folders first, then alphabetical
+	sortSidebarTree(rootNode.Children)
 
-	log.Println("File tree constructed, pruned, and sorted")
+	log.Info("File tree constructed, pruned, and sorted")
 
 	return rootNode
 }
 
-// buildTree recursively walks the directory structure to populate the Node tree.
+// buildSidebarTree recursively walks the directory structure to populate the Node tree.
 // It filters for .md and .canvas files and handles URL slug generation.
-func buildTree(dir string, parent *Node) {
+func buildSidebarTree(dir string, parent *SidebarNode) {
 	entries, _ := os.ReadDir(dir)
 	for _, entry := range entries {
 		// Skip dotfiles (hidden files)
@@ -70,7 +64,7 @@ func buildTree(dir string, parent *Node) {
 			continue
 		}
 
-		node := &Node{
+		node := &SidebarNode{
 			Name:     entry.Name(),
 			IsFolder: entry.IsDir(),
 		}
@@ -103,19 +97,19 @@ func buildTree(dir string, parent *Node) {
 
 		if entry.IsDir() {
 			fullPath := filepath.Join(dir, entry.Name())
-			buildTree(fullPath, node)
+			buildSidebarTree(fullPath, node)
 		}
 	}
 }
 
-// pruneTree removes folders that end up empty (containing no valid .md or .canvas files).
+// pruneSidebarTree removes folders that end up empty (containing no valid .md or .canvas files).
 // This is necessary because we might scan a folder that only contains images or unrelated files.
-func pruneTree(nodes []*Node) []*Node {
-	var kept []*Node
+func pruneSidebarTree(nodes []*SidebarNode) []*SidebarNode {
+	var kept []*SidebarNode
 	for _, n := range nodes {
 		if n.IsFolder {
 			// Recursively prune children first
-			n.Children = pruneTree(n.Children)
+			n.Children = pruneSidebarTree(n.Children)
 			// Only keep the folder if it still has children
 			if len(n.Children) > 0 {
 				kept = append(kept, n)
@@ -128,8 +122,8 @@ func pruneTree(nodes []*Node) []*Node {
 	return kept
 }
 
-// sortTree sorts nodes in place: Folders top, then files, both alphabetically.
-func sortTree(nodes []*Node) {
+// sortSidebarTree sorts nodes in place: Folders top, then files, both alphabetically.
+func sortSidebarTree(nodes []*SidebarNode) {
 	sort.Slice(nodes, func(i, j int) bool {
 		// Prioritize Folders over Files
 		if nodes[i].IsFolder && !nodes[j].IsFolder {
@@ -145,18 +139,27 @@ func sortTree(nodes []*Node) {
 	// Recursively sort children
 	for _, n := range nodes {
 		if n.IsFolder && len(n.Children) > 0 {
-			sortTree(n.Children)
+			sortSidebarTree(n.Children)
 		}
 	}
 }
 
-// setTreeActive traverses the tree and marks the node matching currentPath as Active.
+// setSidebarNodeActive traverses the tree and marks the node matching currentPath as Active.
 // This is used by the template to highlight the current page in the sidebar.
-func setTreeActive(nodes []*Node, currentPath string) {
+func setSidebarNodeActive(nodes []*SidebarNode, currentPath string) {
 	for _, n := range nodes {
 		n.Active = (n.Path == currentPath)
 		if n.IsFolder {
-			setTreeActive(n.Children, currentPath)
+			setSidebarNodeActive(n.Children, currentPath)
 		}
 	}
+}
+
+// SidebarNode represents a single item (file or folder) in the sidebar navigation tree.
+type SidebarNode struct {
+	Name     string
+	Path     string
+	IsFolder bool
+	Active   bool
+	Children []*SidebarNode
 }

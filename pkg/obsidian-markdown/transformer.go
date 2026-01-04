@@ -1,14 +1,21 @@
-package builder
+package obsidianmarkdown
 
 import (
 	"fmt"
 	"html/template"
 	"regexp"
 	"strings"
-	// "golang.org/x/text/cases"
 )
 
 // Contains logic for transforming specific markdown extensions into rich HTML components.
+
+// applyTransforms applies all the transform
+func applyTransforms(htmlStr string) string {
+	htmlStr = transformHighlights(htmlStr)
+	htmlStr = transformMermaid(htmlStr)
+	htmlStr = transformCallouts(htmlStr)
+	return htmlStr
+}
 
 // transformHighlights converts Obsidian-style highlight syntax (==text==)
 // into standard HTML <mark> tags.

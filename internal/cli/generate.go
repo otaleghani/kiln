@@ -32,6 +32,8 @@ func init() {
 		BoolVar(&flatUrls, FlagFlatURLS, DefaultFlatURLS, "Generate flat HTML files (note.html) instead of pretty directories (note/index.html)")
 	cmdGenerate.Flags().
 		StringVarP(&mode, FlagMode, FlagModeShort, DefaultMode, "The mode to use for the generation. Available modes 'default' and 'custom' (defaults to 'default')")
+	cmdGenerate.Flags().
+		StringVarP(&logger, FlagLog, FlagLogShort, DefaultLog, "Logging level. Choose between 'debug' or 'info'. Defaults to 'info'.")
 }
 
 // runGenerate executes the build logic.
@@ -47,8 +49,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	builder.SiteName = siteName
 	builder.Mode = mode
 
-	// TODO: Set verbosity level here based on the requested level
-	// logger.SetLevel()
+	setLogger()
 
 	// Trigger the build
 	builder.Build()

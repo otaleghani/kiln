@@ -9,8 +9,6 @@ import (
 	"sort"
 
 	"html/template"
-	"io/fs"
-	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -19,88 +17,61 @@ import (
 	"time"
 
 	"github.com/otaleghani/kiln/internal/log"
-	"github.com/yuin/goldmark"
+	obsidian "github.com/otaleghani/kiln/pkg/obsidian-markdown"
 	"gopkg.in/yaml.v3"
 )
 
 // walk the input directory and loads the different kinds of files into s.Files
 func (s *CustomSite) walk() error {
 	s.Files = Files{
-		Env:       FilePaths{},
-		Markdown:  []FilePaths{},
-		Base:      []FilePaths{},
-		Canvas:    []FilePaths{},
-		Config:    []FilePaths{},
-		Layout:    make(map[string]FilePaths),
-		Component: []FilePaths{},
-		Static:    []FilePaths{},
+		Env:       &File{},
+		Markdown:  []*File{},
+		Base:      []*File{},
+		Canvas:    []*File{},
+		Config:    []*File{},
+		Layout:    make(map[string]*File),
+		Component: []*File{},
+		Static:    []*File{},
 	}
 
-	err := filepath.Walk(InputDir, func(path string, info fs.FileInfo, err error) error {
-		l := log.Default.WithFile(path)
-		l.Debug("Processing file...")
+	for _, file := range s.Scan.Files {
+		l := log.Default.WithFile(file.RelPath)
 
-		// Handle permission errors etc.
-		if err != nil {
-			return err
-		}
-
-		relPath, err := filepath.Rel(InputDir, path)
-		if err != nil {
-			return err
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			l.Debug("Skipping file", log.FieldReason, "File is a directory")
-			return nil
-		}
-
-		// Skip dotfiles
-		if strings.HasPrefix(relPath, ".") && path != InputDir {
-			l.Debug("Skipping file", log.FieldReason, "File is a hidden file (dotfile)")
-			return nil
-		}
-
-		processFile := FilePaths{path, relPath}
-		fileExt := filepath.Ext(path)
-		switch fileExt {
+		switch file.Ext {
 		case ".md":
-			s.Files.Markdown = append(s.Files.Markdown, processFile)
+			s.Files.Markdown = append(s.Files.Markdown, file)
 		case ".base":
-			s.Files.Base = append(s.Files.Base, processFile)
+			s.Files.Base = append(s.Files.Base, file)
 		case ".canvas":
-			s.Files.Canvas = append(s.Files.Canvas, processFile)
+			s.Files.Canvas = append(s.Files.Canvas, file)
 		case ".json":
-			if filepath.Base(path) == "config.json" {
-				s.Files.Config = append(s.Files.Config, processFile)
+			if file.Name == "config" {
+				s.Files.Config = append(s.Files.Config, file)
 				break
 			}
-			if path == filepath.Join(InputDir, "env.json") {
-				s.Files.Env = processFile
+			if file.RelPath == "env.json" {
+				s.Files.Env = file
 				break
 			}
 			l.Debug("Found unknown JSON file, added to static files")
-			s.Files.Static = append(s.Files.Static, processFile)
+			s.Files.Static = append(s.Files.Static, file)
 		case ".html":
-			if filepath.Base(path) == "layout.html" {
-				s.Files.Layout[getConfigDirectory(relPath)] = processFile
+			if file.Name == "layout" {
+				s.Files.Layout[getConfigDirectory(file.RelPath)] = file
 				break
 			}
-			if strings.HasPrefix(filepath.Base(path), "_") {
-				s.Files.Component = append(s.Files.Component, processFile)
+			if strings.HasPrefix(file.Name, "_") {
+				s.Files.Component = append(s.Files.Component, file)
 				break
 			}
 			l.Debug("Found unknown HTML file, skipped")
 			// staticPages = append(staticPages, processFile)
 		default:
-			s.Files.Static = append(s.Files.Static, processFile)
+			s.Files.Static = append(s.Files.Static, file)
 		}
+	}
 
-		return nil
-	})
-
-	return err
+	return nil
 }
 
 // TODO: Handle base files
@@ -162,7 +133,6 @@ func (s *CustomSite) parseNotes() error {
 		// Validate fields
 		fields := make(map[string]*FieldContent)
 		for key, value := range page.RawFrontmatter {
-			// TODO: Fix required
 			content, err := s.validateFrontmatterField(key, value, page)
 			if err != nil {
 				l.Error("Coudn't validate field", log.FieldName, key, log.FieldError, err)
@@ -183,21 +153,14 @@ func (s *CustomSite) parseNotes() error {
 		}
 
 		ext := filepath.Ext(page.Path)
-		nameWithoutExt := strings.TrimSuffix(page.RelPath, ext)
-		outputPath, webPath := getPageOutputPath(page.RelPath, nameWithoutExt, ext)
+		slugPath := getSlugPath(page.RelPath)
+		webPath := getPageWebPath(slugPath, ext)
+		outputPath := getPageOutputPath(slugPath, ext)
 
 		page.OutputPath = outputPath
 		page.WebPath = webPath
 		page.Fields = fields
 		page.IsIndex = strings.TrimSuffix(filepath.Base(page.Path), ".md") == "index"
-
-		// Generates the HTML of the body of the note
-		var buf bytes.Buffer
-		s.Resolver.CurrentSource = page.WebPath
-		if err := s.MarkdownParser.Convert(page.RawContent, &buf); err != nil {
-			l.Error("Coudn't parse markdown content", log.FieldError, err)
-			return err
-		}
 
 		customLayoutPath := strings.TrimSuffix(page.Path, ".md") + ".html"
 		if _, err := os.Stat(customLayoutPath); err == nil {
@@ -224,11 +187,21 @@ func (s *CustomSite) parseNotes() error {
 			page.Template = customTemplate
 		}
 
-		finalHTML := buf.String()
-		finalHTML = transformCallouts(finalHTML)
-		finalHTML = transformMermaid(finalHTML)
-		finalHTML = transformHighlights(finalHTML)
-		page.Content = template.HTML(finalHTML)
+		obsidianFile := obsidian.File{
+			Path:    page.File.Path,
+			RelPath: page.File.RelPath,
+			Ext:     page.File.Ext,
+			Name:    page.File.Name,
+			OutPath: page.File.OutPath,
+			WebPath: page.File.WebPath,
+		}
+
+		renderedPage, err := s.Markdown.Render(obsidianFile)
+		if err != nil {
+			return err
+		}
+		page.Content = template.HTML(renderedPage.Content)
+		page.TOC = renderedPage.TOC
 
 		// We append the page for the siblings handling
 		if page.Collection != "" && !page.IsIndex {
@@ -289,22 +262,21 @@ func (s *CustomSite) parseStaticFiles() error {
 	for _, file := range s.Files.Static {
 		// Index the asset
 		cleanName := filepath.Base(file.Path)
-		finalOutPath, webPath := getAssetOutputPath(file.RelPath)
 
 		// Index the file
 		asset := &Asset{
 			ID:           cleanName,
 			Path:         file.Path,
 			RelPath:      file.RelPath,
-			RelPermalink: webPath,
-			OutputPath:   finalOutPath,
+			RelPermalink: file.WebPath,
+			OutputPath:   file.OutPath,
 		}
 
-		if err := os.MkdirAll(filepath.Dir(finalOutPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(asset.OutputPath), 0755); err != nil {
 			return err
 		}
 
-		err := copyFile(asset.Path, finalOutPath)
+		err := copyFile(asset.Path, asset.OutputPath)
 		if err != nil {
 			return err
 		}
@@ -330,6 +302,7 @@ func (s *CustomSite) loadNoteFiles() error {
 		rawFrontmatter, rawContent := parseFrontmatter(data)
 
 		page := &CustomPage{
+			File:           file,
 			ID:             file.RelPath,
 			Title:          cleanName,
 			Path:           file.Path,
@@ -475,31 +448,47 @@ func (s *CustomSite) render() error {
 
 // BuildCustom executes the user-first generation logic (Obsidian-SSG)
 // It takes sourceDir (vault root) and outputDir as arguments.
-func buildCustom() error {
-	// Initialize Goldmark using the existing parser in markdown.go
-	fileIndex, sourceMap, _ := initBuild()
-	u, err := url.Parse(BaseURL)
+func buildCustom() {
+	vaultScan, err := scanVault()
 	if err != nil {
-		log.Warn("Couldn't parse base URL", "url", BaseURL)
+		log.Fatal("Couldn't scan vault", log.FieldError, err)
 	}
-	basePath := u.Path
-	markdownParser, resolver := newMarkdownParser(fileIndex, sourceMap, basePath,
-		func(path string) ([]byte, error) {
-			// Point this to your content folder
-			return os.ReadFile(filepath.Join(basePath, path))
-		})
+
+	// Convert scanned files into obsidian-markdown.File
+	index := make(map[string][]*obsidian.File)
+	for name, files := range vaultScan.FileIndex {
+		index[name] = []*obsidian.File{}
+		for _, file := range files {
+			index[name] = append(
+				index[name],
+				&obsidian.File{
+					RelPath: file.RelPath,
+					Path:    file.Path,
+					WebPath: file.WebPath,
+					Name:    file.Name,
+					Ext:     file.Ext,
+					OutPath: file.OutPath,
+				},
+			)
+		}
+	}
+
+	// Creates markdown renderer
+	obsidianMd := obsidian.New(index, func(path string) ([]byte, error) {
+		return os.ReadFile(filepath.Join(InputDir, path))
+	})
 
 	site := &CustomSite{
-		Pages:          make(map[string]*CustomPage),
-		PagesLookup:    make(map[string]*CustomPage),
-		Configs:        make(map[string]*Config),
-		ConfigsLookup:  make(map[string]*Config),
-		Tags:           make(map[string][]*CustomPage),
-		Assets:         make(map[string]*Asset),
-		Env:            make(map[string]string),
-		MarkdownParser: markdownParser,
-		Resolver:       resolver,
-		Template:       template.New("base"),
+		Pages:         make(map[string]*CustomPage),
+		PagesLookup:   make(map[string]*CustomPage),
+		Configs:       make(map[string]*Config),
+		ConfigsLookup: make(map[string]*Config),
+		Tags:          make(map[string][]*CustomPage),
+		Assets:        make(map[string]*Asset),
+		Env:           make(map[string]string),
+		Markdown:      obsidianMd,
+		Template:      template.New("base"),
+		Scan:          vaultScan,
 	}
 	site.Template.Funcs(site.getFuncMap())
 
@@ -553,8 +542,6 @@ func buildCustom() error {
 	if err != nil {
 		log.Fatal("Error rendering pages", log.FieldError, err)
 	}
-
-	return nil
 }
 
 // resolveFieldValue extracts the underlying Go value from a FieldContent wrapper
@@ -1150,13 +1137,11 @@ func getConfigDirectory(relPath string) string {
 
 // CustomPage represents a single markdown file or index in the custom generation mode
 type CustomPage struct {
-	ID             string                   // Unique ID (relative path) // TODO: Delete this, use RelPermalink
-	Title          string                   // Derived from filename or frontmatter
-	Path           string                   // Original file path
-	RelPath        string                   // Original file relative path
-	WebPath        string                   // Output URL (e.g., /posts/my-post.html)
-	Content        template.HTML            // Rendered HTML content
-	RawFrontmatter map[string]any           // Raw YAML from the file
+	ID             string                   // Unique ID (relative path) // TODO: Delete this, use File
+	Title          string                   // Derived from filename or frontmatter // TODO: Delete this, use File
+	Path           string                   // Original file path // TODO: Delete this, use file
+	RelPath        string                   // Original file relative path // TODO: Delete this, use file
+	WebPath        string                   // Output URL (e.g., /posts/my-post.html) // TODO: Delete this, use file
 	RawContent     []byte                   // Raw content of the note
 	Fields         map[string]*FieldContent // Validated collection fields
 	IsIndex        bool                     // Is this an index.md?
@@ -1164,22 +1149,26 @@ type CustomPage struct {
 	OutputPath     string                   // Final output path
 	Collection     string                   // The collection that the page is a part of
 	Template       *template.Template       // If the page has a custom template override it will show here
+	File           *File                    // Contains the original file instance
+	Content        template.HTML            // Rendered HTML content
+	TOC            template.HTML            // Rendered Table of Contents
+	RawFrontmatter map[string]any           // Raw YAML from the file
 }
 
 // CustomSite holds the global state for custom generation
 type CustomSite struct {
 	Pages            map[string]*CustomPage
-	PagesLookup      map[string]*CustomPage   // Map of "Clean Filename" -> Page for Wikilink resolution
-	Configs          map[string]*Config       // Map of directory path -> config data
-	ConfigsLookup    map[string]*Config       // Map of collection_name -> Config for references
-	CollectionsNames map[string]struct{}      // TODO: Delete this. We already have the ConfigsLookup for this. Map of the different collections names found in the configs to check
-	Env              map[string]string        // Map of the environment variables
-	Assets           map[string]*Asset        // Map of "Clean Filename" -> Asset for Asset resolution
-	Tags             map[string][]*CustomPage // Map of tag -> array of pages
-	MarkdownParser   goldmark.Markdown        // Custom markdown parser
-	Resolver         *IndexResolver           // Link resolver
-	Template         *template.Template       // Base template with all components loaded
-	Files            Files                    // All the paths to files to process
+	PagesLookup      map[string]*CustomPage     // Map of "Clean Filename" -> Page for Wikilink resolution
+	Configs          map[string]*Config         // Map of directory path -> config data
+	ConfigsLookup    map[string]*Config         // Map of collection_name -> Config for references
+	CollectionsNames map[string]struct{}        // TODO: Delete this. We already have the ConfigsLookup for this. Map of the different collections names found in the configs to check
+	Env              map[string]string          // Map of the environment variables
+	Assets           map[string]*Asset          // Map of "Clean Filename" -> Asset for Asset resolution
+	Tags             map[string][]*CustomPage   // Map of tag -> array of pages
+	Markdown         *obsidian.ObsidianMarkdown // Makrdown renderer
+	Template         *template.Template         // Base template with all components loaded
+	Files            Files                      // All the paths to files to process
+	Scan             *VaultScan                 // The result of scanVault
 }
 
 type Asset struct {
@@ -1233,22 +1222,16 @@ type FieldContent struct {
 	Enum       string
 }
 
-// FilePaths rappresents a file that needs to be processed
-type FilePaths struct {
-	Path    string
-	RelPath string
-}
-
 // Files rappresents all the different kinds of files to process
 type Files struct {
-	Env       FilePaths            // Expected only one 'env.json' file
-	Markdown  []FilePaths          // All found '.md' files
-	Base      []FilePaths          // All found '.base' files
-	Canvas    []FilePaths          // All found '.canvas' files
-	Config    []FilePaths          // All found 'config.json' files
-	Layout    map[string]FilePaths // Layouts  are related to the collection name
-	Component []FilePaths          // All found '_*.html' files
-	Static    []FilePaths          // Other files are treated as static
+	Env       *File            // Expected only one 'env.json' file
+	Markdown  []*File          // All found '.md' files
+	Base      []*File          // All found '.base' files
+	Canvas    []*File          // All found '.canvas' files
+	Config    []*File          // All found 'config.json' files
+	Layout    map[string]*File // Layouts  are related to the collection name
+	Component []*File          // All found '_*.html' files
+	Static    []*File          // Other files are treated as static
 }
 
 // CustomPageData is the struct passed to the templates

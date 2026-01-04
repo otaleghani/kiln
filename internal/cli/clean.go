@@ -19,15 +19,18 @@ func init() {
 	// in case they generated their site into a non-standard location.
 	cmdClean.Flags().
 		StringVarP(&outputDir, FlagOutputDir, FlagOutputDirShort, DefaultOutputDir, "Name of the output directory (defaults to ./public)")
+	cmdClean.Flags().
+		StringVarP(&logger, FlagLog, FlagLogShort, DefaultLog, "Logging level. Choose between 'debug' or 'info'. Defaults to 'info'.")
 }
 
 // runClean executes the cleanup logic.
 func runClean(cmd *cobra.Command, args []string) {
+	// Apply overrides
 	// If a custom output directory was provided via flags, update the builder configuration.
-	if outputDir != "" {
-		builder.OutputDir = outputDir
-	}
+	builder.OutputDir = outputDir
+
+	setLogger()
 
 	// Delegate the actual deletion logic to the builder package.
-	builder.CleanOutDir()
+	builder.CleanOutputDir()
 }

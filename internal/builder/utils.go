@@ -1,155 +1,181 @@
 package builder
 
 import (
-	"encoding/xml"
 	"io"
 	"io/fs"
-	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/otaleghani/kiln/internal/log"
+	obsidianmarkdown "github.com/otaleghani/kiln/pkg/obsidian-markdown"
 )
 
 // Init checks if the input directory (vault) exists.
 // If not, it creates the directory and a default "Home.md" welcome note.
 func Init() {
-	if _, err := os.Stat(InputDir); os.IsNotExist(err) {
-		os.Mkdir(InputDir, 0755)
-		log.Println("Created vault directory.")
+	_, err := os.Stat(InputDir)
 
-		// Create a welcome note to get the user started
-		welcomeText := "# Welcome to Kiln\n\nThis is your new vault. Run `kiln generate` to build it!"
-		os.WriteFile(filepath.Join(InputDir, "Home.md"), []byte(welcomeText), 0644)
-	} else {
-		log.Println("Vault directory already exists.")
+	if err == nil {
+		log.Error("Vault directory already exists")
+		return
 	}
-	log.Println("Initialization complete.")
+
+	if !os.IsNotExist(err) {
+		log.Error("Couldn't read information about directory", log.FieldError, err)
+		return
+	}
+
+	err = os.Mkdir(InputDir, 0755)
+	if err != nil {
+		log.Error("Couldn't create folder", log.FieldError, err)
+		return
+	}
+
+	log.Info("Created vault directory")
+
+	// Create a welcome note to get the user started
+	welcomeText := "# Welcome to Kiln\n\nThis is your new vault. Run `kiln generate` to build it!"
+	err = os.WriteFile(filepath.Join(InputDir, "Home.md"), []byte(welcomeText), 0644)
+	if err != nil {
+		log.Error("Couldn't create welcome note", log.FieldError, err)
+		return
+	}
+
+	log.Info("Initialization complete")
 }
 
-// CleanOutDir removes the entire output directory to ensure a clean build.
+// CleanOutputDir removes the entire output directory to ensure a clean build.
 // This prevents stale files from persisting in the generated site.
-func CleanOutDir() {
+func CleanOutputDir() {
 	err := os.RemoveAll(OutputDir)
 	if err != nil {
-		log.Printf("Error cleaning output: %v", err)
+		log.Error("Couldn't remove output directory", log.FieldError, err)
 	} else {
-		log.Println("Cleaned ./public directory")
+		log.Info("Cleaned directory", log.FieldPath, OutputDir)
 	}
 }
 
-// initBuild prepares the environment for a new build.
-// It cleans the output directory, copies global assets (favicon, CNAME),
-// and traverses the input directory to build a file index and a graph of nodes.
-func initBuild() (fileIndex map[string][]string, sourceMap map[string]string, graphNodes []GraphNode) {
-	// 1. Reset output state
-	CleanOutDir()
-	os.MkdirAll(OutputDir, 0755)
-
-	// 2. Copy Global Assets
-	// Copy over favicon.ico if it exists in the root
-	faviconSrc := filepath.Join(InputDir, "favicon.ico")
-	if _, err := os.Stat(faviconSrc); err == nil {
-		if err := copyFile(faviconSrc, filepath.Join(OutputDir, "favicon.ico")); err != nil {
-			log.Printf("Warning: Found favicon.ico but failed to copy it: %v", err)
-		} else {
-			log.Println("Found and copied favicon.ico")
-		}
+func scanVault() (*VaultScan, error) {
+	log.Info("Scanning vault...")
+	scan := &VaultScan{
+		FileIndex:  make(map[string][]*File),
+		GraphNodes: []GraphNode{},
+		SourceMap:  make(map[string]string),
+		Sitemap:    &Sitemap{},
 	}
+	scan.Sitemap.Path = filepath.Join(BaseURL, "/sitemap.xml")
 
-	// Copy over CNAME file (for custom domains on GitHub Pages/Netlify) if it exists
-	cnameSrc := filepath.Join(InputDir, "CNAME")
-	if _, err := os.Stat(cnameSrc); err == nil {
-		if err := copyFile(cnameSrc, filepath.Join(OutputDir, "CNAME")); err != nil {
-			log.Printf("Warning: Found CNAME but failed to copy it: %v", err)
-		} else {
-			log.Println("Found and copied CNAME")
-		}
-	}
+	filepath.WalkDir(InputDir, func(path string, info fs.DirEntry, err error) error {
+		l := log.Default.WithFile(path)
+		l.Debug("Processing file...")
 
-	// 3. Index Content
-	// Creates file index (name -> url) and file nodes (for the graph view)
-	fileIndex = make(map[string][]string)
-	graphNodes = []GraphNode{}
-	sourceMap = make(map[string]string)
-
-	// Map to track unique nodes and avoid duplicates in the graph
-	nodeSet := make(map[string]bool)
-
-	filepath.WalkDir(InputDir, func(path string, d fs.DirEntry, err error) error {
+		// Handle permission errors and other related problems
 		if err != nil {
 			return nil
 		}
 
-		// Skip hidden files and folders (e.g. .obsidian, .trash, .git)
-		// We check if the name starts with "." but ensure we aren't skipping the root directory itself.
-		if strings.HasPrefix(d.Name(), ".") && path != InputDir {
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
+		// Create relative path
+		relPath, err := filepath.Rel(InputDir, path)
+		if err != nil {
+			return err
+		}
+
+		// Skip directories
+		if info.IsDir() {
+			l.Debug("Skipping file", log.FieldReason, "File is a directory")
 			return nil
 		}
 
-		// We only process files in this pass, not directories
-		if d.IsDir() {
+		// Skip dotfiles
+		if strings.HasPrefix(relPath, ".") && path != InputDir {
+			l.Debug("Skipping file", log.FieldReason, "File is a hidden file (dotfile)")
 			return nil
 		}
 
-		ext := filepath.Ext(path)
-		relPath, _ := filepath.Rel(InputDir, path)
+		slugPath := getSlugPath(relPath)
+		name, ext := obsidianmarkdown.SplitExt(relPath)
+		// ext := filepath.Ext(path)
+		// name := strings.TrimSuffix(info.Name(), ext) // Clean name of file
+		webPath := getPageWebPath(slugPath, ext)
+		outputPath := getPageOutputPath(slugPath, ext)
 
-		// Normalize paths for URLs (slugify every component of the path)
-		// TODO: I actually have a helper function for this in the custom_build.go
-		parts := strings.Split(relPath, string(os.PathSeparator))
-		for i, p := range parts {
-			parts[i] = slugify(p)
+		switch ext {
+		case ".md", ".canvas", ".base":
+			// Add these to graph nodes
+			scan.GraphNodes = append(scan.GraphNodes, GraphNode{
+				ID:    webPath,
+				Label: name,
+				URL:   webPath,
+				Val:   1,
+			})
+			info, err := info.Info()
+			modTime := time.Now()
+			if err == nil {
+				modTime = info.ModTime()
+			}
+			scan.Sitemap.addEntry(modTime, BaseURL, webPath)
+
+		default:
+			// For everything else
 		}
 
-		// Join parts back together. Note: slugPath currently includes the extension (e.g., "my-note-md")
-		slugPath := filepath.Join(parts...)
-		webPath := "/" + strings.ReplaceAll(slugPath, string(os.PathSeparator), "/")
-
-		key := d.Name()
-
-		// Handle Content Files (Markdown and Canvas)
-		if ext == ".md" || ext == ".canvas" {
-			key = strings.TrimSuffix(key, ext)
-
-			// Remove the extension from the web path to create clean URLs
-			// e.g., "notes/my-note-md" -> "notes/my-note"
-			slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
-			webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
-
-			// Special handling for index/Home notes to map them to the root URL "/"
-			if strings.EqualFold(key, "Home") || strings.EqualFold(key, "index") {
-				webPath = "/"
-			}
-
-			// Add to Graph Nodes list
-			if !nodeSet[key] {
-				graphNodes = append(graphNodes, GraphNode{
-					// ID:    key,
-					ID:    webPath,
-					Label: key,
-					URL:   webPath,
-					Val:   1, // Default weight for visualization
-				})
-				nodeSet[key] = true
-			}
+		// Adds found file to the scan
+		file := &File{
+			Path:    path,
+			RelPath: relPath,
+			Ext:     ext,
+			Name:    name,
+			OutPath: outputPath,
+			WebPath: webPath,
 		}
+		scan.Files = append(scan.Files, file)
 
 		// Register the file in the global index (filename -> public URL)
-		// This is used later for resolving [[WikiLinks]].
-		if _, exists := fileIndex[key]; !exists {
-			fileIndex[key] = []string{}
+		// This is used later for resolving [[WikiLinks]]
+		if _, exists := scan.FileIndex[name]; !exists {
+			scan.FileIndex[name] = []*File{}
 		}
-		fileIndex[key] = append(fileIndex[key], webPath)
-		sourceMap[webPath] = relPath
+		scan.FileIndex[name] = append(scan.FileIndex[name], file)
+
+		// Used to resolve the real path of the original file (public URL -> original vault file path)
+		// This is used later for resolving text embeds ![[Note#heading]]
+		scan.SourceMap[webPath] = relPath
 
 		return nil
 	})
 
-	return
+	return scan, nil
+}
+
+// loadFavicon loads the favicon.ico file if it exists
+func loadFavicon() error {
+	faviconSrc := filepath.Join(InputDir, "favicon.ico")
+	if _, err := os.Stat(faviconSrc); err != nil {
+		return err
+	}
+	err := copyFile(faviconSrc, filepath.Join(OutputDir, "favicon.ico"))
+	if err != nil {
+		return err
+	}
+	log.Debug("'CNAME' file loaded correctly")
+	return nil
+}
+
+// loadCname loads the CNAME file if it exists
+func loadCname() error {
+	faviconSrc := filepath.Join(InputDir, "CNAME")
+	if _, err := os.Stat(faviconSrc); err != nil {
+		return err
+	}
+	err := copyFile(faviconSrc, filepath.Join(OutputDir, "favicon.ico"))
+	if err != nil {
+		return err
+	}
+	log.Debug("'favicon.ico' file loaded correctly")
+	return nil
 }
 
 // copyFile is a simple wrapper to copy files from src to dst.
@@ -191,6 +217,8 @@ func isImageExt(ext string) bool {
 
 // getSlugPath converts a relative file path into a slugified path string.
 // It iterates through every directory in the path and slugifies it.
+//
+// E.g.: /Directory/Cool File.md -> /directory/cool-file.md
 func getSlugPath(relPath string) string {
 	parts := strings.Split(relPath, string(os.PathSeparator))
 	for i, p := range parts {
@@ -200,122 +228,123 @@ func getSlugPath(relPath string) string {
 	return slugPath
 }
 
-// getPageOutputPath determines the filesystem output location and the public web URL for a file.
-// It handles "Pretty URLs" by creating index.html files inside named directories.
-// Returns:
-// - outPath: where to write the file on disk (e.g., ./public/notes/my-note/index.html)
-// - webPath: the URL path (e.g., /notes/my-note/)
-func getPageOutputPath(relPath, nameWithoutExt, ext string) (outPath string, webPath string) {
-	slugPath := getSlugPath(relPath)
+// getPageWebPath returns the relative webpath of the given slugifies path
+//
+// E.g.: /directory/cool-file.md -> /directory/cool-file
+func getPageWebPath(slugPath, ext string) string {
+	var webPath string
+	pathPrefix := "/"
 
-	// Case 1: Root files (Home or index) -> ./public/index.html
-	if strings.EqualFold(nameWithoutExt, "Home") ||
-		strings.EqualFold(nameWithoutExt, "index") {
-		outPath = filepath.Join(OutputDir, "index.html")
-		webPath = "/"
-	} else {
-		if !FlatUrls {
-			// Regular files -> ./public/folder/note-name/index.html
-			slugFolder := strings.TrimSuffix(slugPath, slugify(ext))
-			outPath = filepath.Join(OutputDir, slugFolder, "index.html")
-			webPath = "/" + strings.ReplaceAll(slugFolder, string(os.PathSeparator), "/")
-		} else {
-			// Regular files -> ./public/folder/note-name.html
-			slugName := strings.TrimSuffix(slugPath, slugify(ext))
-			outPath = filepath.Join(OutputDir, slugName+".html")
-			webPath = "/" + strings.ReplaceAll(slugName, string(os.PathSeparator), "/")
+	u, err := url.Parse(BaseURL)
+	if err != nil {
+		log.Fatal("Couldn't parse given base URL", "url", BaseURL, "error", err)
+	}
+	if u.Path != "" {
+		pathPrefix = u.Path
+	}
+
+	switch ext {
+	case ".md", ".canvas", ".base":
+		// Handle the root homepage
+		if strings.EqualFold(slugPath, "index.md") {
+			return pathPrefix
 		}
+
+		// Handle other indexes
+		if strings.HasSuffix(slugPath, "index.md") {
+			webPath = filepath.Join(pathPrefix, strings.TrimSuffix(slugPath, "index.md"))
+			break
+		}
+
+		// Remove extension
+		slugPath = strings.TrimSuffix(slugPath, ext)
+		webPath = filepath.Join(pathPrefix, slugPath)
+
+	default:
+		// If static file, just append together pathPrefix and slugPath
+		webPath = filepath.Join(pathPrefix, slugPath)
+	}
+
+	// Replace all os specific path separator. Thanks windows
+	return strings.ReplaceAll(webPath, string(os.PathSeparator), "/")
+}
+
+// getOutputPath returns the relative output path of the given slugifies path
+//
+// E.g. Flat urls: /directory/cool-file.md -> /directory/cool-file.html
+// E.g. With directories: /directory/cool-file.md -> /directory/cool-file/index.html
+func getPageOutputPath(slugPath, ext string) string {
+	var outputPath string
+
+	// Check which extension we are dealing with
+	switch ext {
+	case ".md", ".canvas", ".base":
+		// Handles markdown, canvases and bases to become .html files
+		fileName := strings.TrimSuffix(slugPath, ext)
+
+		// Handle root index page
+		if strings.EqualFold(fileName, "index") {
+			outputPath = filepath.Join(OutputDir, "index.html")
+			break
+		}
+
+		// Handle non flat urls by using the slug path as a folder
+		if !FlatUrls {
+			outputPath = filepath.Join(OutputDir, fileName, "/index.html")
+			break
+		}
+
+		outputPath = filepath.Join(OutputDir, fileName, ".html")
+
+	default:
+		// Handles static assets by just adding the slugPath as is
+		outputPath = filepath.Join(OutputDir, slugPath)
 	}
 
 	// Ensure the parent directory exists before returning
-	os.MkdirAll(filepath.Dir(outPath), 0755)
-	return
+	err := os.MkdirAll(filepath.Dir(outputPath), 0755)
+	if err != nil {
+		log.Fatal("Couldn't create parent directory for file", "path", slugPath, "error", err)
+	}
+
+	// If flat url, just return the slugPath.html
+	return outputPath
 }
 
-// getAssetOutputPath gives you the webpath and the output path for a given relative path
-func getAssetOutputPath(relPath string) (outPath string, webPath string) {
-	// ext := filepath.Ext(relPath)
-	// nameWithoutExt := strings.TrimSuffix(relPath, ext)
-	slugPath := getSlugPath(relPath)
-
-	// Regular files -> ./public/folder/note-name.html
-	// slugName := strings.TrimSuffix(slugPath, slugify(ext))
-	outPath = filepath.Join(OutputDir, slugPath)
-	webPath = "/" + strings.ReplaceAll(slugPath, string(os.PathSeparator), "/")
-
-	// Ensure the parent directory exists before returning
-	os.MkdirAll(filepath.Dir(outPath), 0755)
-	return
-}
-
-// getBreadcrumbs constructs a list of navigation steps for the current page.
+// Breadcrumbs constructs a list of navigation steps for the current page.
 // It walks up the directory tree from the current file location.
-func getBreadcrumbs(relPath, nameWithoutExt string) []string {
+func (f *File) Breadcrumbs() []string {
 	var breadcrumbs []string
 	breadcrumbs = append(breadcrumbs, "Home")
 
 	// Add intermediate directories
-	dir := filepath.Dir(relPath)
+	dir := filepath.Dir(f.RelPath)
 	if dir != "." && dir != "" {
 		breadcrumbs = append(breadcrumbs, strings.Split(dir, string(os.PathSeparator))...)
 	}
 
 	// Add current page (unless it is the home page itself)
-	if !strings.EqualFold(nameWithoutExt, "index") &&
-		!strings.EqualFold(nameWithoutExt, "Home") {
-		breadcrumbs = append(breadcrumbs, nameWithoutExt)
+	if !strings.EqualFold(f.Name, "index") {
+		breadcrumbs = append(breadcrumbs, f.Name)
 	}
+
 	return breadcrumbs
 }
 
-// SitemapEntry represents a single URL entry in the sitemap.xml.
-type SitemapEntry struct {
-	XMLName xml.Name `xml:"url"`
-	Loc     string   `xml:"loc"`     // The absolute URL
-	LastMod string   `xml:"lastmod"` // The last modification date
+// File rappresents a file that needs to be processed
+type File struct {
+	Path    string // Complete path of the file
+	RelPath string // Relative path from input directory
+	Ext     string // Extension of the file
+	Name    string // Name of the file (no extension)
+	OutPath string // Final output path of the file (e.g. /public/folder/page.html)
+	WebPath string // Final web path of the page (e.g. /folder/page)
 }
 
-// addToSitemap appends a new entry to the sitemap slice.
-// It retrieves the file's modification time to populate 'lastmod'.
-func addToSitemap(d fs.DirEntry, baseURL, webPath string, sitemapEntries *[]SitemapEntry) {
-	info, err := d.Info()
-	modTime := time.Now()
-	if err == nil {
-		modTime = info.ModTime()
-	}
-
-	fullURL := strings.TrimRight(baseURL, "/") + webPath
-	*sitemapEntries = append(*sitemapEntries, SitemapEntry{
-		Loc:     fullURL,
-		LastMod: modTime.Format("2006-01-02"),
-	})
-}
-
-// generateRobots creates a robots.txt file in the output directory.
-// It points crawlers to the Sitemap location.
-func generateRobots(baseURL string) {
-	robotsFile, _ := os.Create(filepath.Join(OutputDir, "robots.txt"))
-	defer robotsFile.Close()
-	robotsFile.WriteString("User-agent: *\n")
-	robotsFile.WriteString("Allow: /\n")
-	robotsFile.WriteString("Sitemap: " + strings.TrimRight(baseURL, "/") + "/sitemap.xml\n")
-}
-
-// generateSitemap marshals the list of sitemap entries into XML format
-// and writes it to sitemap.xml in the output directory.
-func generateSitemap(sitemapEntries []SitemapEntry) {
-	sitemapFile, _ := os.Create(filepath.Join(OutputDir, "sitemap.xml"))
-	defer sitemapFile.Close()
-	sitemapFile.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
-	sitemapFile.WriteString(
-		`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n",
-	)
-	for _, entry := range sitemapEntries {
-		output, _ := xml.MarshalIndent(entry, "  ", "  ")
-		sitemapFile.Write(output)
-		sitemapFile.WriteString("\n")
-	}
-	sitemapFile.WriteString(`</urlset>`)
-
-	log.Println("Generated sitemap.xml and robots.txt")
+type VaultScan struct {
+	FileIndex  map[string][]*File // Used to resolve wikilinks
+	SourceMap  map[string]string  // Used to resolve the real disk path
+	GraphNodes []GraphNode        // Lists of all pages for graph
+	Files      []*File            // List of all the files found in the vault
+	Sitemap    *Sitemap           // Sitemap entity
 }

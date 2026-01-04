@@ -27,6 +27,7 @@ There are some flags that you can use to customize the output:
 | `--input`     | `-i`      | `vault`     | The path to your source folder containing the Markdown notes.                                                                    |
 | `--output`    | `-o`      | `public`    | The path where the generated HTML files will be saved.                                                                           |
 | `--flat-urls` |           | `false`     | Generate flat HTML files (`note.html`) instead of pretty directories (`note/index.html`)                                         |
+| `--log`       | `-l`      | `info`      | Sets the log level. You can choose between `info` or `debug`.                                                                    |
 
 ## Examples
 

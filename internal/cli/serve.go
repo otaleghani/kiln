@@ -23,6 +23,8 @@ func init() {
 	cmdServe.Flags().StringVarP(&port, FlagPort, FlagPortShort, DefaultPort, "Port to serve on")
 	cmdServe.Flags().
 		StringVarP(&outputDir, FlagOutputDir, FlagOutputDirShort, DefaultOutputDir, "Name of the output directory to serve(defaults to ./public)")
+	cmdServe.Flags().
+		StringVarP(&logger, FlagLog, FlagLogShort, DefaultLog, "Logging level. Choose between 'debug' or 'info'. Defaults to 'info'.")
 }
 
 // runServe executes the server logic.
@@ -33,6 +35,8 @@ func runServe(cmd *cobra.Command, args []string) {
 	// Construct the local base URL (e.g., http://localhost:8080).
 	// This helps ensure absolute links or assets resolve correctly during local preview.
 	localBaseURL := "http://localhost:" + port
+
+	setLogger()
 
 	// Start the static file server.
 	server.Serve(port, builder.OutputDir, localBaseURL)

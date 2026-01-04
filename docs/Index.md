@@ -71,7 +71,7 @@ Visualize how your ideas connect.
 Built for performance and discoverability.
 
 - **Zero-Config SEO**: Automatic generation of **[[Meta Tags]]**, **[[Sitemap xml|Sitemap xml]]**, and **[[Robots txt|Robots.txt]]**.
-- **[[Themes|Theming]]**: Built-in [[Light-Dark mode]] and customizable color palettes baked directly into CSS.
+- **[[Themes|Theming]]**: Built-in [[Light-Dark Mode]] and customizable color palettes baked directly into CSS.
 - **Linter**: A simple to use CLI linter using the [[doctor]] command to check your vault.
 - Other commands: Check out the stats of your vault with the [[stats]] command or initialize a new project with the [[init]] command.
 
@@ -87,4 +87,4 @@ Kiln is open source and distributed under the MIT License. If you spot a bug or 
 
 ## Credits
 
-Check out the [[credits]] page for a full list of credits.
+Check out the [[Credits]] page for a full list of credits.

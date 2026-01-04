@@ -2,11 +2,12 @@ package linter
 
 import (
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/otaleghani/kiln/internal/log"
 )
 
 // CollectNotes scans the input directory and creates an index of all valid files.
@@ -29,19 +30,18 @@ func CollectNotes(inputDir string) map[string]bool {
 		if !d.IsDir() {
 			rel, _ := filepath.Rel(inputDir, path)
 
-			// 1. Index full relative path (e.g., "folder/note.md")
+			// Index full relative path (e.g., "folder/note.md")
 			validFiles[rel] = true
 
-			// 2. Index relative path without extension (e.g., "folder/note")
+			// Index relative path without extension (e.g., "folder/note")
 			noExtRel := strings.TrimSuffix(rel, filepath.Ext(rel))
 			validFiles[noExtRel] = true
 
-			// --- THE FIX ---
-			// 3. Index the filename itself (e.g., "note.md")
+			// Index the filename itself (e.g., "note.md")
 			// This allows [[note.md]] to match, even if it's inside a folder.
 			validFiles[d.Name()] = true
 
-			// 4. Index the filename without extension (e.g., "note")
+			// Index the filename without extension (e.g., "note")
 			// This allows [[note]] to match, even if it's inside a folder.
 			if filepath.Ext(d.Name()) == ".md" || filepath.Ext(d.Name()) == ".canvas" {
 				noExtName := strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
@@ -111,7 +111,7 @@ func BrokenLinks(inputDir string, notes map[string]bool) {
 			if !exists {
 				// Use Rel path for cleaner logging
 				relPath, _ := filepath.Rel(inputDir, path)
-				log.Printf("Broken link in [%s]: [[%s]]\n", relPath, rawLink)
+				log.Warn("Found broken link", log.FieldPath, relPath, "link", rawLink)
 				issuesFound++
 			}
 		}
@@ -119,10 +119,10 @@ func BrokenLinks(inputDir string, notes map[string]bool) {
 	})
 
 	if issuesFound == 0 {
-		log.Println("No broken links found")
+		log.Info("No broken links found")
 	} else {
 		// Optional: Fail the build if broken links are critical
 		// os.Exit(1)
-		log.Printf("Found %d broken links.", issuesFound)
+		log.Error("Found broken links", "number", issuesFound)
 	}
 }

@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{if .Frontmatter.title}}{{.Frontmatter.title}}{{else}}{{.Title}}{{end}} • {{ .SiteName}}</title>
+    <title>{{if .Frontmatter.title}}{{.Frontmatter.title}}{{else}}{{.File.Name}}{{end}} • {{ .Site.SiteName}}</title>
     
-    <meta name="description" content="{{if .Frontmatter.description}}{{.Frontmatter.description}}{{else}}Notes on {{.Title}}{{end}}">
+    <meta name="description" content="{{if .Frontmatter.description}}{{.Frontmatter.description}}{{else}}Notes on {{.File.Name}}{{end}}">
     <meta name="generator" content="Kiln">
-    <meta property="og:title" content="{{.Title}}">
+    <meta property="og:title" content="{{.File.Name}}">
 
     <link rel="preconnect" href="https://unpkg.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://d3js.org">
 
-    <link rel="preload" href="{{.BaseURL}}/style.css" as="style">
-    <link rel="stylesheet" href="{{.BaseURL}}/style.css">
+    <link rel="preload" href="{{.Site.BaseURL}}/style.css" as="style">
+    <link rel="stylesheet" href="{{.Site.BaseURL}}/style.css">
     
     <script>
         (function() {
@@ -34,8 +34,8 @@
     </style>
 
     <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
-    <script src="{{.BaseURL}}/graph.js" defer></script>
-    <script src="{{.BaseURL}}/app.js" defer></script>
+    <script src="{{.Site.BaseURL}}/graph.js" defer></script>
+    <script src="{{.Site.BaseURL}}/app.js" defer></script>
     
     <script>
     window.MathJax = {
@@ -53,7 +53,7 @@
             </script>
             
             <div class="sidebar-header">
-                <a class="sidebar-home-link" href="{{.BaseURL}}/">{{ .SiteName }}</a>
+                <a class="sidebar-home-link" href="{{.Site.BaseURL}}/">{{ .Site.SiteName }}</a>
                 <div class="sidebar-actions">
                     <button id="theme-toggle" aria-label="Toggle Theme">
                         <i class="sun-icon" data-lucide="sun"></i>
@@ -68,13 +68,13 @@
                     <input type="text" id="sidebar-search" placeholder="Search notes..." 
                         style="width: 100%; padding: 0.5rem; border: 1px solid var(--sidebar-border); border-radius: 4px; background: var(--bg); color: var(--text);">
                 </div>
-                <ul>{{template "tree" .Sidebar}}</ul>
+                <ul>{{template "tree" .Site.SidebarRootNode.Children}}</ul>
             </div>
         </nav>
 
         <div class="center-container">
             <main id="kiln-main" class="main-wrapper">
-            <div id="page-title-data" data-title="{{ .WebPath }}" hidden></div>
+            <div id="page-title-data" data-title="{{ .File.WebPath }}" hidden></div>
 
             <div class="navbar">
                 <button class="sidebar-toggle left-toggle" aria-label="Toggle Sidebar">☰</button>
@@ -95,7 +95,7 @@
                 
                 {{if .IsCanvas}}
                     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-                    <script src="{{.BaseURL}}/canvas.js"></script>
+                    <script src="{{.Site.BaseURL}}/canvas.js"></script>
 
                     <div id="viewport">
                         <div id="canvas-world">
@@ -151,7 +151,7 @@
             
             <div class="sidebar-header">
                 <div class="sidebar-actions">
-                    <a href="{{.BaseURL}}/graph" class="graph-btn" title="Global Graph"><i data-lucide="globe"></i></a>
+                    <a href="{{.Site.BaseURL}}/graph" class="graph-btn" title="Global Graph"><i data-lucide="globe"></i></a>
                     <button class="sidebar-toggle right-toggle sidebar-toggle-navbar" aria-label="Toggle Sidebar"></button>
                 </div>
             </div>

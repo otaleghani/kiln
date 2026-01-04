@@ -25,4 +25,7 @@ import "embed"
 //go:embed Lato-Bold.woff2
 //go:embed Merriweather-Regular.woff2
 //go:embed Merriweather-Bold.woff2
+//go:embed default_layout.html
+//go:embed default_style.css
+//go:embed default_app.js
 var TemplateFS embed.FS

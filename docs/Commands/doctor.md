@@ -29,6 +29,7 @@ kiln: 2025/12/20 11:11:16 No broken links found
 
 ## Flags
 
-| Flag       | Short version | Default value | Description                                  |
-| ---------- | ------------- | ------------- | -------------------------------------------- |
-| `--input`  | `-i`          | `"vault"`     | Name of the directory containing your vault. |
+| Flag      | Short version | Default value | Description                                                   |
+| --------- | ------------- | ------------- | ------------------------------------------------------------- |
+| `--input` | `-i`          | `"vault"`     | Name of the directory containing your vault.                  |
+| `--log`   | `-l`          | `info`        | Sets the log level. You can choose between `info` or `debug`. |

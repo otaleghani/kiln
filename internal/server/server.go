@@ -1,24 +1,25 @@
 package server
 
 import (
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/otaleghani/kiln/internal/log"
 )
 
 // Serve starts a simple static file server on the specified port.
 // It includes logic to handle "Clean URLs" (extensionless linking) and directory indices,
 // mimicking the behavior of production static hosting providers.
 func Serve(port, outputDir, baseURL string) {
-	// 1. Determine Path Prefix
+	// Determine path prefix
 	// If the user's BaseURL includes a path (e.g., "https://example.com/docs"),
 	// we need to serve the site under that prefix ("/docs") locally to match production.
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		log.Fatalf("Invalid BaseURL: %v", err)
+		log.Fatal("Couldn't parse baseURL", log.FieldError, err)
 	}
 	pathPrefix := u.Path
 
@@ -28,19 +29,16 @@ func Serve(port, outputDir, baseURL string) {
 	}
 	pathPrefix = strings.TrimSuffix(pathPrefix, "/")
 
-	// 2. Setup the Standard File Server
-	// This will serve raw files from the output directory.
+	// Setup the standard file server
 	fileServer := http.FileServer(http.Dir(outputDir))
 
-	// 3. Create Custom Request Handler
-	// This wrapper logic runs AFTER any prefix has been stripped.
-	// It handles clean URLs, trailing slashes, and fallback lookups.
+	// Create custom request handler
+	// It handles clean URLs, trailing slashes, and fallback lookups
 	baseHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// r.URL.Path here is relative to the outputDir (prefix already stripped by http.StripPrefix)
 		path := r.URL.Path
 
-		// A. Trailing Slash Canonicalization
-		// Redirect paths ending in "/" to the non-slash version (except root).
+		// Trailing slash canonicalization
 		// Example: /about/ -> /about
 		if path != "/" && strings.HasSuffix(path, "/") {
 			newPath := strings.TrimSuffix(path, "/")
@@ -50,10 +48,10 @@ func Serve(port, outputDir, baseURL string) {
 			return
 		}
 
-		// B. "Pretty URL" Support
+		// Pretty URL support
 		// If the request has no extension (e.g. "/my-note"), we try to find the actual file on disk.
 		if filepath.Ext(path) == "" {
-			// Case 1: Check for an HTML file with the same name.
+			// Check for an HTML file with the same name
 			// Request: /my-note -> serves: /my-note.html
 			htmlPath := filepath.Join(outputDir, path+".html")
 			if _, err := os.Stat(htmlPath); err == nil {
@@ -61,7 +59,7 @@ func Serve(port, outputDir, baseURL string) {
 				return
 			}
 
-			// Case 2: Check for a directory with an index.html.
+			// Check for a directory with an index.html (flat-urls)
 			// Request: /folder -> serves: /folder/index.html
 			localPath := filepath.Join(outputDir, path)
 			if info, err := os.Stat(localPath); err == nil && info.IsDir() {
@@ -73,18 +71,18 @@ func Serve(port, outputDir, baseURL string) {
 			}
 		}
 
-		// Fallback: Use the standard file server (handles assets, existing files, 404s).
+		// Use the standard file server (handles assets, existing files, 404s).
 		fileServer.ServeHTTP(w, r)
 	})
 
-	// 4. Mount the Handler
+	// Mount the handler
 	// If a path prefix is configured, we must strip it from the request URL
-	// so that the file server sees the path relative to 'outputDir'.
+	// so that the file server sees the path relative to 'outputDir'
 	if pathPrefix != "" {
 		// Handle the subpath (e.g. requests to /kiln/...)
 		http.Handle(pathPrefix+"/", http.StripPrefix(pathPrefix, baseHandler))
 
-		// Convenience: Redirect root "/" to the subpath "/kiln/"
+		// Redirect root "/" to the subpath "/kiln/"
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/" {
 				http.Redirect(w, r, pathPrefix+"/", http.StatusFound)
@@ -92,15 +90,15 @@ func Serve(port, outputDir, baseURL string) {
 				http.NotFound(w, r)
 			}
 		})
-		log.Printf("Serving at http://localhost:%s%s/", port, pathPrefix)
+		log.Info("Serving...", "port", port, "path", pathPrefix)
 	} else {
 		// Standard root serving (no prefix)
 		http.Handle("/", baseHandler)
-		log.Printf("Serving at http://localhost:%s", port)
+		log.Info("Serving...", "port", port)
 	}
 
-	log.Println("Press Ctrl+C to stop")
+	log.Info("Press Ctrl+C to stop")
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal("Server failed: ", err)
+		log.Fatal("Server failed", log.FieldError, err)
 	}
 }

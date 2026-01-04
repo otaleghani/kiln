@@ -1,19 +1,30 @@
 package builder
 
-import "log"
+import "github.com/otaleghani/kiln/internal/log"
+
+// Build orchestrates the static site generation process.
+func Build() {
+	CleanOutputDir()
+	switch Mode {
+	case "custom":
+		log.Info("Building site in Custom mode")
+		buildCustom()
+	default:
+		log.Info("Building site in Default mode")
+		buildDefault()
+	}
+}
 
 var (
-	// OutputDir is the destination directory for the generated site.
-	OutputDir string
-	// InputDir is the source directory containing the Obsidian vault.
-	InputDir string
-	// FlatUrls defines if the user opted in for flat urls.
-	FlatUrls  bool
-	ThemeName string
-	FontName  string
-	BaseURL   string
-	SiteName  string
-	Mode      string
+	OutputDir  string // Destination directory
+	InputDir   string // Source directory
+	FlatUrls   bool   // Defines if the user opted in for flat urls
+	ThemeName  string // Theme name
+	FontName   string // Font name
+	BaseURL    string // Base URL of the application
+	SiteName   string // Sitename
+	Mode       string // Mode, either default or custom
+	LayoutName string // Layout name
 )
 
 // GraphNode represents a single node in the interactive graph view.
@@ -22,16 +33,4 @@ type GraphNode struct {
 	Label string `json:"label"`
 	URL   string `json:"url"`
 	Val   int    `json:"val"`
-}
-
-// Build orchestrates the static site generation process.
-func Build() {
-	switch Mode {
-	case "custom":
-		log.Println("Building site in Custom mode")
-		buildCustom()
-	default:
-		log.Println("Building site in Default mode")
-		buildDefault()
-	}
 }

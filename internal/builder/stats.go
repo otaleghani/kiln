@@ -1,12 +1,12 @@
 package builder
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/tabwriter"
+
+	"github.com/otaleghani/kiln/internal/log"
 )
 
 // Stats calculates and prints summary statistics for the vault (count, words, etc.).
@@ -36,12 +36,7 @@ func Stats() {
 		return nil
 	})
 
-	// Print the results in a clean, aligned table
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "METRIC\tVALUE")
-	fmt.Fprintln(w, "------\t-----")
-	fmt.Fprintf(w, "Total Notes\t%d\n", noteCount)
-	fmt.Fprintf(w, "Total Words\t%d\n", wordCount)
-	fmt.Fprintf(w, "Longest Note\t%s (%d words)\n", longestNote, maxWords)
-	w.Flush()
+	log.Info("Total notes", "notes", noteCount)
+	log.Info("Total words", "words", wordCount)
+	log.Info("Longest note", "note", longestNote, "words", maxWords)
 }
