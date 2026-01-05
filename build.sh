@@ -32,6 +32,7 @@ echo "Building site..."
 ./kiln generate \
   --input "$INPUT_DIR" \
   --output ./public \
+  --flat-urls=true \
   --name "$SITE_NAME" \
   --url "$DEPLOYMENT_URL"
 
