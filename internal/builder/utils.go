@@ -289,12 +289,12 @@ func getPageOutputPath(slugPath, ext string) string {
 		}
 
 		// Handle non flat urls by using the slug path as a folder
-		if !FlatUrls {
+		if FlatUrls {
 			outputPath = filepath.Join(OutputDir, fileName, "/index.html")
 			break
 		}
 
-		outputPath = filepath.Join(OutputDir, fileName, ".html")
+		outputPath = filepath.Join(OutputDir, fileName+".html")
 
 	default:
 		// Handles static assets by just adding the slugPath as is
