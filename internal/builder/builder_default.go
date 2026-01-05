@@ -75,6 +75,36 @@ func buildDefault() {
 	}
 	site.Minifier.AddFunc("text/html", html.Minify)
 
+	// Divide the different files and call "RenderType" directly, instaed of calling Render
+	notePages := []PageNote{}
+	basePages := []PageBase{}
+	canvasPages := []PageCanvas{}
+	staticFiles := []*File{}
+
+	for _, page := range site.Scan.Files {
+		switch page.Ext {
+		case ".md":
+			note := PageNote{}
+			notePages = append(notePages, note)
+		case ".canvas":
+			canvas := PageCanvas{}
+			canvasPages = append(canvasPages, canvas)
+		case ".base":
+			base := PageBase{}
+			basePages = append(basePages, base)
+		default:
+			staticFiles = append(staticFiles, page)
+		}
+	}
+
+	for _, file := range staticFiles {
+		l := log.Default.WithFile(file.RelPath)
+		err := copyFile(file.Path, file.OutPath)
+		if err != nil {
+			l.Error("Couldn't copy file", log.FieldError, err)
+		}
+	}
+
 	log.Info("Rendering pages...")
 	for _, page := range site.Scan.Files {
 		l := log.Default.WithFile(page.RelPath)
@@ -187,9 +217,16 @@ func (s *DefaultSite) Render(f *File) error {
 		return s.RenderNote(f)
 	case ".canvas":
 		return s.RenderCanvas(f)
+	case ".base":
+		return s.RenderBase(f)
 	default:
 		return nil
 	}
+}
+
+func (s *DefaultSite) RenderBase(f *File) error {
+	log.Info("Found base", "path", f.Path)
+	return nil
 }
 
 func (s *DefaultSite) RenderGraph() error {
@@ -436,4 +473,50 @@ type CanvasNode struct {
 	IsImage     bool   `json:"isImage,omitempty"`     // Flag for image nodes
 	Src         string `json:"src,omitempty"`         // Web path for image source
 	URL         string `json:"url,omitempty"`         // Link URL
+}
+
+type BaseFilterGroup struct {
+	Operator   string          `yaml:"operator"` // "and", "or" (simplified for this example)
+	Conditions []BaseCondition `yaml:"conditions"`
+}
+
+// Individual filter condition (e.g., status == "done")
+type BaseCondition struct {
+	Field    string `yaml:"field"`    // e.g., "file.folder" or "status"
+	Operator string `yaml:"operator"` // "==", "!=", "contains", ">"
+	Value    any    `yaml:"value"`
+}
+
+type BaseViewConfig struct {
+	Type    string          `yaml:"type"` // "table", "list", "cards"
+	Name    string          `yaml:"name"`
+	Columns []BaseColumnDef `yaml:"columns"` // Used for Tables
+}
+
+type BaseColumnDef struct {
+	Field string `yaml:"field"` // The property key to show
+	Title string `yaml:"title"` // Optional override
+}
+
+type BasePropConfig struct {
+	DisplayName string `yaml:"displayName"`
+}
+
+// PageCanvas represents a '.canvas' file to be rendered
+type PageCanvas struct {
+	File *File
+}
+
+// PageBase represents a '.base' file to be rendered
+type PageBase struct {
+	File       *File                     // Original file
+	Filters    BaseFilterGroup           `yaml:"filters"`
+	Properties map[string]BasePropConfig `yaml:"properties"`
+	Views      []BaseViewConfig          `yaml:"views"`
+}
+
+// PageNote represents a '.md' file to be rendered
+type PageNote struct {
+	File        *File          // Original file
+	Frontmatter map[string]any // Extracted frontmatter
 }
