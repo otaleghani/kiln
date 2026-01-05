@@ -2,7 +2,6 @@
 title: Generate Command
 description: The generate command is the core of Kiln. Learn how to build your static site and customize it using flags for themes, fonts, and SEO settings.
 ---
-
 # Generate Command
 
 The `generate` command is the primary workhorse of Kiln. It reads your Markdown files from the source directory and compiles them into a fully functional, static HTML website ready for deployment.

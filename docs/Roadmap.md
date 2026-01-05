@@ -12,8 +12,10 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 ## Planned immediate enhancements 
 *Priority items to stabilize the current beta.*
 
-- [ ] **Better logs**: Create better logs management using `charm/log`
 - [ ] **Support bases**: Support for Obsidian bases.
+- [ ] **Layouts**: Other layouts to chose from
+- [ ] **More themes to pick**
+- [ ] **More fonts to choose**
 
 ## Core Features
 *Major functionality upgrades.*
