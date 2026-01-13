@@ -264,9 +264,6 @@
   .mx-2 {
     margin-inline: calc(var(--spacing) * 2);
   }
-  .mx-4 {
-    margin-inline: calc(var(--spacing) * 4);
-  }
   .mx-auto {
     margin-inline: auto;
   }
@@ -276,17 +273,8 @@
   .mt-0 {
     margin-top: calc(var(--spacing) * 0);
   }
-  .mt-4 {
-    margin-top: calc(var(--spacing) * 4);
-  }
-  .mt-16 {
-    margin-top: calc(var(--spacing) * 16);
-  }
   .mt-20 {
     margin-top: calc(var(--spacing) * 20);
-  }
-  .mt-24 {
-    margin-top: calc(var(--spacing) * 24);
   }
   .mr-2 {
     margin-right: calc(var(--spacing) * 2);
@@ -351,6 +339,9 @@
   .h-5 {
     height: calc(var(--spacing) * 5);
   }
+  .h-dvh {
+    height: 100dvh;
+  }
   .h-full {
     height: 100%;
   }
@@ -365,6 +356,9 @@
   }
   .w-72 {
     width: calc(var(--spacing) * 72);
+  }
+  .w-dvh {
+    width: 100dvh;
   }
   .w-full {
     width: 100%;
@@ -453,9 +447,6 @@
   }
   .overflow-x-auto {
     overflow-x: auto;
-  }
-  .overflow-x-scroll {
-    overflow-x: scroll;
   }
   .overflow-y-auto {
     overflow-y: auto;
@@ -550,9 +541,6 @@
   }
   .py-2\.5 {
     padding-block: calc(var(--spacing) * 2.5);
-  }
-  .py-4 {
-    padding-block: calc(var(--spacing) * 4);
   }
   .pt-24 {
     padding-top: calc(var(--spacing) * 24);
@@ -807,21 +795,6 @@
       }
     }
   }
-  .sm\:mt-4 {
-    @media (width >= 40rem) {
-      margin-top: calc(var(--spacing) * 4);
-    }
-  }
-  .sm\:rounded-xl {
-    @media (width >= 40rem) {
-      border-radius: var(--radius-xl);
-    }
-  }
-  .md\:mx-auto {
-    @media (width >= 48rem) {
-      margin-inline: auto;
-    }
-  }
   .md\:mt-4 {
     @media (width >= 48rem) {
       margin-top: calc(var(--spacing) * 4);
@@ -837,25 +810,9 @@
       display: block;
     }
   }
-  .md\:hidden {
-    @media (width >= 48rem) {
-      display: none;
-    }
-  }
   .md\:rounded-xl {
     @media (width >= 48rem) {
       border-radius: var(--radius-xl);
-    }
-  }
-  .md\:border {
-    @media (width >= 48rem) {
-      border-style: var(--tw-border-style);
-      border-width: 1px;
-    }
-  }
-  .md\:border-sidebar-border {
-    @media (width >= 48rem) {
-      border-color: var(--color-sidebar-border);
     }
   }
   .md\:p-0 {
@@ -863,19 +820,9 @@
       padding: calc(var(--spacing) * 0);
     }
   }
-  .md\:p-6 {
-    @media (width >= 48rem) {
-      padding: calc(var(--spacing) * 6);
-    }
-  }
   .xl\:relative {
     @media (width >= 80rem) {
       position: relative;
-    }
-  }
-  .xl\:mt-4 {
-    @media (width >= 80rem) {
-      margin-top: calc(var(--spacing) * 4);
     }
   }
   .xl\:hidden {
@@ -947,7 +894,6 @@ body {
 }
 .canvas-mode {
   position: relative;
-  width: 100%;
   flex: 1;
   padding: 0;
   overflow: hidden;
@@ -1362,6 +1308,9 @@ path.edge {
   color: #888;
 }
 .content table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-collapse: collapse;
   width: 100%;
   margin: 1rem 0;
@@ -1555,6 +1504,7 @@ details.callout[open] > summary .callout-title::after {
   padding: 0;
 }
 .toc a {
+  padding-block: calc(var(--spacing) * 1);
   text-decoration: none;
   opacity: 1;
   display: block;

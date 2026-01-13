@@ -85,7 +85,6 @@ body {
 * */
 .canvas-mode {
   position: relative;
-  width: 100%;
   flex: 1;
   padding: 0;
   overflow: hidden;
@@ -565,6 +564,9 @@ path.edge {
 }
 
 .content table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-collapse: collapse;
   width: 100%;
   margin: 1rem 0;
@@ -801,6 +803,7 @@ details.callout[open] > summary .callout-title::after {
 }
 
 .toc a {
+  @apply py-1;
   text-decoration: none;
   opacity: 1;
   display: block;

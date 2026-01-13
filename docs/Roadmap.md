@@ -9,6 +9,11 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 > [!note] Contributing
 > Have a suggestion? Feel free to open an issue or contribute to the discussion on our GitHub repository.
 
+## Planned immediate enhancements 
+*Priority items to stabilize the current beta.*
+
+- [ ] **Divide core styles**: Every layout uses the same markdown style. 
+
 ## Core Features
 *Major functionality upgrades.*
 

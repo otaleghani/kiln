@@ -31,27 +31,27 @@ jobs:
         env:
           GOOS: linux
           GOARCH: amd64
-        run: go build -ldflags "-X '${{ env.PACKAGE_PATH }}.Version=${{ github.ref_name }}'" -o kiln_linux_amd64 ./cmd/kiln
+        run: go build -ldflags "-X '${{ env.PACKAGE_PATH }}.version=${{ github.ref_name }}'" -o kiln_linux_amd64 ./cmd/kiln
 
       # Compile for Windows (AMD64)
       - name: Build Windows
         env:
           GOOS: windows
           GOARCH: amd64
-        run: go build -ldflags "-X '${{ env.PACKAGE_PATH }}.Version=${{ github.ref_name }}'" -o kiln_windows_amd64.exe ./cmd/kiln
+        run: go build -ldflags "-X '${{ env.PACKAGE_PATH }}.version=${{ github.ref_name }}'" -o kiln_windows_amd64.exe ./cmd/kiln
 
       # Compile for macOS (Apple Silicon & Intel)
       - name: Build macOS (Intel)
         env:
           GOOS: darwin
           GOARCH: amd64
-        run: go build -ldflags "-X '${{ env.PACKAGE_PATH }}.Version=${{ github.ref_name }}'" -o kiln_darwin_amd6 ./cmd/kiln
+        run: go build -ldflags "-X '${{ env.PACKAGE_PATH }}.version=${{ github.ref_name }}'" -o kiln_darwin_amd6 ./cmd/kiln
       
       - name: Build macOS (Apple Silicon)
         env:
           GOOS: darwin
           GOARCH: arm64
-        run: go build -ldflags "-X '${{ env.PACKAGE_PATH }}.Version=${{ github.ref_name }}'" -o kiln_darwin_arm64 ./cmd/kiln
+        run: go build -ldflags "-X '${{ env.PACKAGE_PATH }}.version=${{ github.ref_name }}'" -o kiln_darwin_arm64 ./cmd/kiln
 
       - name: Generate checksums
         run: sha256sum kiln_* > checksums.txt

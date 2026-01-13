@@ -94,11 +94,7 @@
     <script src="{{ .Site.BaseURL }}/graph.js" defer></script>
     <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
   </head>
-  <body
-    hx-boost="true"
-    hx-swap="outerHTML"
-    class="bg-background relative overflow-hidden h-screen"
-  >
+  <body hx-boost="true" hx-swap="outerHTML" class="bg-background relative ">
     <header
       class="p-4 flex justify-between gap-4 items-center max-w-prose mx-auto w-full text-accent fixed z-50 top-0 inset-x-0 bg-sidebar md:rounded-xl md:mt-4 border border-sidebar-border"
     >
@@ -118,7 +114,7 @@
       </div>
     </header>
     <!-- Main content -->
-    <main class="flex-1 flex flex-col h-screen overflow-y-scroll markdown-body">
+    <main class="flex-1 flex flex-col h-dvh overflow-y-scroll markdown-body">
       {{ template "page-name" . }}
       {{ template "content-canvas" . }}
       {{ template "content-note" . }}
@@ -456,7 +452,7 @@
 <!-- Content: Canvas -->
 {{ define "content-canvas" }}
   {{ if .IsCanvas }}
-    <div class="canvas-mode" id="content">
+    <div class="canvas-mode " id="content">
       <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
       <script src="{{ .Site.BaseURL }}/canvas.js"></script>
       <div id="viewport">

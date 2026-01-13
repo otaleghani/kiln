@@ -29,6 +29,11 @@ window.JsonCanvasRenderer = class JsonCanvasRenderer {
     this.handleMouseMove = this.handleMouseMove.bind(this);
     this.handleMouseUp = this.handleMouseUp.bind(this);
 
+    // Bind touch methods
+    this.handleTouchStart = this.handleTouchStart.bind(this);
+    this.handleTouchMove = this.handleTouchMove.bind(this);
+    this.handleTouchEnd = this.handleTouchEnd.bind(this);
+
     this.setupInteractions();
   }
 
@@ -36,6 +41,10 @@ window.JsonCanvasRenderer = class JsonCanvasRenderer {
     if (this.viewport) {
       this.viewport.removeEventListener("wheel", this.handleWheel);
       this.viewport.removeEventListener("mousedown", this.handleMouseDown);
+      // Remove touch listeners
+      this.viewport.removeEventListener("touchstart", this.handleTouchStart);
+      this.viewport.removeEventListener("touchmove", this.handleTouchMove);
+      this.viewport.removeEventListener("touchend", this.handleTouchEnd);
     }
     window.removeEventListener("mousemove", this.handleMouseMove);
     window.removeEventListener("mouseup", this.handleMouseUp);
@@ -392,6 +401,75 @@ window.JsonCanvasRenderer = class JsonCanvasRenderer {
     if (this.viewport) this.viewport.style.cursor = "default";
   }
 
+  handleTouchStart(e) {
+    // Allow standard clicks on links/buttons
+    if (e.target.closest("a, button, input, .canvas-node-header")) return;
+
+    if (e.touches.length === 1) {
+      // Single touch = Drag
+      this.state.isDragging = true;
+      this.state.lastMouseX = e.touches[0].clientX;
+      this.state.lastMouseY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      // Two fingers = Start Pinch Zoom
+      this.state.isDragging = false;
+      this.state.initialPinchDistance = this.getPinchDistance(e);
+      this.state.initialScale = this.state.scale;
+    }
+  }
+
+  handleTouchMove(e) {
+    // 1. Handle Panning (1 finger)
+    if (this.state.isDragging && e.touches.length === 1) {
+      e.preventDefault(); // Stop the browser from scrolling the page
+
+      const dx = e.touches[0].clientX - this.state.lastMouseX;
+      const dy = e.touches[0].clientY - this.state.lastMouseY;
+
+      this.state.panX += dx;
+      this.state.panY += dy;
+
+      this.state.lastMouseX = e.touches[0].clientX;
+      this.state.lastMouseY = e.touches[0].clientY;
+
+      this.updateTransform();
+    }
+    // 2. Handle Zooming (2 fingers)
+    else if (e.touches.length === 2 && this.state.initialPinchDistance) {
+      e.preventDefault();
+
+      const currentDist = this.getPinchDistance(e);
+      const zoomFactor = currentDist / this.state.initialPinchDistance;
+
+      // Calculate new scale based on initial scale * zoom factor
+      let newScale = this.state.initialScale * zoomFactor;
+      newScale = Math.min(Math.max(0.1, newScale), 5); // Clamp limits
+
+      this.state.scale = newScale;
+      this.updateTransform();
+    }
+  }
+
+  handleTouchEnd(e) {
+    // If all fingers lifted, stop dragging
+    if (e.touches.length === 0) {
+      this.state.isDragging = false;
+      this.state.initialPinchDistance = null;
+    }
+  }
+
+  // Helper to calculate distance between two fingers
+  getPinchDistance(e) {
+    return Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY,
+    );
+  }
+
+  updateTransform() {
+    this.world.style.transform = `translate(${this.state.panX}px, ${this.state.panY}px) scale(${this.state.scale})`;
+  }
+
   setupInteractions() {
     this.viewport.addEventListener("wheel", this.handleWheel, {
       passive: false,
@@ -399,6 +477,15 @@ window.JsonCanvasRenderer = class JsonCanvasRenderer {
     this.viewport.addEventListener("mousedown", this.handleMouseDown);
     window.addEventListener("mousemove", this.handleMouseMove);
     window.addEventListener("mouseup", this.handleMouseUp);
+
+    // Passive: false is required to use preventDefault() to stop page scrolling
+    this.viewport.addEventListener("touchstart", this.handleTouchStart, {
+      passive: false,
+    });
+    window.addEventListener("touchmove", this.handleTouchMove, {
+      passive: false,
+    });
+    window.addEventListener("touchend", this.handleTouchEnd);
   }
 
   updateTransform() {
