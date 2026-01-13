@@ -4,6 +4,9 @@ description: A list of all the addition to kiln.
 ---
 # Changelog
 
+## v0.3.1
+- FIX: `simple_layout.html` and `default_layout.html` had issues with scrolling
+- FIX: `canvas.js` didn't have mobile events
 ## v0.3.0
 - ADD: [[Bases]] page generation
 - ADD: [[Folders]] page generation
