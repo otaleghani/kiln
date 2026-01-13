@@ -37,3 +37,6 @@ vault/
 # Obsidian dirs
 .obsidian/
 .trash/
+
+# Node
+node_modules/

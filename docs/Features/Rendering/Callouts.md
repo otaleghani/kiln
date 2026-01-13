@@ -42,7 +42,7 @@ You can make callouts foldable (collapsible) by adding a `+` or `-` symbol immed
 
 ## Supported Types
 
-Kiln supports the full set of standard Obsidian callout types and their aliases.
+Kiln supports the full set of standard Obsidian callout types and their aliases. 
 
 | **Type**   | **Aliases**            | **Color Profile** |
 | ---------- | ---------------------- | ----------------- |
@@ -59,6 +59,41 @@ Kiln supports the full set of standard Obsidian callout types and their aliases.
 | `bug`      |                        | 🔴 Red            |
 | `example`  |                        | 🟣 Purple         |
 | `quote`    | `cite`                 | ⚪ Gray            |
+Here's a series of examples for the different callouts that you can use.
+
+> [!note]
+
+> [!abstract]
+> You could also use `summary` or `tldr`
+
+> [!info]
+
+> [!todo]
+
+> [!tip]
+> You could also use `hint` or `important`
+
+> [!success]
+> You could also use `check` or `done`
+
+> [!question]
+> You could also use `help` or `faq`
+
+> [!warning]
+> You could also use `caution` or `attention`
+
+> [!failure]
+> You could also use `fail` or `missing`
+
+> [!danger]
+> You could also use `error`
+
+> [!bug]
+
+> [!example]
+
+> [!quote]
+> You could also use `cite`
 
 ### Icons
 

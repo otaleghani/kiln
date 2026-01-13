@@ -1,4 +1,4 @@
-package obsidianmarkdown
+package markdown
 
 import (
 	"bytes"

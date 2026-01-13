@@ -1,4 +1,4 @@
-package obsidianmarkdown
+package markdown
 
 import (
 	"strings"
@@ -6,6 +6,7 @@ import (
 	"errors"
 	"path/filepath"
 
+	"github.com/otaleghani/kiln/internal/obsidian"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/text"
@@ -53,7 +54,7 @@ func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 var ErrorCandidateNotFound = errors.New("Candidate not found")
 
 // FindFile returns the best File match for the given target and the anchor
-func (r *IndexResolver) FindFile(target []byte) (*File, string, error) {
+func (r *IndexResolver) FindFile(target []byte) (*obsidian.File, string, error) {
 	dest := string(target)
 	dest = strings.TrimSpace(dest)
 
@@ -78,12 +79,12 @@ func (r *IndexResolver) FindFile(target []byte) (*File, string, error) {
 		if alt, ok := r.Index[lowerDest]; ok {
 			candidates = alt
 		} else {
-			return &File{}, anchor, ErrorCandidateNotFound // Not found
+			return &obsidian.File{}, anchor, ErrorCandidateNotFound // Not found
 		}
 	}
 
 	// Select best match
-	var bestMatch *File
+	var bestMatch *obsidian.File
 
 	// If user provided a path (e.g. "Deployment/Cloudflare Pages")
 	if strings.Contains(dest, "/") || strings.Contains(dest, "\\") {
@@ -129,7 +130,7 @@ func (r *IndexResolver) FindFile(target []byte) (*File, string, error) {
 func (r *IndexResolver) recordGraphLink(target string) {
 	if r.CurrentSource != "" && target != "" {
 		if !strings.EqualFold(r.CurrentSource, target) {
-			r.Links = append(r.Links, GraphLink{
+			r.Links = append(r.Links, obsidian.GraphLink{
 				Source: r.CurrentSource,
 				Target: target,
 			})
@@ -175,7 +176,10 @@ func (r *IndexResolver) renderSelection(
 				destUrl,
 			) + "\" class=\"markdown-embed-link\" title=\"Open Original\">",
 		)
-		w.WriteString("<i class=\"\" data-lucide=\"maximize-2\"></i>")
+		w.WriteString(
+			`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>`,
+		)
+		// w.WriteString("<i class=\"\" data-lucide=\"maximize-2\"></i>")
 		w.WriteString("</a>")
 
 		w.WriteString("</div>") // End Header
@@ -471,7 +475,8 @@ func isImageFile(ext string) bool {
 // SplitExt returns the base name and the extension of the given path
 func SplitExt(path string) (name, ext string) {
 	ext = filepath.Ext(path)
-	name = strings.TrimSuffix(strings.ToLower(filepath.Base(path)), ext)
+	// name = strings.TrimSuffix(strings.ToLower(filepath.Base(path)), ext)
+	name = strings.TrimSuffix(filepath.Base(path), ext)
 	return
 }
 
@@ -486,31 +491,23 @@ func slugify(s string) string {
 	return s
 }
 
-// GraphLink represents a directed edge in the note graph.
-//
-// Used to generate the part of the json file
-type GraphLink struct {
-	Source string `json:"source"`
-	Target string `json:"target"`
-}
-
 // File rappresents a file that needs to be processed
-type File struct {
-	Path    string // Complete path of the file
-	RelPath string // Relative path from input directory
-	Ext     string // Extension of the file
-	Name    string // Name of the file (no extension)
-	OutPath string // Final output path of the file (e.g. /public/folder/page.html)
-	WebPath string // Final web path of the page (e.g. /folder/page)
-}
+// type File struct {
+// 	Path    string // Complete path of the file
+// 	RelPath string // Relative path from input directory
+// 	Ext     string // Extension of the file
+// 	Name    string // Name of the file (no extension)
+// 	OutPath string // Final output path of the file (e.g. /public/folder/page.html)
+// 	WebPath string // Final web path of the page (e.g. /folder/page)
+// }
 
 // IndexResolver handles link resolution and graph tracking.
 // It intercepts both Wikilinks ([[...]]) and standard Markdown links to ensure
 // they point to the correct URL, respecting the site's BasePath.
 type IndexResolver struct {
-	Index         map[string][]*File                // Lowercase filename -> Candidate files
+	Index         map[string][]*obsidian.File       // Lowercase filename -> Candidate files
 	SourceMap     map[string]string                 // Webpath -> Real file (used for text embedding)
-	Links         []GraphLink                       // All of the graph links
+	Links         []obsidian.GraphLink              // All of the graph links
 	CurrentSource string                            // The current source
 	BasePath      string                            // The basepath // TODO: Delete this, you
 	Engine        goldmark.Markdown                 // Needed for recursion

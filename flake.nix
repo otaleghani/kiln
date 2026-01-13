@@ -23,13 +23,19 @@
           air
           overmind
 
+          nodejs_22
           vscode-langservers-extracted
           typescript-language-server
           typescript
           prettier
+          djlint # Linter and formatter for templates
+          tailwindcss_4
+          tailwindcss-language-server
+          watchman
         ];
 
         shellHook = ''
+          export PATH="$PWD/node_modules/.bin:$PATH"
           if [ -z "$TMUX" ]; then
             tmux set-option -g default-command "nix develop --command zsh"
             tmux new-session -s kiln -d 'nvim' \; new-window

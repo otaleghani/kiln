@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"sort"
 
@@ -16,26 +17,26 @@ import (
 	"strings"
 	"time"
 
-	"github.com/otaleghani/kiln/internal/log"
-	obsidian "github.com/otaleghani/kiln/pkg/obsidian-markdown"
+	"github.com/otaleghani/kiln/internal/obsidian"
+	"github.com/otaleghani/kiln/internal/obsidian/markdown"
 	"gopkg.in/yaml.v3"
 )
 
 // walk the input directory and loads the different kinds of files into s.Files
 func (s *CustomSite) walk() error {
 	s.Files = Files{
-		Env:       &File{},
-		Markdown:  []*File{},
-		Base:      []*File{},
-		Canvas:    []*File{},
-		Config:    []*File{},
-		Layout:    make(map[string]*File),
-		Component: []*File{},
-		Static:    []*File{},
+		Env:       &obsidian.File{},
+		Markdown:  []*obsidian.File{},
+		Base:      []*obsidian.File{},
+		Canvas:    []*obsidian.File{},
+		Config:    []*obsidian.File{},
+		Layout:    make(map[string]*obsidian.File),
+		Component: []*obsidian.File{},
+		Static:    []*obsidian.File{},
 	}
 
-	for _, file := range s.Scan.Files {
-		l := log.Default.WithFile(file.RelPath)
+	for _, file := range s.Obsidian.Vault.Files {
+		l := s.log.With("file", file.RelPath)
 
 		switch file.Ext {
 		case ".md":
@@ -79,9 +80,9 @@ func (s *CustomSite) walk() error {
 
 // parseComponentFiles takes every found HTML component and loads it, creating a base template
 func (s *CustomSite) parseComponentFiles() (err error) {
-	log.Info("Loading components...")
+	s.log.Info("Loading components...")
 	for _, file := range s.Files.Component {
-		log.Default.WithFile(file.RelPath).Debug("Processing component...")
+		s.log.Debug("Processing component...", "file", file.RelPath)
 
 		s.Template, err = s.Template.ParseFiles(file.Path)
 		if err != nil {
@@ -93,9 +94,9 @@ func (s *CustomSite) parseComponentFiles() (err error) {
 
 // parseLayouts creates for each configuration the specific template to execute
 func (s *CustomSite) parseLayouts() error {
-	log.Info("Parsing layouts...")
+	s.log.Info("Parsing layouts...")
 	for _, config := range s.Configs {
-		l := log.Default.WithFile(config.RelPath)
+		l := s.log.With("file", config.RelPath)
 		l.Debug("Loading 'layout.html'")
 		if layout, exists := s.Files.Layout[getConfigDirectory(config.RelPath)]; exists {
 
@@ -124,18 +125,18 @@ func (s *CustomSite) parseLayouts() error {
 // parseNotes loops through the pages of the CustomSite and parses the raw data discovered
 // by loadNoteFile.
 func (s *CustomSite) parseNotes() error {
-	log.Info("Parsing notes...")
+	s.log.Info("Parsing notes...")
 	siblings := make(map[string][]*CustomPage)
 
 	for _, page := range s.Pages {
-		l := log.Default.WithFile(page.RelPath)
+		l := s.log.With("file", page.RelPath)
 
 		// Validate fields
 		fields := make(map[string]*FieldContent)
 		for key, value := range page.RawFrontmatter {
 			content, err := s.validateFrontmatterField(key, value, page)
 			if err != nil {
-				l.Error("Coudn't validate field", log.FieldName, key, log.FieldError, err)
+				l.Error("Coudn't validate field", "field", key, "error", err)
 				return err
 			}
 			fields[key] = &content
@@ -146,42 +147,36 @@ func (s *CustomSite) parseNotes() error {
 			for fieldName, field := range config.Fields {
 				_, exists := fields[fieldName]
 				if !exists && field.Required {
-					l.Error("Field is required", log.FieldName, fieldName)
+					l.Error("Field is required", "field", fieldName)
 					return ErrorRequiredField
 				}
 			}
 		}
 
-		ext := filepath.Ext(page.Path)
-		slugPath := getSlugPath(page.RelPath)
-		webPath := getPageWebPath(slugPath, ext)
-		outputPath := getPageOutputPath(slugPath, ext)
-
-		page.OutputPath = outputPath
-		page.WebPath = webPath
+		// ext := filepath.Ext(page.Path)
+		// slugPath := getSlugPath(page.RelPath)
+		// webPath := getPageWebPath(slugPath, ext)
+		// outputPath := getPageOutputPath(slugPath, ext)
+		// page.OutputPath = outputPath
+		// page.WebPath = webPath
+		// page.OutputPath =
 		page.Fields = fields
 		page.IsIndex = strings.TrimSuffix(filepath.Base(page.Path), ".md") == "index"
 
 		customLayoutPath := strings.TrimSuffix(page.Path, ".md") + ".html"
 		if _, err := os.Stat(customLayoutPath); err == nil {
-			l.Debug("Found custom layout", log.FieldFile, customLayoutPath)
+			l.Debug("Found custom layout", "file", customLayoutPath)
 
 			customTemplate, err := s.Template.Clone()
 			if err != nil {
-				l.Error("Error cloning base layout", log.FieldError, err)
+				l.Error("Error cloning base layout", "error", err)
 				return err
 			}
 
 			// Parses layout.html for the specific config
 			customTemplate, err = customTemplate.ParseFiles(customLayoutPath)
 			if err != nil {
-				l.Error(
-					"Error parsing custom layout",
-					log.FieldFile,
-					customLayoutPath,
-					log.FieldError,
-					err,
-				)
+				l.Error("Error parsing custom layout", "file", customLayoutPath, "error", err)
 				return err
 			}
 			page.Template = customTemplate
@@ -222,10 +217,10 @@ func (s *CustomSite) parseNotes() error {
 // parseConfigs loops through the configs of the CustomSite and parses the raw data
 // discovered by loadConfigFile.
 func (s *CustomSite) parseConfigs() error {
-	log.Info("Parsing configurations...")
+	s.log.Info("Parsing configurations...")
 
 	for _, config := range s.Configs {
-		l := log.Default.WithFile(config.RelPath)
+		l := s.log.With("file", config.RelPath)
 		if filepath.Join(InputDir, "config.json") == config.Path {
 			l.Debug("Found config file in root folder, skipping it")
 			return nil
@@ -236,16 +231,16 @@ func (s *CustomSite) parseConfigs() error {
 		for key, value := range config.RawFields {
 			// Normalize configuration field
 			if key == "collection_name" {
-				l.Debug("Skipped", log.FieldName, key)
+				l.Debug("Skipped", "field", key)
 				continue
 			}
 			field, err := s.normalizeConfigField(value)
 			if err != nil {
-				l.Error("Couldn't normalized field", log.FieldName, key, log.FieldError, err)
+				l.Error("Couldn't normalized field", "field", key, "error", err)
 				continue
 			}
 			configMap[key] = field
-			l.Debug("Added field", log.FieldName, key, log.FieldType, field.Type)
+			l.Debug("Added field", "field", key, "type", field.Type)
 		}
 
 		config.Fields = configMap
@@ -258,7 +253,7 @@ func (s *CustomSite) parseConfigs() error {
 // parseStaticFiles creates a rappresentation of the given static file and copies the file over
 // the output directory
 func (s *CustomSite) parseStaticFiles() error {
-	log.Info("Parsing static files...")
+	s.log.Info("Parsing static files...")
 	for _, file := range s.Files.Static {
 		// Index the asset
 		cleanName := filepath.Base(file.Path)
@@ -276,21 +271,21 @@ func (s *CustomSite) parseStaticFiles() error {
 			return err
 		}
 
-		err := copyFile(asset.Path, asset.OutputPath)
+		err := obsidian.CopyFile(asset.Path, asset.OutputPath)
 		if err != nil {
 			return err
 		}
 
 		s.Assets[cleanName] = asset
 
-		log.Default.WithFile(asset.RelPath).Info("Static file parsed correctly")
+		s.log.Info("Static file parsed correctly", "file", asset.RelPath)
 	}
 	return nil
 }
 
 // loadNoteFile creates the initial rappresentation of the file (discovery phase)
 func (s *CustomSite) loadNoteFiles() error {
-	log.Info("Loading notes...")
+	s.log.Info("Loading notes...")
 	for _, file := range s.Files.Markdown {
 		cleanName := strings.TrimSuffix(filepath.Base(file.Path), ".md")
 		config := s.Configs[getConfigDirectory(file.RelPath)]
@@ -309,6 +304,8 @@ func (s *CustomSite) loadNoteFiles() error {
 			RelPath:        file.RelPath,
 			RawFrontmatter: rawFrontmatter,
 			RawContent:     rawContent,
+			OutputPath:     file.OutPath,
+			WebPath:        file.WebPath,
 		}
 		if config != nil {
 			page.Collection = config.Name
@@ -316,20 +313,20 @@ func (s *CustomSite) loadNoteFiles() error {
 		s.Pages[file.RelPath] = page
 		s.PagesLookup[cleanName] = page
 
-		log.Default.WithFile(page.RelPath).Info("Markdown note parsed correctly")
+		s.log.Info("Markdown note parsed correctly", "file", page.RelPath)
 	}
 	return nil
 }
 
 // parseEnvFile saves the data in the env.json file if found
 func (s *CustomSite) parseEnvFile() error {
-	log.Info("Loading environment...")
+	s.log.Info("Loading environment...")
 	if s.Files.Env.Path == "" {
-		log.Info("No 'env.json' file found")
+		s.log.Info("No 'env.json' file found")
 		return nil
 	}
 
-	l := log.Default.WithFile(s.Files.Env.RelPath)
+	l := s.log.With("file", s.Files.Env.RelPath)
 	// Read file
 	rawData, err := os.ReadFile(s.Files.Env.Path)
 	if err != nil {
@@ -362,10 +359,10 @@ func (s *CustomSite) parseEnvFile() error {
 // loadConfigFiles loads the configuration found in the config.json file
 func (s *CustomSite) loadConfigFiles() error {
 	// Configuration files are handled before everything because they are needed (e.g. notes)
-	log.Info("Loading configurations...")
+	s.log.Info("Loading configurations...")
 	for _, file := range s.Files.Config {
 		if filepath.Join(InputDir, "config.json") == file.Path {
-			log.Debug("Configuration file is in root folder, skipping it")
+			s.log.Debug("Configuration file is in root folder, skipping it")
 			return nil
 		}
 
@@ -399,14 +396,14 @@ func (s *CustomSite) loadConfigFiles() error {
 		s.Configs[config.ID] = config
 		s.ConfigsLookup[collectionName] = config
 
-		log.Default.WithFile(config.RelPath).Info("Configuration file loaded correctly")
+		s.log.Info("Configuration file loaded correctly", "file", config.RelPath)
 	}
 	return nil
 }
 
 func (s *CustomSite) render() error {
 	for _, page := range s.Pages {
-		l := log.Default.WithFile(page.RelPath)
+		l := s.log.With("file", page.RelPath)
 
 		var tmpl *template.Template
 		var tmplPath string
@@ -422,13 +419,13 @@ func (s *CustomSite) render() error {
 		}
 
 		if err := os.MkdirAll(filepath.Dir(page.OutputPath), 0755); err != nil {
-			l.Error("Error creating dirs", log.FieldPath, page.OutputPath, log.FieldError, err)
+			l.Error("Error creating dirs", "path", page.OutputPath, "error", err)
 			return err
 		}
 
 		f, err := os.Create(page.OutputPath)
 		if err != nil {
-			l.Error("Error creating file", log.FieldPath, page.OutputPath, log.FieldError, err)
+			l.Error("Error creating file", "path", page.OutputPath, "error", err)
 			return err
 		}
 		defer f.Close()
@@ -439,7 +436,7 @@ func (s *CustomSite) render() error {
 		}
 
 		if err := tmpl.ExecuteTemplate(f, tmplPath, data); err != nil {
-			l.Error("Error executing template", log.FieldError, err)
+			l.Error("Error executing template", "error", err)
 			return err
 		}
 	}
@@ -448,33 +445,22 @@ func (s *CustomSite) render() error {
 
 // BuildCustom executes the user-first generation logic (Obsidian-SSG)
 // It takes sourceDir (vault root) and outputDir as arguments.
-func buildCustom() {
-	vaultScan, err := scanVault()
-	if err != nil {
-		log.Fatal("Couldn't scan vault", log.FieldError, err)
-	}
+func buildCustom(log *slog.Logger) {
+	obs := obsidian.New(
+		obsidian.WithBaseURL(BaseURL),
+		obsidian.WithFlatURLs(FlatUrls),
+		obsidian.WithInputDir(InputDir),
+		obsidian.WithLogger(log),
+	)
 
-	// Convert scanned files into obsidian-markdown.File
-	index := make(map[string][]*obsidian.File)
-	for name, files := range vaultScan.FileIndex {
-		index[name] = []*obsidian.File{}
-		for _, file := range files {
-			index[name] = append(
-				index[name],
-				&obsidian.File{
-					RelPath: file.RelPath,
-					Path:    file.Path,
-					WebPath: file.WebPath,
-					Name:    file.Name,
-					Ext:     file.Ext,
-					OutPath: file.OutPath,
-				},
-			)
-		}
+	err := obs.Scan()
+	if err != nil {
+		log.Error("Couldn't scan vault", "error", err)
+		os.Exit(1)
 	}
 
 	// Creates markdown renderer
-	obsidianMd := obsidian.New(index, func(path string) ([]byte, error) {
+	obsidianMd := markdown.New(obs.Vault.FileIndex, func(path string) ([]byte, error) {
 		return os.ReadFile(filepath.Join(InputDir, path))
 	})
 
@@ -488,59 +474,71 @@ func buildCustom() {
 		Env:           make(map[string]string),
 		Markdown:      obsidianMd,
 		Template:      template.New("base"),
-		Scan:          vaultScan,
+		Obsidian:      obs,
+		log:           log,
+		// Scan:          vaultScan,
 	}
 	site.Template.Funcs(site.getFuncMap())
 
 	err = site.walk()
 	if err != nil {
-		log.Fatal("Error in walk", log.FieldError, err)
+		log.Error("Error in walk", "error", err)
+		os.Exit(1)
 	}
 
 	err = site.parseEnvFile()
 	if err != nil {
-		log.Fatal("Error handling the 'env.json'", log.FieldError, err)
+		log.Error("Error handling the 'env.json'", "error", err)
+		os.Exit(1)
 	}
 
 	err = site.loadConfigFiles()
 	if err != nil {
-		log.Fatal("Error loading a 'config.json'", log.FieldError, err)
+		log.Error("Error loading a 'config.json'", "error", err)
+		os.Exit(1)
 	}
 
 	err = site.parseConfigs()
 	if err != nil {
-		log.Fatal("Error parsing a 'config.json'", log.FieldError, err)
+		log.Error("Error parsing a 'config.json'", "error", err)
+		os.Exit(1)
 	}
 
 	// Load components files before layouts
 	err = site.parseComponentFiles()
 	if err != nil {
-		log.Fatal("Error parsing components", log.FieldError, err)
+		log.Error("Error parsing components", "error", err)
+		os.Exit(1)
 	}
 
 	err = site.parseLayouts()
 	if err != nil {
-		log.Fatal("Error loading layouts", log.FieldError, err)
+		log.Error("Error loading layouts", "error", err)
+		os.Exit(1)
 	}
 
 	err = site.loadNoteFiles()
 	if err != nil {
-		log.Fatal("Error loading notes", log.FieldError, err)
+		log.Error("Error loading notes", "error", err)
+		os.Exit(1)
 	}
 
 	err = site.parseStaticFiles()
 	if err != nil {
-		log.Fatal("Error handling static file", log.FieldError, err)
+		log.Error("Error handling static file", "error", err)
+		os.Exit(1)
 	}
 
 	err = site.parseNotes()
 	if err != nil {
-		log.Fatal("Error parsing note", log.FieldError, err)
+		log.Error("Error parsing note", "error", err)
+		os.Exit(1)
 	}
 
 	err = site.render()
 	if err != nil {
-		log.Fatal("Error rendering pages", log.FieldError, err)
+		log.Error("Error rendering pages", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -851,7 +849,7 @@ func (s *CustomSite) normalizeConfigField(
 			for _, val := range rawValues {
 				str, ok := val.(string)
 				if !ok {
-					log.Debug("Couldn't parse enum data for field %s", typeName)
+					s.log.Debug("Couldn't parse enum data for field %s", typeName)
 					continue
 				}
 				config.AllowedValues = append(config.AllowedValues, str)
@@ -925,7 +923,7 @@ func (s *CustomSite) validateFrontmatterField(
 	value any,
 	currentPage *CustomPage,
 ) (FieldContent, error) {
-	l := log.Default.WithFile(currentPage.RelPath)
+	l := s.log.With("path", currentPage.RelPath)
 
 	config := s.Configs[getConfigDirectory(currentPage.ID)]
 	if config == nil {
@@ -938,7 +936,7 @@ func (s *CustomSite) validateFrontmatterField(
 		return FieldContent{}, ErrorNoConfigField
 	}
 
-	l.Debug("Validating field", log.FieldName, key)
+	l.Debug("Validating field", "name", key)
 
 	content := FieldContent{Raw: value, Config: &fieldConfig}
 
@@ -1089,7 +1087,8 @@ func (s *CustomSite) validateFrontmatterField(
 		return content, nil
 
 	default:
-		log.Fatal("Found config with unknown type", "type", fieldConfig.Type)
+		s.log.Error("Found config with unknown type", "type", fieldConfig.Type)
+		os.Exit(1)
 	}
 
 	return FieldContent{}, nil
@@ -1149,7 +1148,7 @@ type CustomPage struct {
 	OutputPath     string                   // Final output path
 	Collection     string                   // The collection that the page is a part of
 	Template       *template.Template       // If the page has a custom template override it will show here
-	File           *File                    // Contains the original file instance
+	File           *obsidian.File           // Contains the original file instance
 	Content        template.HTML            // Rendered HTML content
 	TOC            template.HTML            // Rendered Table of Contents
 	RawFrontmatter map[string]any           // Raw YAML from the file
@@ -1165,10 +1164,12 @@ type CustomSite struct {
 	Env              map[string]string          // Map of the environment variables
 	Assets           map[string]*Asset          // Map of "Clean Filename" -> Asset for Asset resolution
 	Tags             map[string][]*CustomPage   // Map of tag -> array of pages
-	Markdown         *obsidian.ObsidianMarkdown // Makrdown renderer
+	Markdown         *markdown.ObsidianMarkdown // Makrdown renderer
 	Template         *template.Template         // Base template with all components loaded
 	Files            Files                      // All the paths to files to process
-	Scan             *VaultScan                 // The result of scanVault
+	// Scan             *VaultScan                 // The result of scanVault
+	Obsidian *obsidian.Obsidian
+	log      *slog.Logger
 }
 
 type Asset struct {
@@ -1224,14 +1225,14 @@ type FieldContent struct {
 
 // Files rappresents all the different kinds of files to process
 type Files struct {
-	Env       *File            // Expected only one 'env.json' file
-	Markdown  []*File          // All found '.md' files
-	Base      []*File          // All found '.base' files
-	Canvas    []*File          // All found '.canvas' files
-	Config    []*File          // All found 'config.json' files
-	Layout    map[string]*File // Layouts  are related to the collection name
-	Component []*File          // All found '_*.html' files
-	Static    []*File          // Other files are treated as static
+	Env       *obsidian.File            // Expected only one 'env.json' file
+	Markdown  []*obsidian.File          // All found '.md' files
+	Base      []*obsidian.File          // All found '.base' files
+	Canvas    []*obsidian.File          // All found '.canvas' files
+	Config    []*obsidian.File          // All found 'config.json' files
+	Layout    map[string]*obsidian.File // Layouts  are related to the collection name
+	Component []*obsidian.File          // All found '_*.html' files
+	Static    []*obsidian.File          // Other files are treated as static
 }
 
 // CustomPageData is the struct passed to the templates

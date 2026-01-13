@@ -1,17 +1,17 @@
 package builder
 
-import "github.com/otaleghani/kiln/internal/log"
+import "log/slog"
 
 // Build orchestrates the static site generation process.
-func Build() {
-	CleanOutputDir()
+func Build(log *slog.Logger) {
+	CleanOutputDir(log)
 	switch Mode {
 	case "custom":
 		log.Info("Building site in Custom mode")
-		buildCustom()
+		buildCustom(log)
 	default:
 		log.Info("Building site in Default mode")
-		buildDefault()
+		buildDefault(log)
 	}
 }
 
@@ -28,11 +28,3 @@ var (
 	DisableTOC        bool   // Disables table of contents
 	DisableLocalGraph bool   // Disables local graph
 )
-
-// GraphNode represents a single node in the interactive graph view.
-type GraphNode struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
-	URL   string `json:"url"`
-	Val   int    `json:"val"`
-}

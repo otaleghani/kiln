@@ -2,22 +2,25 @@ package builder
 
 import (
 	"html/template"
+	"log/slog"
 	"strings"
 	textTemplate "text/template"
+	"time"
 
 	"github.com/otaleghani/kiln/assets"
-	"github.com/otaleghani/kiln/internal/log"
 )
 
 // resolveLayout looks up a Layout by name.
-func resolveLayout(name string) *Layout {
+func resolveLayout(name string, log *slog.Logger) *Layout {
 	log.Info("Resolving layout...", "name", name)
 	layout, ok := layouts[strings.ToLower(name)]
 	if !ok {
-		log.Warn("Layout not found, using default layout", log.FieldName, "default")
+		log.Warn("Layout not found, using default layout", "name", "default")
 		name = "default"
 		layout = layouts[name]
 	}
+
+	layout.log = log
 
 	return layout
 }
@@ -30,18 +33,25 @@ var layouts = map[string]*Layout{
 		CssPath:  "default_style.css",
 		JsPath:   "default_app.js",
 	},
+
+	"simple": {
+		Name:     "simple",
+		HtmlPath: "simple_layout.html",
+		CssPath:  "simple_style.css",
+		JsPath:   "simple_app.js",
+	},
 }
 
 // loadLayout loads the given layout files into memory
 func (l *Layout) loadLayout() error {
-	log.Debug("Loading layout", "name", l.Name)
+	l.log.Debug("Loading layout", "name", l.Name)
 
 	// Load and parse the base HTML layout
 	layoutContent, err := assets.TemplateFS.ReadFile(l.HtmlPath)
 	if err != nil {
 		return err
 	}
-	tmplLayout, err := template.New("layout").Parse(string(layoutContent))
+	tmplLayout, err := template.New("layout").Funcs(funcMap).Parse(string(layoutContent))
 	if err != nil {
 		return err
 	}
@@ -94,6 +104,22 @@ func (l *Layout) loadLayout() error {
 	return nil
 }
 
+// Layout func map
+var funcMap = template.FuncMap{
+	"formatDate": func(t time.Time) string {
+		return t.Format("Jan 02, 2006")
+	},
+	"getValue":       GetValue,
+	"safe":           safeHTML,
+	"getDisplayName": GetDisplayName,
+	"dict":           dict,
+}
+
+// safeHTML is used to render an any result into a template.HTML
+func safeHTML(s string) template.HTML {
+	return template.HTML(s)
+}
+
 // Layout contains the paths for the layout
 //
 // Every Layout is made by 3 different files, layout.html, style.css, and app.js.
@@ -110,4 +136,5 @@ type Layout struct {
 	JsTemplate       *textTemplate.Template // If you need to change some data
 	JsGraphTemplate  *textTemplate.Template // Usually you'll need to update the graph base url
 	JsCanvasTemplate *textTemplate.Template // If you need to change some data
+	log              *slog.Logger
 }

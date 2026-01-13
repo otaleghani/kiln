@@ -1,7 +1,4 @@
-/**
- * Kiln Logic - app.js
- */
-
+// Script loading helper
 window.loadScript = function (src, id) {
   return new Promise((resolve, reject) => {
     if (document.getElementById(id)) return resolve(); // Already loaded
@@ -15,6 +12,84 @@ window.loadScript = function (src, id) {
   });
 };
 
+window.initMathJax = async function () {
+  const content = document.querySelector("#content");
+  if (!content) return;
+
+  const text = content.innerText;
+  // Check for $$ or \( or \[
+  // Note: We check for delimiters to avoid loading heavy scripts unnecessarily
+  if (!text.includes("$$") && !text.includes("\\(") && !text.includes("\\[")) {
+    return;
+  }
+
+  // Check if already loaded - If typesetPromise exists, the library is active. Just tell it to render.
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    await window.MathJax.typesetPromise();
+    return;
+  }
+
+  // Configure it if not loaded
+  if (!window.MathJax) {
+    window.MathJax = {
+      tex: {
+        inlineMath: [
+          ["$", "$"],
+          ["\\(", "\\)"],
+        ],
+        displayMath: [
+          ["$$", "$$"],
+          ["\\[", "\\]"],
+        ],
+        processEscapes: true,
+      },
+      svg: { fontCache: "global" },
+      startup: {
+        // This handles the VERY FIRST render when the script loads
+        pageReady: () => {
+          return window.MathJax.startup.defaultPageReady();
+        },
+      },
+    };
+  }
+
+  // Load script
+  await window.loadScript(
+    "https://cdn.jsdelivr.net/npm/mathjax@4/tex-svg.js",
+    "mathjax-script",
+  );
+};
+
+// Lazyload mermaid
+window.initMermaid = async function () {
+  const graphs = document.querySelectorAll(".mermaid");
+  if (graphs.length === 0) return; // Stop if no diagrams
+
+  // Save original content for theme switching re-renders
+  graphs.forEach((g) => {
+    if (!g.getAttribute("data-original"))
+      g.setAttribute("data-original", g.innerHTML);
+  });
+
+  // Lazy Load Mermaid
+  try {
+    await import("https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs").then(
+      (m) => {
+        window.mermaid = m.default;
+        const theme =
+          document.documentElement.getAttribute("data-theme") === "dark"
+            ? "dark"
+            : "default";
+        window.mermaid.initialize({ startOnLoad: false, theme: theme });
+        window.mermaid.run({ querySelector: ".mermaid" });
+      },
+    );
+  } catch (e) {
+    console.warn("Mermaid failed to load", e);
+  }
+};
+
+// Theme toggle logic
 window.initThemeToggle = function () {
   const btn = document.getElementById("theme-toggle");
   if (!btn) return;
@@ -57,121 +132,10 @@ window.initThemeToggle = function () {
   });
 };
 
-window.initMermaid = async function () {
-  const graphs = document.querySelectorAll(".mermaid");
-  if (graphs.length === 0) return; // Stop if no diagrams
-
-  // Save original content for theme switching re-renders
-  graphs.forEach((g) => {
-    if (!g.getAttribute("data-original"))
-      g.setAttribute("data-original", g.innerHTML);
-  });
-
-  // Lazy Load Mermaid
-  try {
-    await import(
-      "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"
-    ).then((m) => {
-      window.mermaid = m.default;
-      const theme =
-        document.documentElement.getAttribute("data-theme") === "dark"
-          ? "dark"
-          : "default";
-      window.mermaid.initialize({ startOnLoad: false, theme: theme });
-      window.mermaid.run({ querySelector: ".mermaid" });
-    });
-  } catch (e) {
-    console.warn("Mermaid failed to load", e);
-  }
-};
-
-window.initMathJax = async function () {
-  // Basic heuristic: check for delimiters in text content
-  // We search the main content only to be efficient
-  const content = document.querySelector(".markdown-body");
-  if (!content) return;
-
-  const text = content.innerText;
-  // Check for $$ or \[ or \(
-  if (!text.includes("$$") && !text.includes("\\(") && !text.includes("\\["))
-    return;
-
-  // Lazy Load MathJax
-  window.MathJax = {
-    tex: {
-      inlineMath: [
-        ["$", "$"],
-        ["\\(", "\\)"],
-      ],
-      displayMath: [
-        ["$$", "$$"],
-        ["\\[", "\\]"],
-      ],
-      processEscapes: true,
-    },
-    svg: { fontCache: "global" },
-    startup: {
-      pageReady: () => {
-        return window.MathJax.startup.defaultPageReady();
-      },
-    },
-  };
-
-  await window.loadScript(
-    "https://cdn.jsdelivr.net/npm/mathjax@4implement-trie-prefix-tree/es5/tex-svg.js",
-    "mathjax-script",
-  );
-};
-
-window.initLucide = async function () {
-  // Only load if icons exist
-  if (!document.querySelector("[data-lucide]")) return;
-
-  await window.loadScript("https://unpkg.com/lucide@latest", "lucide-script");
-  if (window.lucide) window.lucide.createIcons();
-};
-
-// Theme
-// window.initThemeToggle = function () {
-//     const btn = document.getElementById('theme-toggle');
-//     if (!btn) return;
-//
-//     // Clone to remove old listeners
-//     const newBtn = btn.cloneNode(true);
-//     btn.parentNode.replaceChild(newBtn, btn);
-//
-//     newBtn.addEventListener('click', async () => {
-//         try {
-//             const current = document.documentElement.getAttribute('data-theme');
-//             const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-//             let target = (!current) ? (sysDark ? 'light' : 'dark') : (current === 'dark' ? 'light' : 'dark');
-//
-//             document.documentElement.setAttribute('data-theme', target);
-//             localStorage.setItem('theme', target);
-//
-//             // Update Mermaid Diagrams
-//             if (window.mermaid) {
-//                 const mermaidTheme = target === 'dark' ? 'dark' : 'default';
-//                 window.mermaid.initialize({ startOnLoad: false, theme: mermaidTheme });
-//
-//                 const graphs = document.querySelectorAll('.mermaid');
-//                 graphs.forEach(graph => {
-//                     const original = graph.getAttribute('data-original');
-//                     if (original) {
-//                         graph.removeAttribute('data-processed');
-//                         graph.innerHTML = original;
-//                     }
-//                 });
-//                 await window.mermaid.run({ querySelector: '.mermaid' });
-//             }
-//         } catch (e) { console.error(e); }
-//     });
-// };
-
-// Sidebar
-window.setupSidebarInteraction = function () {
+// Left sidebar logic
+window.setupLeftSidebarInteraction = function () {
   const toggleBtns = document.querySelectorAll(".sidebar-toggle.left-toggle");
-  const sidebar = document.getElementById("sidebar");
+  const sidebar = document.getElementById("left-sidebar");
   if (!toggleBtns.length || !sidebar) return;
 
   toggleBtns.forEach((btn) => {
@@ -180,13 +144,14 @@ window.setupSidebarInteraction = function () {
     newBtn.addEventListener("click", () => {
       sidebar.classList.toggle("collapsed");
       localStorage.setItem(
-        "sidebar-collapsed",
+        "left-sidebar",
         sidebar.classList.contains("collapsed"),
       );
     });
   });
 };
 
+// Right sidebar logic
 window.setupRightSidebarInteraction = function () {
   const toggleBtns = document.querySelectorAll(".sidebar-toggle.right-toggle");
   const sidebar = document.getElementById("right-sidebar");
@@ -198,16 +163,17 @@ window.setupRightSidebarInteraction = function () {
     newBtn.addEventListener("click", () => {
       sidebar.classList.toggle("collapsed");
       localStorage.setItem(
-        "right-sidebar-collapsed",
+        "right-sidebar",
         sidebar.classList.contains("collapsed"),
       );
     });
   });
 };
 
+// Sidebars autoclose on mobile logic
 window.setupMobileAutoClose = function () {
   document.body.addEventListener("click", (e) => {
-    if (window.innerWidth > 768) return;
+    if (window.innerWidth > 1280) return;
 
     const link = e.target.closest("a");
     const isGraphNode =
@@ -218,12 +184,12 @@ window.setupMobileAutoClose = function () {
     if (!link && !isGraphNode) return;
 
     // Close Sidebars
-    ["sidebar", "right-sidebar"].forEach((id) => {
+    ["left-sidebar", "right-sidebar"].forEach((id) => {
       const el = document.getElementById(id);
-      if (el && el.classList.contains("collapsed")) {
-        el.classList.remove("collapsed");
+      if (el && !el.classList.contains("collapsed")) {
+        el.classList.add("collapsed");
         localStorage.setItem(
-          id === "sidebar" ? "sidebar-collapsed" : "right-sidebar-collapsed",
+          id === "left-sidebar" ? "left-sidebar" : "right-sidebar",
           "true",
         );
       }
@@ -231,8 +197,9 @@ window.setupMobileAutoClose = function () {
   });
 };
 
-window.initSidebarSearch = function () {
-  const searchInput = document.getElementById("sidebar-search");
+// Navbar search
+window.initNavbarSearch = function () {
+  const searchInput = document.getElementById("navbar-search");
   if (!searchInput) return;
 
   // Remove old listeners by cloning (optional but safer in SPAs)
@@ -241,7 +208,7 @@ window.initSidebarSearch = function () {
 
   newInput.addEventListener("input", (e) => {
     const term = e.target.value.toLowerCase().trim();
-    const items = document.querySelectorAll(".sidebar.left-sidebar li");
+    const items = document.querySelectorAll("#left-sidebar li");
 
     items.forEach((item) => {
       const text = item.textContent.toLowerCase();
@@ -262,25 +229,6 @@ window.initSidebarSearch = function () {
   if (document.activeElement !== newInput) newInput.focus();
 };
 
-// --- 3. Graph & Canvas Logic ---
-window.toggleGraphExpand = function () {
-  const wrapper = document.getElementById("local-graph-wrapper");
-  if (!wrapper) return;
-  wrapper.classList.toggle("expanded");
-
-  const icon = wrapper.querySelector('button[title="Expand"] i');
-  if (icon) {
-    icon.setAttribute(
-      "data-lucide",
-      wrapper.classList.contains("expanded") ? "minimize-2" : "maximize-2",
-    );
-    if (window.lucide) window.lucide.createIcons();
-  }
-  setTimeout(() => {
-    window.dispatchEvent(new Event("resize"));
-  }, 50);
-};
-
 // Called from HTML to init canvas with Go data
 window.initCanvasMode = function (canvasData) {
   if (window.renderer) window.renderer.cleanup();
@@ -298,7 +246,44 @@ window.initCanvasMode = function (canvasData) {
   tryInitCanvas();
 };
 
-// --- 4. Utilities ---
+// Expands the graph
+window.toggleGraphExpand = function () {
+  const wrapper = document.getElementById("local-graph-wrapper");
+  if (!wrapper) return;
+  wrapper.classList.toggle("expanded");
+};
+
+// Highlights the sidebar link
+window.highlightSidebarLink = function () {
+  document
+    .querySelectorAll("#left-sidebar a")
+    .forEach((el) => el.classList.remove("text-accent"));
+
+  const normalize = (p) => {
+    if (!p) return "";
+    try {
+      p = decodeURIComponent(p);
+    } catch (e) {}
+    return p.length > 1 && p.endsWith("/") ? p.slice(0, -1) : p;
+  };
+
+  const currentPath = normalize(window.location.pathname);
+  const links = document.querySelectorAll("#left-sidebar a");
+
+  for (const link of links) {
+    const linkPath = normalize(link.getAttribute("href"));
+    if (linkPath === currentPath) {
+      link.classList.add("text-accent");
+      let parent = link.parentElement;
+      while (parent) {
+        if (parent.tagName === "DETAILS") parent.open = true;
+        parent = parent.parentElement;
+      }
+      break;
+    }
+  }
+};
+
 window.addCopyButtons = function () {
   document.querySelectorAll(".chroma").forEach((block) => {
     if (block.querySelector(".copy-code-btn")) return;
@@ -321,113 +306,24 @@ window.addCopyButtons = function () {
   });
 };
 
-window.highlightSidebarLink = function () {
-  document
-    .querySelectorAll(".sidebar a")
-    .forEach((el) => el.classList.remove("active"));
-
-  const normalize = (p) => {
-    if (!p) return "";
-    try {
-      p = decodeURIComponent(p);
-    } catch (e) {}
-    return p.length > 1 && p.endsWith("/") ? p.slice(0, -1) : p;
-  };
-
-  const currentPath = normalize(window.location.pathname);
-  const links = document.querySelectorAll(".sidebar a");
-
-  for (const link of links) {
-    const linkPath = normalize(link.getAttribute("href"));
-    if (linkPath === currentPath) {
-      link.classList.add("active");
-      let parent = link.parentElement;
-      while (parent) {
-        if (parent.tagName === "DETAILS") parent.open = true;
-        parent = parent.parentElement;
-      }
-      break;
-    }
-  }
-};
-
-// This should be in your initAll or DOMContentLoaded
-window.initSidebarState = function () {
-  const sidebar = document.getElementById("sidebar");
-  const rightSidebar = document.getElementById("right-sidebar");
-
-  // Double requestAnimationFrame ensures the DOM has fully painted
-  // the collapsed state before we turn on animations.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      if (sidebar) sidebar.classList.add("animate-ready");
-      if (rightSidebar) rightSidebar.classList.add("animate-ready");
-    });
-  });
-};
-
-// window.initAll = function() {
-//     window.initSidebarState();
-//     window.initSidebarSearch();
-//     window.setupSidebarInteraction();
-//     window.setupRightSidebarInteraction();
-//     window.initThemeToggle();
-//     window.addCopyButtons();
-//     window.highlightSidebarLink();
-//
-//     // Animate sidebars in only after JS loads
-//     const sb = document.getElementById('sidebar');
-//     const rsb = document.getElementById('right-sidebar');
-//     requestAnimationFrame(() => {
-//         if (sb) sb.classList.add('animate-ready');
-//         if (rsb) rsb.classList.add('animate-ready');
-//     });
-// };
-
+// Calls every init function
 window.initAll = function () {
-  // UI Setup (Instant)
-  window.setupSidebarInteraction();
-  window.setupRightSidebarInteraction();
   window.initThemeToggle();
-  window.addCopyButtons();
+  window.initNavbarSearch();
+  window.setupRightSidebarInteraction();
+  window.setupLeftSidebarInteraction();
   window.highlightSidebarLink();
-  window.initSidebarSearch();
+  window.addCopyButtons();
 
-  // Lazy Load Heavy Libs (Conditional)
-  // We run these concurrently
-  Promise.all([
-    window.initMermaid(),
-    window.initMathJax(),
-    window.initLucide(),
-  ]);
+  Promise.all([window.initMathJax(), window.initMermaid()]);
 };
 
-// --- 5. Event Listeners ---
 document.addEventListener("DOMContentLoaded", () => {
   window.initAll();
   window.setupMobileAutoClose();
-  // if (window.lucide) window.lucide.createIcons();
 });
 
-document.addEventListener("htmx:beforeSwap", (evt) => {
-  // 1. Temporarily disable animations before the new content is swapped in.
-  // This prevents the sidebar from "sliding" if the layout shifts slightly.
-  // const sidebar = document.getElementById('sidebar');
-  // const rightSidebar = document.getElementById('right-sidebar');
-  // if (sidebar) sidebar.classList.remove('animate-ready');
-  // if (rightSidebar) rightSidebar.classList.remove('animate-ready');
-});
-
-document.addEventListener("htmx:afterSwap", (evt) => {
-  // if (window.lucide) window.lucide.createIcons();
-  // if (window.mermaid) window.mermaid.run({ querySelector: '.mermaid' });
-  // if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
-  //
-  // window.initAll(); // Re-attach listeners to new DOM elements
-});
-
-document.addEventListener("htmx:afterSwap", (evt) => {
-  // Re-run checks on new content
+document.addEventListener("htmx:afterSwap", () => {
   window.initAll();
 
   // MathJax specific re-render if it was already loaded

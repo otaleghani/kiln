@@ -29,8 +29,8 @@ func runInit(cmd *cobra.Command, args []string) {
 		builder.InputDir = inputDir
 	}
 
-	setLogger()
+	log := getLogger()
 
 	// Trigger the creation of the vault directory and default files.
-	builder.Init()
+	builder.Init(log)
 }

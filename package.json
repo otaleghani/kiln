@@ -1,0 +1,27 @@
+{
+  "name": "kiln",
+  "version": "1.0.0",
+  "description": "> **Bake your Obsidian vault into a blazing fast static site.**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otaleghani/kiln.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/otaleghani/kiln/issues"
+  },
+  "homepage": "https://github.com/otaleghani/kiln#readme",
+  "devDependencies": {
+    "prettier": "^3.7.4",
+    "prettier-plugin-go-template": "^0.0.15"
+  }
+}

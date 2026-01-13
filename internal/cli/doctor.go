@@ -32,11 +32,11 @@ func runDoctor(cmd *cobra.Command, args []string) {
 	// Override the default input directory if the flag is set.
 	builder.InputDir = inputDir
 
-	setLogger()
+	log := getLogger()
 
 	// Collect all valid note paths to build a reference index.
 	notes := linter.CollectNotes(builder.InputDir)
 
 	// Scan content for links that point to non-existent notes.
-	linter.BrokenLinks(builder.InputDir, notes)
+	linter.BrokenLinks(builder.InputDir, notes, log)
 }

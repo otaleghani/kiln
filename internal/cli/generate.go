@@ -58,8 +58,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	builder.DisableTOC = disableTOC
 	builder.DisableLocalGraph = disableLocalGraph
 
-	setLogger()
+	log := getLogger()
 
 	// Trigger the build
-	builder.Build()
+	builder.Build(log)
 }

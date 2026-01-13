@@ -1,25 +1,25 @@
 package server
 
 import (
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/otaleghani/kiln/internal/log"
 )
 
 // Serve starts a simple static file server on the specified port.
 // It includes logic to handle "Clean URLs" (extensionless linking) and directory indices,
 // mimicking the behavior of production static hosting providers.
-func Serve(port, outputDir, baseURL string) {
+func Serve(port, outputDir, baseURL string, log *slog.Logger) {
 	// Determine path prefix
 	// If the user's BaseURL includes a path (e.g., "https://example.com/docs"),
 	// we need to serve the site under that prefix ("/docs") locally to match production.
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		log.Fatal("Couldn't parse baseURL", log.FieldError, err)
+		log.Error("Couldn't parse baseURL", "error", err)
+		os.Exit(1)
 	}
 	pathPrefix := u.Path
 
@@ -99,6 +99,7 @@ func Serve(port, outputDir, baseURL string) {
 
 	log.Info("Press Ctrl+C to stop")
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal("Server failed", log.FieldError, err)
+		log.Error("Server failed", "error", err)
+		os.Exit(1)
 	}
 }

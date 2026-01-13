@@ -222,7 +222,7 @@ A single Obsidian tag string. Whenever you define a tag the note representation 
 **Template:**
 ```html
 <span class="category">
-	{{ .Page | get "main_category" }} <!-- This prints the tag like #something -->
+	{{ .Page | get "main_category" }} <!-- This prints the tag like # something -->
 </span>
 
 <!-- Knowing the tag, you can retrieve all the pages with that tag like this -->

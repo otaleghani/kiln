@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      (function () {
+        // Check localStorage or System preference for prefered color scheme
+        const savedTheme = localStorage.getItem("theme");
+        const sysDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+
+        if (savedTheme === "dark" || (!savedTheme && sysDark)) {
+          document.documentElement.classList.add("dark");
+          document.documentElement.setAttribute("data-theme", "dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {{ template "head" . }}
+    <link rel="stylesheet" href="{{ .Site.BaseURL }}/style.css" />
+    <style>
+      /* Font definitions */
+      {{ .Site.Theme.Font.FontFaceReplaced }}
+
+      /* Variable definitions */
+      :root {
+        /* --- LIGHT THEME (Default) --- */
+        --bg-color: {{ .Site.Theme.Light.Bg }};
+        --text-color: {{ .Site.Theme.Light.Text }};
+        --sidebar-bg: {{ .Site.Theme.Light.SidebarBg }};
+        --sidebar-border: {{ .Site.Theme.Light.SidebarBorder }};
+        --accent-color: {{ .Site.Theme.Light.Accent }};
+        --hover-color: {{ .Site.Theme.Light.Hover }};
+
+        /* Palette */
+        --color-red: {{ .Site.Theme.Light.Red }};
+        --color-orange: {{ .Site.Theme.Light.Orange }};
+        --color-yellow: {{ .Site.Theme.Light.Yellow }};
+        --color-green: {{ .Site.Theme.Light.Green }};
+        --color-blue: {{ .Site.Theme.Light.Blue }};
+        --color-purple: {{ .Site.Theme.Light.Purple }};
+        --color-cyan: {{ .Site.Theme.Light.Cyan }};
+        --color-comment: {{ .Site.Theme.Light.Comment }};
+
+        --sidebar-width: 280px;
+        --font-main: {{ .Site.Theme.Font.Family }}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      /* --- DARK THEME OVERRIDES (Data Attribute) --- */
+      :root[data-theme="dark"] {
+        --bg-color: {{ .Site.Theme.Dark.Bg }};
+        --text-color: {{ .Site.Theme.Dark.Text }};
+        --sidebar-bg: {{ .Site.Theme.Dark.SidebarBg }};
+        --sidebar-border: {{ .Site.Theme.Dark.SidebarBorder }};
+        --accent-color: {{ .Site.Theme.Dark.Accent }};
+        --hover-color: {{ .Site.Theme.Dark.Hover }};
+
+        --color-red: {{ .Site.Theme.Dark.Red }};
+        --color-orange: {{ .Site.Theme.Dark.Orange }};
+        --color-yellow: {{ .Site.Theme.Dark.Yellow }};
+        --color-green: {{ .Site.Theme.Dark.Green }};
+        --color-blue: {{ .Site.Theme.Dark.Blue }};
+        --color-purple: {{ .Site.Theme.Dark.Purple }};
+        --color-cyan: {{ .Site.Theme.Dark.Cyan }};
+        --color-comment: {{ .Site.Theme.Dark.Comment }};
+      }
+
+      /* --- DARK THEME OVERRIDES (System Preference) --- */
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg-color: {{ .Site.Theme.Dark.Bg }};
+          --text-color: {{ .Site.Theme.Dark.Text }};
+          --sidebar-bg: {{ .Site.Theme.Dark.SidebarBg }};
+          --sidebar-border: {{ .Site.Theme.Dark.SidebarBorder }};
+          --accent-color: {{ .Site.Theme.Dark.Accent }};
+          --hover-color: {{ .Site.Theme.Dark.Hover }};
+
+          --color-red: {{ .Site.Theme.Dark.Red }};
+          --color-orange: {{ .Site.Theme.Dark.Orange }};
+          --color-yellow: {{ .Site.Theme.Dark.Yellow }};
+          --color-green: {{ .Site.Theme.Dark.Green }};
+          --color-blue: {{ .Site.Theme.Dark.Blue }};
+          --color-purple: {{ .Site.Theme.Dark.Purple }};
+          --color-cyan: {{ .Site.Theme.Dark.Cyan }};
+          --color-comment: {{ .Site.Theme.Dark.Comment }};
+        }
+      }
+    </style>
+    <script src="{{ .Site.BaseURL }}/app.js" defer></script>
+    <script src="{{ .Site.BaseURL }}/graph.js" defer></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+  </head>
+  <body
+    hx-boost="true"
+    hx-swap="outerHTML"
+    class="bg-background relative overflow-hidden h-screen"
+  >
+    <header
+      class="p-4 flex justify-between gap-4 items-center max-w-prose mx-auto w-full text-accent fixed z-50 top-0 inset-x-0 bg-sidebar md:rounded-xl md:mt-4 border border-sidebar-border"
+    >
+      <div class="w-full overflow-scroll">
+        {{ template "breadcrumbs" . }}
+      </div>
+      <div class="flex gap-2 items-center">
+        {{ template "theme-toggler" }}
+        {{ if (not .Site.DisableTOC) }}
+          {{ template "toc-button" }}
+        {{ end }}
+        {{ if (not .Site.DisableLocalGraph) }}
+          {{ template "local-graph-button" }}
+        {{ end }}
+        {{ template "graph-button" }}
+        {{ template "menu-button" }}
+      </div>
+    </header>
+    <!-- Main content -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-scroll markdown-body">
+      {{ template "page-name" . }}
+      {{ template "content-canvas" . }}
+      {{ template "content-note" . }}
+      {{ template "content-graph" . }}
+      {{ template "content-base" . }}
+      {{ template "content-folder" . }}
+      {{ template "content-tag" . }}
+    </main>
+    {{ template "menu" . }}
+    {{ if (not .Site.DisableTOC) }}
+      {{ template "toc-container" . }}
+    {{ end }}
+    {{ if (not .Site.DisableLocalGraph) }}
+      {{ template "local-graph-container" . }}
+    {{ end }}
+  </body>
+</html>
+
+{{ define "menu-button" }}
+  <div>
+    <button
+      id="menu-button"
+      aria-label="Toggle navbar"
+      title="Navbar"
+      class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="h-5 w-5 text-foreground"
+        id="menu-icon"
+      >
+        <path d="M4 5h16" />
+        <path d="M4 12h16" />
+        <path d="M4 19h16" />
+      </svg>
+    </button>
+  </div>
+{{ end }}
+
+{{ define "menu" }}
+  <div
+    class="fixed inset-0 z-40 bg-background pb-4 hidden overflow-scroll p-4 md:p-0"
+    id="menu-wrapper"
+  >
+    <nav
+      class="max-w-prose mx-auto w-full rounded-xl border border-sidebar-border p-6 mt-20 md:mt-24"
+    >
+      <ul>
+        {{ template "navbar" .Site.NavbarRoot.Children }}
+      </ul>
+    </nav>
+    <footer class="p-6 text-sm text-center item-end">
+      Generated with
+      <a href="https://kiln.talesign.com" target="_blank" class="underline"
+        >Kiln</a
+      >
+      •
+      <a
+        href="https://github.com/otaleghani/kiln"
+        target="_blank"
+        class="underline"
+        >Github</a
+      >
+    </footer>
+  </div>
+{{ end }}
+
+{{ define "toc-button" }}
+  <div>
+    <button
+      id="toc-button"
+      aria-label="Toggle table of contents"
+      title="Table of contents"
+      class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="h-5 w-5 text-foreground"
+        id="toc-icon"
+      >
+        <path d="M16 5H3" />
+        <path d="M16 12H3" />
+        <path d="M16 19H3" />
+        <path d="M21 5h.01" />
+        <path d="M21 12h.01" />
+        <path d="M21 19h.01" />
+      </svg>
+    </button>
+  </div>
+{{ end }}
+{{ define "toc-container" }}
+  <div
+    class="fixed inset-0 z-40 bg-background pb-4 hidden overflow-scroll p-4 md:p-0"
+    id="toc-wrapper"
+  >
+    <div
+      class="max-w-prose mx-auto w-full rounded-xl border border-sidebar-border p-6 mt-20 md:mt-24"
+    >
+      {{ template "toc" . }}
+    </div>
+  </div>
+{{ end }}
+
+{{ define "local-graph-button" }}
+  <div>
+    <button
+      id="local-graph-button"
+      aria-label="Toggle local graph"
+      title="Local graph"
+      class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="w-5 h-5 text-foreground"
+        id="local-graph-icon"
+      >
+        <circle cx="12" cy="4.5" r="2.5" />
+        <path d="m10.2 6.3-3.9 3.9" />
+        <circle cx="4.5" cy="12" r="2.5" />
+        <path d="M7 12h10" />
+        <circle cx="19.5" cy="12" r="2.5" />
+        <path d="m13.8 17.7 3.9-3.9" />
+        <circle cx="12" cy="19.5" r="2.5" />
+      </svg>
+    </button>
+  </div>
+{{ end }}
+{{ define "local-graph-container" }}
+  <div
+    class="fixed inset-0 z-40 bg-background pb-4 hidden overflow-scroll p-4 md:p-0"
+    id="local-graph-wrapper"
+  >
+    <div
+      class="max-w-prose mx-auto w-full rounded-xl border border-sidebar-border p-6 mt-20 md:mt-24"
+    >
+      <div id="local-graph-container"></div>
+    </div>
+  </div>
+{{ end }}
+
+
+<!-- NAVBAR -->
+{{ define "navbar" }}
+  {{ range . }}
+    <li class="py-1 pl-4">
+      {{ if .IsFolder }}
+        <details class="[&[open]>summary>svg]:rotate-90">
+          <summary
+            class="relative flex cursor-pointer items-center list-none font-bold"
+          >
+            <svg
+              class="h-4 w-4 mr-2 opacity-50 transition-transform duration-200 -ml-6"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+            <a href="{{ .Path }}" class="">{{ .Name }}</a>
+          </summary>
+          <ul class="border-l border-l-sidebar-border py-0.5 pl-6 -ml-4">
+            {{ template "navbar" .Children }}
+          </ul>
+        </details>
+      {{ else }}
+        <a href="{{ .Path }}" class="flex items-baseline gap-2">
+          <span>{{ .Name }}</span>
+          {{ if .IsCanvas }}
+            <span
+              class="uppercase text-[8px] bg-sidebar-border rounded px-1 py-0.5 font-bold tracking-wider"
+              >Canvas</span
+            >
+          {{ end }}
+          {{ if .IsBase }}
+            <span
+              class="uppercase text-[8px] bg-sidebar-border rounded px-1 py-0.5 font-bold tracking-wider"
+              >Base</span
+            >
+          {{ end }}
+        </a>
+      {{ end }}
+    </li>
+  {{ end }}
+{{ end }}
+
+{{ define "theme-toggler" }}
+  <button
+    id="theme-toggle"
+    aria-label="Toggle theme"
+    title="Toggle theme"
+    class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+  >
+    <!-- Sun -->
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="block dark:hidden w-5 h-5 text-foreground"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </svg>
+    <!-- Moon -->
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="hidden dark:block w-5 h-5 text-foreground"
+    >
+      <path
+        d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"
+      />
+    </svg>
+  </button>
+{{ end }}
+
+{{ define "graph-button" }}
+  <a
+    href="{{ .Site.BaseURL }}/graph"
+    class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="w-5 h-5 text-foreground"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+      <path d="M2 12h20" />
+    </svg>
+  </a>
+{{ end }}
+
+{{ define "breadcrumbs" }}
+  <nav
+    class="flex items-center text-sm text-foreground opacity-85 flex-nowrap text-nowrap overflow-x-auto py-2"
+  >
+    {{ range $index, $element := .Breadcrumbs }}
+
+      {{ if $index }}
+        <span class="mx-2 text-foreground select-none hidden md:block">/</span>
+      {{ end }}
+
+      {{ if eq $index 0 }}
+        <a
+          href="{{ $element.Url }}"
+          class="text-accent hover:underline transition-colors"
+        >
+          {{ $.Site.SiteName }}
+        </a>
+      {{ else }}
+        <a
+          href="{{ $element.Url }}"
+          class="text-foreground hover:text-accent hover:underline transition-colors hidden md:block"
+        >
+          {{ $element.Label }}
+        </a>
+      {{ end }}
+
+    {{ end }}
+  </nav>
+{{ end }}
+
+
+<!-- page-name is used for the local graph -->
+{{ define "page-name" }}
+  {{ if and (not .IsFolder) (not .IsTag) }}
+    <div id="page-title-data" data-title="{{ .File.WebPath }}" hidden></div>
+  {{ end }}
+  {{ if .IsFolder }}
+    <div id="page-title-data" data-title="{{ .Folder.WebPath }}" hidden></div>
+  {{ end }}
+  {{ if .IsTag }}
+    <div id="page-title-data" data-title="{{ .Tag.WebPath }}" hidden></div>
+  {{ end }}
+{{ end }}
+
+
+<!-- Content: Canvas -->
+{{ define "content-canvas" }}
+  {{ if .IsCanvas }}
+    <div class="canvas-mode" id="content">
+      <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+      <script src="{{ .Site.BaseURL }}/canvas.js"></script>
+      <div id="viewport">
+        <div id="canvas-world">
+          <svg id="edges-layer"></svg>
+        </div>
+      </div>
+      <div id="canvas-controls">
+        <button
+          onclick="window.renderer.zoomOut()"
+          class="canvas-btn icon-minus"
+          aria-label="Zoom Out"
+        ></button>
+        <button
+          onclick="window.renderer.resetView()"
+          class="canvas-btn icon-maximize"
+          aria-label="Reset View"
+        ></button>
+        <button
+          onclick="window.renderer.zoomIn()"
+          class="canvas-btn icon-plus"
+          aria-label="Zoom In"
+        ></button>
+      </div>
+  <script>
+    (function() {
+      var data = {{.CanvasContent}};
+      if (window.initCanvasMode) {
+        // Navigating via HTMX (App is already loaded)
+        window.initCanvasMode(data);
+      } else {
+        // F5 Refresh (App is 'defer' and hasn't loaded yet)
+        document.addEventListener('DOMContentLoaded', function() {
+          if (window.initCanvasMode) window.initCanvasMode(data);
+        });
+      }
+    })();
+ </script>
+    </div>
+  {{ end }}
+{{ end }}
+
+
+<!-- Content: Note -->
+{{ define "content-note" }}
+  {{ if .IsNote }}
+    <div class="p-4 content pt-26 w-full">
+      {{ .Content }}
+    </div>
+  {{ end }}
+{{ end }}
+
+{{ define "content-graph" }}
+  {{ if .IsGraph }}
+    <div class="canvas-mode" id="content">
+      {{ .Content }}
+    </div>
+  {{ end }}
+{{ end }}
+
+
+<!-- TOC -->
+{{ define "toc" }}
+  {{ if not .Site.DisableTOC }}
+    <div id="toc-container">
+      {{ if .TOC }}
+        <header
+          class="flex justify-between items-center py-2 border-b border-sidebar-border mb-4"
+        >
+          <span class="font-bold">Table of contents</span>
+        </header>
+        <div>{{ .TOC }}</div>
+        <script>
+          // Find the specific container
+
+          if (document.getElementById("toc-container")) {
+            // Select all links inside the container
+            const links = document
+              .getElementById("toc-container")
+              .querySelectorAll("a");
+
+            // Iterate over each link and add the click event listener
+            links.forEach((link) => {
+              link.addEventListener("click", function () {
+                window.toggleTOC();
+              });
+            });
+          }
+        </script>
+      {{ end }}
+    </div>
+  {{ end }}
+{{ end }}
+
+
+<!-- BASES -->
+{{ define "content-base" }}
+  {{ if .IsBase }}
+    <div id="content" class="content pt-24">
+      {{ if eq (index .Base.File.Views 0).Type "table" }}
+        {{ template "table" . }}
+      {{ end }}
+      {{ if eq (index .Base.File.Views 0).Type "cards" }}
+        {{ template "cards" . }}
+      {{ end }}
+      {{ if eq (index .Base.File.Views 0).Type "list" }}
+        {{ template "list" . }}
+      {{ end }}
+    </div>
+  {{ end }}
+{{ end }}
+
+{{ define "table" }}
+  <div class="w-full font-main text-foreground">
+    <div
+      class="overflow-x-auto border-b border-b-sidebar-border bg-background mb-4"
+    >
+      <table class="w-full border-collapse border-spacing-0 text-sm">
+        <thead>
+          <tr>
+            {{ range .Base.Columns }}
+              <th
+                class="bg-sidebar text-foreground font-semibold text-left px-3 py-2.5 border-b border-r border-sidebar-border whitespace-nowrap last:border-r-0"
+              >
+                {{ getDisplayName $.Base.File . }}
+              </th>
+            {{ end }}
+          </tr>
+        </thead>
+
+        <tbody>
+          {{ if .Base.Groups }}
+            {{ range $group := .Base.Groups }}
+              <tr class="group-row">
+                <td
+                  colspan="{{ len $.Base.Columns }}"
+                  class="bg-sidebar text-foreground font-bold text-[0.95em] px-3 py-2 text-left border-b border-sidebar-border"
+                >
+                  {{ $group.Key }}
+                  <span class="font-normal opacity-70 text-sm ml-1">
+                    ({{ len $group.Notes }})
+                  </span>
+                </td>
+              </tr>
+
+              {{ range $note := $group.Notes }}
+                <tr class="hover:bg-hover transition-colors">
+                  {{ range $col := $.Base.Columns }}
+                    <td
+                      class="px-3 py-2 border-b border-r border-sidebar-border align-top leading-snug last:border-r-0 empty:bg-foreground/5"
+                    >
+                      {{ if eq $col "file.name" }}
+                        <a
+                          href="{{ $note.WebPath }}"
+                          class="text-accent font-medium no-underline hover:underline"
+                        >
+                          {{ $note.Name }}
+                        </a>
+                      {{ else }}
+                        {{ $val := getValue $.Site $note $col }}
+                        {{ if $val }}
+                          <div class="[&_ul]:pl-5">
+                            {{ $val | safe }}
+                          </div>
+                        {{ end }}
+                      {{ end }}
+                    </td>
+                  {{ end }}
+                </tr>
+              {{ end }}
+            {{ end }}
+
+          {{ else }}
+            {{ range $note := .Base.Notes }}
+              <tr class="hover:bg-hover transition-colors">
+                {{ range $col := $.Base.Columns }}
+                  <td
+                    class="px-3 py-2 border-b border-r border-sidebar-border align-top leading-snug last:border-r-0 empty:bg-foreground/5"
+                  >
+                    {{ if eq $col "file.name" }}
+                      <a
+                        href="{{ $note.WebPath }}"
+                        class="text-accent font-medium no-underline hover:underline"
+                      >
+                        {{ $note.Name }}
+                      </a>
+                    {{ else }}
+                      {{ $val := getValue $.Site $note $col }}
+                      {{ if $val }}
+                        <div class="[&_ul]:pl-5">
+                          {{ $val | safe }}
+                        </div>
+                      {{ end }}
+                    {{ end }}
+                  </td>
+                {{ end }}
+              </tr>
+            {{ end }}
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{{ end }}
+
+{{ define "cards" }}
+  <div class="my-4 w-full font-main text-foreground p-4 overflow-y-auto">
+    {{ if .Base.Groups }}
+      {{ range $group := .Base.Groups }}
+        <div class="mb-6">
+          <h3
+            class="mb-3 font-bold text-lg border-b border-sidebar-border pb-1"
+          >
+            {{ $group.Key }}
+            <span class="font-normal opacity-70 text-sm ml-1"
+              >({{ len $group.Notes }})</span
+            >
+          </h3>
+          <div
+            class="grid gap-4 mb-8"
+            style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));"
+          >
+            {{ range $note := $group.Notes }}
+              {{ template "card_item" (dict "Site" $.Site "Note" $note "Columns" $.Base.Columns) }}
+            {{ end }}
+          </div>
+        </div>
+      {{ end }}
+
+    {{ else }}
+      <div
+        class="grid gap-4 mb-8"
+        style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));"
+      >
+        {{ range $note := .Base.Notes }}
+          {{ template "card_item" (dict "Site" $.Site "Note" $note "Columns" $.Base.Columns) }}
+        {{ end }}
+      </div>
+    {{ end }}
+  </div>
+{{ end }}
+
+{{ define "card_item" }}
+  <div
+    class="bg-background border border-sidebar-border rounded-lg p-4 shadow-sm flex flex-col transition-all duration-100 ease-in-out hover:-translate-y-0.5 hover:shadow-md hover:border-accent"
+  >
+    <div class="text-lg font-bold mb-3 border-b border-sidebar-border pb-2">
+      <a
+        href="{{ .Note.WebPath }}"
+        class="text-foreground no-underline hover:text-accent hover:underline"
+      >
+        {{ .Note.Name }}
+      </a>
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      {{ range $col := .Columns }}
+        {{ if ne $col "file.name" }}
+          <div class="flex justify-between text-sm leading-snug">
+            <span class="text-foreground/60 font-medium mr-2.5 shrink-0"
+              >{{ $col }}:</span
+            >
+            <span class="text-foreground text-right break-words">
+              {{ $val := getValue $.Site $.Note $col }}
+              {{ if $val }}
+                {{ $val | safe }}
+              {{ else }}
+                <span class="text-sidebar-border">-</span>
+              {{ end }}
+            </span>
+          </div>
+        {{ end }}
+      {{ end }}
+    </div>
+  </div>
+{{ end }}
+
+{{ define "list" }}
+  <div class="p-4 w-full font-main text-foreground">
+    {{ if .Base.Groups }}
+      {{ range $group := .Base.Groups }}
+        <div class="mb-6">
+          <h3
+            class="mb-3 font-bold text-lg border-b border-sidebar-border pb-1"
+          >
+            {{ $group.Key }}
+            <span class="font-normal opacity-70 text-sm ml-1"
+              >({{ len $group.Notes }})</span
+            >
+          </h3>
+          <ul
+            class="list-none p-0 m-0 mb-8 border border-sidebar-border rounded-md bg-background"
+          >
+            {{ range $note := $group.Notes }}
+              {{ template "list_item" (dict "Site" $.Site "Note" $note "Columns" $.Base.Columns) }}
+            {{ end }}
+          </ul>
+        </div>
+      {{ end }}
+    {{ else }}
+      <ul
+        class="list-none p-0 m-0 mb-8 border border-sidebar-border rounded-md bg-background"
+      >
+        {{ range $note := .Base.Notes }}
+          {{ template "list_item" (dict "Site" $.Site "Note" $note "Columns" $.Base.Columns) }}
+        {{ end }}
+      </ul>
+    {{ end }}
+  </div>
+{{ end }}
+
+{{ define "list_item" }}
+  <li
+    class="flex justify-between items-center px-4 py-2.5 border-b border-sidebar-border last:border-b-0 transition-colors hover:bg-hover overflow-x-auto"
+  >
+    <div class="flex-1">
+      <a
+        href="{{ .Note.WebPath }}"
+        class="font-medium text-foreground text-[0.95em] no-underline hover:text-accent hover:underline"
+      >
+        {{ .Note.Name }}
+      </a>
+    </div>
+
+    <div class="flex gap-2 text-xs ml-4 items-start">
+      {{ range $col := .Columns }}
+        {{ if ne $col "file.name" }}
+          {{ $val := getValue $.Site $.Note $col }}
+          {{ if $val }}
+            <span
+              class="text-nowrap bg-sidebar border border-sidebar-border rounded px-1.5 py-0.5 text-foreground/80 max-w-[150px] truncate"
+            >
+              {{ $val | safe }}
+            </span>
+          {{ end }}
+        {{ end }}
+      {{ end }}
+    </div>
+  </li>
+{{ end }}
+
+{{ define "content-folder" }}
+  {{ if .IsFolder }}
+    <div
+      class="my-4 w-full font-main text-foreground p-4 max-w-prose mx-auto pt-24"
+    >
+      <h1
+        class="mt-0 mb-6 text-3xl border-b border-sidebar-border pb-2 text-foreground font-semibold"
+      >
+        Folder:
+        {{ .Folder.Name }}
+      </h1>
+
+      <ul
+        class="list-none p-0 m-0 mb-8 border border-sidebar-border rounded-md bg-background"
+      >
+        {{ range .Folder.Folders }}
+          <li
+            class="flex justify-between items-center px-4 py-2.5 border-b border-sidebar-border last:border-b-0 transition-colors hover:bg-hover"
+          >
+            <div class="flex items-center">
+              <span class="mr-2 opacity-70 text-lg">📁</span>
+              <a
+                href="{{ .WebPath }}"
+                class="font-semibold text-foreground text-[0.95em] no-underline hover:text-accent hover:underline"
+              >
+                {{ .Name }}
+              </a>
+            </div>
+          </li>
+        {{ end }}
+
+        {{ range .Folder.Files }}
+          <li
+            class="flex justify-between items-center px-4 py-2.5 border-b border-sidebar-border last:border-b-0 transition-colors hover:bg-hover"
+          >
+            <div class="flex items-center">
+              <span class="mr-2 opacity-70 text-lg">📄</span>
+              <a
+                href="{{ .WebPath }}"
+                class="font-medium text-foreground text-[0.95em] no-underline hover:text-accent hover:underline"
+              >
+                {{ .Name }}
+              </a>
+            </div>
+            <div class="flex gap-2 text-xs ml-4">
+              <span class="text-foreground/60" title="Last Modified">
+                {{ .Modified | formatDate }}
+              </span>
+            </div>
+          </li>
+        {{ end }}
+      </ul>
+    </div>
+  {{ end }}
+{{ end }}
+
+{{ define "content-tag" }}
+  {{ if .IsTag }}
+    <div
+      class="my-4 w-full font-main text-foreground p-4 max-w-prose mx-auto pt-24"
+      id="content"
+    >
+      <h1
+        class="mt-0 mb-6 text-3xl border-b border-sidebar-border pb-2 text-foreground font-semibold"
+      >
+        Tag:
+        {{ .Tag.Name }}
+      </h1>
+      <ul
+        class="list-none p-0 m-0 mb-8 border border-sidebar-border rounded-md bg-background"
+      >
+        {{ range .Tag.Files }}
+          <li
+            class="flex justify-between items-center px-4 py-2.5 border-b border-sidebar-border last:border-b-0 transition-colors hover:bg-hover"
+          >
+            <div class="flex items-center">
+              <span class="mr-2 opacity-70 text-lg">📄</span>
+              <a
+                href="{{ .WebPath }}"
+                class="font-medium text-foreground text-[0.95em] no-underline hover:text-accent hover:underline"
+              >
+                {{ .Name }}
+              </a>
+            </div>
+            <div class="flex gap-2 text-xs ml-4">
+              <span class="text-foreground/60" title="Last Modified">
+                {{ .Modified | formatDate }}
+              </span>
+            </div>
+          </li>
+        {{ end }}
+      </ul>
+    </div>
+  {{ end }}
+{{ end }}
+
+{{ define "head" }}
+  {{ if and (not .IsFolder) (not .IsTag) }}
+    <title>
+      {{ if .Frontmatter.title }}
+        {{ .Frontmatter.title }}
+      {{ else }}
+        {{ .File.Name }}
+      {{ end }}
+      •
+      {{ .Site.SiteName }}
+    </title>
+    <meta
+      name="description"
+      content="{{ if .Frontmatter.description }}
+        {{ .Frontmatter.description }}
+      {{ else }}
+        Notes on
+        {{ .File.Name }}
+      {{ end }}"
+    />
+    <meta property="og:title" content="{{ .File.Name }}" />
+  {{ end }}
+
+  {{ if .IsFolder }}
+    <title>{{ .Folder.RelPath }} • {{ .Site.SiteName }}</title>
+    <meta name="description" content="{{ .Folder.RelPath }}" />
+    <meta property="og:title" content="{{ .Folder.RelPath }}" />
+  {{ end }}
+  {{ if .IsTag }}
+    <title>{{ .Tag.Name }} • {{ .Site.SiteName }}</title>
+    <meta name="description" content="{{ .Tag.Name }}" />
+    <meta property="og:title" content="{{ .Tag.Name }}" />
+  {{ end }}
+{{ end }}

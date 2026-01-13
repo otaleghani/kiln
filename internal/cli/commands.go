@@ -3,9 +3,12 @@
 package cli
 
 import (
+	"log/slog"
+	"os"
 	"strings"
 
-	"github.com/otaleghani/kiln/internal/log"
+	"github.com/charmbracelet/log"
+
 	"github.com/spf13/cobra"
 )
 
@@ -88,20 +91,26 @@ It supports wikilinks, callouts, mermaid diagrams, and graph visualization.`,
 	rootCmd.AddCommand(cmdClean)    // Removes generated artifacts
 	rootCmd.AddCommand(cmdDoctor)   // Checks for common issues
 	rootCmd.AddCommand(cmdStats)    // Displays vault statistics
+	rootCmd.AddCommand(cmdVersion)  // Version of the program
 
 	return rootCmd
 }
 
-// setLogger creates a new default logger with the level based on the given log flag
-func setLogger() {
-	var l *log.Logger
+// getLogger creates a new default logger with the level based on the given log flag
+func getLogger() *slog.Logger {
+	// handler := log.New(os.Stderr)
+	handler := log.New(os.Stderr)
+	handler.SetReportTimestamp(true)
+	handler.SetFormatter(log.TextFormatter)
+
 	switch strings.ToLower(logger) {
 	case "debug":
-		l = log.New(log.LevelDebug)
+		handler.SetLevel(log.DebugLevel)
 	case "info":
-		l = log.New(log.LevelInfo)
+		handler.SetLevel(log.InfoLevel)
 	default:
-		l = log.New(log.LevelInfo)
+		handler.SetLevel(log.InfoLevel)
 	}
-	log.SetDefault(l)
+
+	return slog.New(handler)
 }

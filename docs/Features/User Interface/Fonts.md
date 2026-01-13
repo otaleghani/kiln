@@ -1,7 +1,9 @@
 ---
 title: Fonts & Typography
 description: Kiln includes a selection of high-quality, self-hosted Google Fonts that are baked directly into your site for maximum performance and privacy.
+tags:
 ---
+#user-interface
 # Fonts & Typography
 
 Typography is the foundation of a readable site. Kiln allows you to choose from a curated selection of typefaces to match your site's aesthetic.
@@ -16,12 +18,18 @@ Crucially, Kiln uses a **Zero-Dependency** approach for fonts.
 
 You can select one of the following typeface options during the build process:
 
-| ID | Name | Style | Best For |
-| :--- | :--- | :--- | :--- |
-| `system` | **System UI** | Sans-serif | Performance purists. Uses the native font of the user's OS (San Francisco on Mac, Segoe UI on Windows). |
-| `inter` | **Inter** | Sans-serif | Clean, modern, highly legible. The standard for modern site. |
-| `lato` | **Lato** | Sans-serif | Friendly and stable. Good for blogs and softer aesthetics. |
-| `merriweather` | **Merriweather** | Serif | Excellent for long-form reading and dense text. |
+| **ID**              | **Name**              | **Style**  | **Best For**                                                                                            |
+| ------------------- | --------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| `system`            | **System UI**         | Sans-serif | Performance purists. Uses the native font of the user's OS (San Francisco on Mac, Segoe UI on Windows). |
+| `inter`             | **Inter**             | Sans-serif | Clean, modern, highly legible. The standard for modern sites.                                           |
+| `lato`              | **Lato**              | Sans-serif | Friendly and stable. Good for blogs and softer aesthetics.                                              |
+| `merriweather`      | **Merriweather**      | Serif      | Excellent for long-form reading and dense text.                                                         |
+| `lora`              | **Lora**              | Serif      | Contemporary with calligraphic roots. Elegant and perfect for storytelling or essays.                   |
+| `libre-baskerville` | **Libre Baskerville** | Serif      | Traditional and open. Specifically optimized for reading body text on screens.                          |
+| `noto-serif`        | **Noto Serif**        | Serif      | A universal, reliable serif. Clean, balanced, and highly compatible.                                    |
+| `ibm-plex-sans`     | **IBM Plex Sans**     | Sans-serif | Neutral and technical. Excellent for technical documentation and data-heavy sites.                      |
+| `google-sans`       | **Google Sans**       | Sans-serif | Geometric and simple. The distinctive, clean look used across Google products.                          |
+| `roboto`            | **Roboto**            | Sans-serif | Mechanical skeleton with friendly curves. A widely used, neutral standard.                              |
 
 ## Configuration
 

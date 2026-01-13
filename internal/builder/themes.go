@@ -1,7 +1,8 @@
 package builder
 
 import (
-	"log"
+	"html/template"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,9 +42,10 @@ type Theme struct {
 
 // FontData holds the metadata and CSS required to render a specific font family.
 type FontData struct {
-	Family   string   // The CSS font-family string (e.g., "'Inter', sans-serif")
-	Files    []string // List of filenames (e.g., .woff2) that need to be extracted
-	FontFace string   // The raw CSS @font-face declaration to inject into the stylesheet
+	Family           template.CSS // The CSS font-family string (e.g., "'Inter', sans-serif")
+	Files            []string     // List of filenames (e.g., .woff2) that need to be extracted
+	FontFace         template.CSS // The raw CSS @font-face declaration to inject into the stylesheet
+	FontFaceReplaced template.CSS
 }
 
 // fonts is a registry of available font configurations supported by the builder.
@@ -58,14 +60,14 @@ var fonts = map[string]*FontData{
 				font-style: normal;
 				font-weight: 400;
 				font-display: swap;
-				src: url('./Inter-Regular.woff2') format('woff2');
+				src: url('{{.Site.BaseURL}}/Inter-Regular.woff2') format('woff2');
 			}
 			@font-face {
 				font-family: 'Inter';
 				font-style: normal;
 				font-weight: 700;
 				font-display: swap;
-				src: url('./Inter-Bold.woff2') format('woff2');
+				src: url('{{.Site.BaseURL}}/Inter-Bold.woff2') format('woff2');
 			}
 		`,
 	},
@@ -78,14 +80,14 @@ var fonts = map[string]*FontData{
 				font-style: normal;
 				font-weight: 400;
 				font-display: swap;
-				src: url('./Lato-Regular.woff2') format('woff2');
+				src: url('{{.Site.BaseURL}}/Lato-Regular.woff2') format('woff2');
 			}
 			@font-face {
 				font-family: 'Lato';
 				font-style: normal;
 				font-weight: 700;
 				font-display: swap;
-				src: url('./Lato-Bold.woff2') format('woff2');
+				src: url('{{.Site.BaseURL}}/Lato-Bold.woff2') format('woff2');
 			}
 		`,
 	},
@@ -98,14 +100,134 @@ var fonts = map[string]*FontData{
 				font-style: normal;
 				font-weight: 400;
 				font-display: swap;
-				src: url('./Merriweather-Regular.woff2') format('woff2');
+				src: url('{{.Site.BaseURL}}/Merriweather-Regular.woff2') format('woff2');
 			}
 			@font-face {
 				font-family: 'Merriweather';
 				font-style: normal;
 				font-weight: 700;
 				font-display: swap;
-				src: url('./Merriweather-Bold.woff2') format('woff2');
+				src: url('{{.Site.BaseURL}}/Merriweather-Bold.woff2') format('woff2');
+			}
+		`,
+	},
+	"lora": {
+		Family: "'Lora', serif",
+		Files:  []string{"Lora-Regular.woff2", "Lora-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'Lora';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/Lora-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'Lora';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/Lora-Bold.woff2') format('woff2');
+			}
+		`,
+	},
+	"libre-baskerville": {
+		Family: "'Libre Baskerville', serif",
+		Files:  []string{"LibreBaskerville-Regular.woff2", "LibreBaskerville-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'Libre Baskerville';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/LibreBaskerville-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'Libre Baskerville';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/LibreBaskerville-Bold.woff2') format('woff2');
+			}
+		`,
+	},
+	"noto-serif": {
+		Family: "'Noto Serif', serif",
+		Files:  []string{"NotoSerif-Regular.woff2", "NotoSerif-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'Noto Serif';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/NotoSerif-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'Noto Serif';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/NotoSerif-Bold.woff2') format('woff2');
+			}
+		`,
+	},
+	"ibm-plex-sans": {
+		Family: "'IBM Plex Sans', sans-serif",
+		Files:  []string{"IBMPlexSans-Regular.woff2", "IBMPlexSans-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'IBM Plex Sans';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/IBMPlexSans-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'IBM Plex Sans';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/IBMPlexSans-Bold.woff2') format('woff2');
+			}
+		`,
+	},
+	"google-sans": {
+		Family: "'Google Sans', sans-serif",
+		Files:  []string{"GoogleSans-Regular.woff2", "GoogleSans-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'Google Sans';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/GoogleSans-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'Google Sans';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/GoogleSans-Bold.woff2') format('woff2');
+			}
+		`,
+	},
+	"roboto": {
+		Family: "'Roboto', sans-serif",
+		Files:  []string{"Roboto-Regular.woff2", "Roboto-Bold.woff2"},
+		FontFace: `
+			@font-face {
+				font-family: 'Roboto';
+				font-style: normal;
+				font-weight: 400;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/Roboto-Regular.woff2') format('woff2');
+			}
+			@font-face {
+				font-family: 'Roboto';
+				font-style: normal;
+				font-weight: 700;
+				font-display: swap;
+				src: url('{{.Site.BaseURL}}/Roboto-Bold.woff2') format('woff2');
 			}
 		`,
 	},
@@ -159,27 +281,77 @@ var themes = map[string]*Theme{
 			Red: "#bf616a", Orange: "#d08770", Yellow: "#ebcb8b", Green: "#a3be8c", Blue: "#81a1c1", Purple: "#b48ead", Cyan: "#88c0d0",
 		},
 	},
+	"tokyonight": {
+		Light: &ThemeColors{
+			Bg: "#d5d6db", Text: "#343b58", SidebarBg: "#cfc9c2", SidebarBorder: "#b4b5b9", Accent: "#7aa2f7", Hover: "#c0c0c0", Comment: "#565f89",
+			Red: "#f7768e", Orange: "#ff9e64", Yellow: "#e0af68", Green: "#73daca", Blue: "#7aa2f7", Purple: "#bb9af7", Cyan: "#7dcfff",
+		},
+		Dark: &ThemeColors{
+			Bg: "#1a1b26", Text: "#c0caf5", SidebarBg: "#16161e", SidebarBorder: "#414868", Accent: "#7aa2f7", Hover: "#292e42", Comment: "#565f89",
+			Red: "#f7768e", Orange: "#ff9e64", Yellow: "#e0af68", Green: "#9ece6a", Blue: "#7aa2f7", Purple: "#bb9af7", Cyan: "#7dcfff",
+		},
+	},
+	"rose-pine": {
+		Light: &ThemeColors{ // Rosé Pine Dawn
+			Bg: "#faf4ed", Text: "#575279", SidebarBg: "#fffaf3", SidebarBorder: "#cecacd", Accent: "#eb6f92", Hover: "#f2e9e1", Comment: "#9893a5",
+			Red: "#b4637a", Orange: "#d7827e", Yellow: "#ea9d34", Green: "#286983", Blue: "#56949f", Purple: "#907aa9", Cyan: "#d7827e",
+		},
+		Dark: &ThemeColors{ // Rosé Pine Main
+			Bg: "#191724", Text: "#e0def4", SidebarBg: "#1f1d2e", SidebarBorder: "#403d52", Accent: "#eb6f92", Hover: "#26233a", Comment: "#6e6a86",
+			Red: "#eb6f92", Orange: "#ebbcba", Yellow: "#f6c177", Green: "#31748f", Blue: "#9ccfd8", Purple: "#c4a7e7", Cyan: "#ebbcba",
+		},
+	},
+	"gruvbox": {
+		Light: &ThemeColors{
+			Bg: "#fbf1c7", Text: "#3c3836", SidebarBg: "#ebdbb2", SidebarBorder: "#d5c4a1", Accent: "#d65d0e", Hover: "#ebdbb2", Comment: "#928374",
+			Red: "#cc241d", Orange: "#d65d0e", Yellow: "#d79921", Green: "#98971a", Blue: "#458588", Purple: "#b16286", Cyan: "#689d6a",
+		},
+		Dark: &ThemeColors{
+			Bg: "#282828", Text: "#ebdbb2", SidebarBg: "#3c3836", SidebarBorder: "#504945", Accent: "#fe8019", Hover: "#3c3836", Comment: "#a89984",
+			Red: "#fb4934", Orange: "#fe8019", Yellow: "#fabd2f", Green: "#b8bb26", Blue: "#83a598", Purple: "#d3869b", Cyan: "#8ec07c",
+		},
+	},
+	"everforest": {
+		Light: &ThemeColors{
+			Bg: "#fdf6e3", Text: "#5c6a72", SidebarBg: "#f3efda", SidebarBorder: "#e6e2cc", Accent: "#f57d26", Hover: "#edf3e8", Comment: "#939f91",
+			Red: "#f85552", Orange: "#f57d26", Yellow: "#dfa000", Green: "#8da101", Blue: "#3a94c5", Purple: "#df69ba", Cyan: "#35a77c",
+		},
+		Dark: &ThemeColors{
+			Bg: "#2b3339", Text: "#d3c6aa", SidebarBg: "#323c41", SidebarBorder: "#4a555b", Accent: "#a7c080", Hover: "#374247", Comment: "#859289",
+			Red: "#e67e80", Orange: "#e69875", Yellow: "#dbbc7f", Green: "#a7c080", Blue: "#7fbbb3", Purple: "#d699b6", Cyan: "#83c092",
+		},
+	},
+	"cyberdream": {
+		Light: &ThemeColors{
+			Bg: "#ffffff", Text: "#16181a", SidebarBg: "#eff1f5", SidebarBorder: "#7b8496", Accent: "#5ea1ff", Hover: "#e4e5e8", Comment: "#7b8496",
+			Red: "#ff6e5e", Orange: "#ffbd5e", Yellow: "#f2cdcd", Green: "#5eff6c", Blue: "#5ea1ff", Purple: "#bd5eff", Cyan: "#5ef1ff",
+		},
+		Dark: &ThemeColors{
+			Bg: "#16181a", Text: "#ffffff", SidebarBg: "#1e2124", SidebarBorder: "#3c4048", Accent: "#5ea1ff", Hover: "#272a2d", Comment: "#7b8496",
+			Red: "#ff6e5e", Orange: "#ffbd5e", Yellow: "#f2cdcd", Green: "#5eff6c", Blue: "#5ea1ff", Purple: "#bd5eff", Cyan: "#5ef1ff",
+		},
+	},
 }
 
-// resolveTheme looks up a theme by name.
+// ResolveTheme looks up a theme by name.
 // If the theme is not found, it defaults to "default" and logs a warning.
 // It also resolves the associated font using resolveFont.
-func resolveTheme(themeName, fontName string) *Theme {
+func ResolveTheme(themeName, fontName string, log *slog.Logger) *Theme {
 	theme, ok := themes[strings.ToLower(themeName)]
 	if !ok {
-		log.Printf("Theme '%s' not found, falling back to default.", themeName)
+		log.Warn("Theme not found. Using default theme.", "name", themeName)
 		theme = themes["default"]
 	}
-	theme.Font = resolveFont(fontName)
+	theme.Font = resolveFont(fontName, log)
 	return theme
 }
 
 // resolveFont looks up font data by name.
 // If the font is not found, it defaults to "inter" and logs a warning.
-func resolveFont(name string) *FontData {
+func resolveFont(name string, log *slog.Logger) *FontData {
 	font, ok := fonts[strings.ToLower(name)]
 	if !ok {
-		log.Printf("Font '%s' not found, falling back to inter.", name)
+		log.Warn("Font not found. Using default theme.", "name", name)
 		return fonts["inter"]
 	}
 	return font
@@ -187,7 +359,7 @@ func resolveFont(name string) *FontData {
 
 // extractFonts writes the font files associated with the given FontData to disk.
 // It reads the files from the embedded assets filesystem and writes them to fontsDir.
-func (t *Theme) extractFonts(fontsDir string) {
+func (t *Theme) extractFonts(fontsDir string, log *slog.Logger) {
 	// If the font has no associated files (e.g., System fonts), return immediately.
 	if len(t.Font.Files) == 0 {
 		return
@@ -195,20 +367,20 @@ func (t *Theme) extractFonts(fontsDir string) {
 
 	// Ensure the target directory exists.
 	if err := os.MkdirAll(fontsDir, 0755); err != nil {
-		log.Printf("Failed to create fonts directory: %s\n", err.Error())
+		log.Error("Failed to create fonts directory", "error", err)
 	}
 
 	for _, fileName := range t.Font.Files {
 		// Read the binary content from the embedded assets FS.
 		content, err := assets.TemplateFS.ReadFile(fileName)
 		if err != nil {
-			log.Printf("Failed to read embedded font %s: %s", fileName, err.Error())
+			log.Error("Failed to read embed font", "error", err)
 		}
 
 		// Write the binary content to the user's filesystem.
 		destPath := filepath.Join(fontsDir, fileName)
 		if err := os.WriteFile(destPath, content, 0644); err != nil {
-			log.Printf("Failed to write font file %s: %s", fileName, err.Error())
+			log.Error("Failed to write font", "error", err)
 		}
 	}
 }

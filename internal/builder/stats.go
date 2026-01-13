@@ -2,15 +2,14 @@ package builder
 
 import (
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/otaleghani/kiln/internal/log"
 )
 
 // Stats calculates and prints summary statistics for the vault (count, words, etc.).
-func Stats() {
+func Stats(log *slog.Logger) {
 	var noteCount, wordCount, maxWords int
 	var longestNote string
 

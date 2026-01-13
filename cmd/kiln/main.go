@@ -10,10 +10,10 @@ import (
 // main is the entry point of the application.
 // It initializes the Cobra command hierarchy via the cli package and executes the root command.
 func main() {
-	// 1. Initialize the Command Line Interface
+	// Initialize the Command Line Interface
 	rootCmd := cli.Init()
 
-	// 2. Execute the requested command
+	// Execute the requested command
 	// If Execute returns an error (e.g., unknown command, missing flag),
 	// we log it and exit with a non-zero status code to indicate failure.
 	if err := rootCmd.Execute(); err != nil {

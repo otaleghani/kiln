@@ -2,12 +2,11 @@ package linter
 
 import (
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/otaleghani/kiln/internal/log"
 )
 
 // CollectNotes scans the input directory and creates an index of all valid files.
@@ -54,7 +53,7 @@ func CollectNotes(inputDir string) map[string]bool {
 }
 
 // BrokenLinks iterates through all Markdown files in the directory and validates their WikiLinks.
-func BrokenLinks(inputDir string, notes map[string]bool) {
+func BrokenLinks(inputDir string, notes map[string]bool, log *slog.Logger) {
 	// Regex to find standard WikiLink syntax: [[Target]]
 	linkRegex := regexp.MustCompile(`\[\[(.*?)\]\]`)
 	issuesFound := 0
@@ -111,7 +110,7 @@ func BrokenLinks(inputDir string, notes map[string]bool) {
 			if !exists {
 				// Use Rel path for cleaner logging
 				relPath, _ := filepath.Rel(inputDir, path)
-				log.Warn("Found broken link", log.FieldPath, relPath, "link", rawLink)
+				log.Warn("Found broken link", "path", relPath, "link", rawLink)
 				issuesFound++
 			}
 		}

@@ -2,7 +2,6 @@
 title: Bake your Obsidian vault into a website
 description: Turn your Obsidian vault into a blazing fast, interactive website. Kiln natively supports Canvas, Graphs, Math, and Wikilinks with zero configuration required.
 ---
-
 > [!Info] New: Custom Mode
 > You can now use the flag `--mode "custom"` to activate custom mode, a feature that allows you to use Obsidian as an headless CMS. Check it out at [[What is Custom Mode]] or follow the [[Quick Start Guide]] to get started building custom static websites with Kiln. 
 # Kiln: an Obsidian static website generator
@@ -49,6 +48,7 @@ We support the tools you use to think.
 - **[[Mermaid Graphs]]**: Native support for flowcharts, sequence diagrams, and Gantt charts.
 - **[[Math|Math & LaTeX]]**: Beautiful equation rendering via MathJax.
 - **[[Syntax Highlighting]]**: Automatic language detection and coloring for code blocks.
+- **[[Bases]]**: Group, filter and view your notes like a database.
 
 ### Navigation & UX
 
@@ -58,6 +58,8 @@ Your site behaves like a modern app, not a static document.
 - **[[Explorer|File Explorer]]**: A "What You See Is What You Get" sidebar that mirrors your vault structure.
 - **[[Search|Quick Find]]**: Real-time, fuzzy search to filter your file tree instantly.
 - **[[Table of Contents|Table of Contents]]**: Auto-generated right sidebar navigation for every note.
+- **[[Folders]]**: Navigate your notes with ease.
+- **[[Tags]]**: Group together different notes from different folders.
 
 ### Visual Knowledge
 

@@ -22,7 +22,22 @@ import "embed"
 //go:embed Lato-Bold.woff2
 //go:embed Merriweather-Regular.woff2
 //go:embed Merriweather-Bold.woff2
+//go:embed GoogleSans-Regular.woff2
+//go:embed GoogleSans-Bold.woff2
+//go:embed IBMPlexSans-Regular.woff2
+//go:embed IBMPlexSans-Bold.woff2
+//go:embed LibreBaskerville-Regular.woff2
+//go:embed LibreBaskerville-Bold.woff2
+//go:embed Lora-Regular.woff2
+//go:embed Lora-Bold.woff2
+//go:embed NotoSerif-Regular.woff2
+//go:embed NotoSerif-Bold.woff2
+//go:embed Roboto-Regular.woff2
+//go:embed Roboto-Bold.woff2
 //go:embed default_layout.html
 //go:embed default_style.css
 //go:embed default_app.js
+//go:embed simple_layout.html
+//go:embed simple_style.css
+//go:embed simple_app.js
 var TemplateFS embed.FS

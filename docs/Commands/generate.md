@@ -29,6 +29,7 @@ There are some flags that you can use to customize the output:
 | `--log`                 | `-l`      | `info`      | Sets the log level. You can choose between `info` or `debug`.                                                                    |
 | `--disable-toc`         |           | `false`     | Disables the Table of contents on the right sidebar. If the local graph is disabled too, hides the right sidebar.                |
 | `--disable-local-graph` |           | `false`     | Disables the Local graph. If the table of contents is disabled too, hides the right sidebar.                                     |
+| `layout`                | `-L`      | `default`   | Layout to use. Choose between 'default' and the others. Find out more about which layout is available at [[Layouts]].            |
 
 ## Examples
 

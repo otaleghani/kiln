@@ -9,6 +9,9 @@
   function setupGraph() {
     const globalContainer = document.getElementById("global-graph-container");
     const localContainer = document.getElementById("local-graph-container");
+    const localContainerWrapper = document.getElementById(
+      "local-graph-wrapper",
+    );
 
     // Only load if a graph container is present
     if (!globalContainer && !localContainer) return;
@@ -20,7 +23,8 @@
         const script = document.createElement("script");
         script.id = "d3-script";
         script.src = "https://d3js.org/d3.v7.min.js";
-        script.onload = () => initGraph(globalContainer, localContainer);
+        script.onload = () =>
+          initGraph(globalContainer, localContainer, localContainerWrapper);
         script.onerror = () =>
           console.error(
             "Failed to load D3.js. Please check your internet connection.",
@@ -29,7 +33,7 @@
       }
     } else {
       // D3 already loaded, run immediately
-      initGraph(globalContainer, localContainer);
+      initGraph(globalContainer, localContainer, localContainerWrapper);
     }
   }
 
@@ -54,8 +58,9 @@
     if (shouldUpdate) {
       const global = document.getElementById("global-graph-container");
       const local = document.getElementById("local-graph-container");
+      const localWrapper = document.getElementById("local-graph-wrapper");
       if (global || local) {
-        initGraph(global, local);
+        initGraph(global, local, localWrapper);
       }
     }
   });
@@ -71,13 +76,14 @@
       .addEventListener("change", () => {
         const global = document.getElementById("global-graph-container");
         const local = document.getElementById("local-graph-container");
+        const localWrapper = document.getElementById("local-graph-wrapper");
         if (global || local) {
-          initGraph(global, local);
+          initGraph(global, local, localWrapper);
         }
       });
   }
 
-  function initGraph(globalContainer, localContainer) {
+  function initGraph(globalContainer, localContainer, localContainerWrapper) {
     // Initialize cache if empty
     if (!graphDataPromise) {
       // Use the injected BaseURL for fetching
@@ -130,10 +136,10 @@
             currentTitle,
           );
           if (localData.nodes.length > 0) {
-            localContainer.style.display = "";
+            localContainerWrapper.style.display = "";
             renderGraph(localContainer, localData, true);
           } else {
-            localContainer.style.display = "none";
+            localContainerWrapper.style.display = "none";
           }
         }
       }
@@ -173,6 +179,10 @@
       style.getPropertyValue("--color-comment").trim() || "#888";
     const neutralLinkColor =
       style.getPropertyValue("--sidebar-border").trim() || "#999";
+    const folderNodeColor =
+      style.getPropertyValue("--color-yellow").trim() || "#FFD700";
+    const assetNodeColor =
+      style.getPropertyValue("--color-red").trim() || "#FF0000";
 
     container.innerHTML = "";
 
@@ -250,7 +260,13 @@
     const node = nodeGroup
       .append("circle")
       .attr("r", (d) => getNodeRadius(d))
-      .attr("fill", neutralNodeColor)
+      .attr("fill", (d) =>
+        d.type == "folder"
+          ? folderNodeColor
+          : d.type == ".md" || d.type == ".canvas" || d.type == ".base"
+            ? neutralNodeColor
+            : assetNodeColor,
+      )
       .call(drag(simulation));
 
     const label = svgGroup
@@ -291,7 +307,16 @@
       })
       .on("mouseout", function (event, d) {
         const currentR = getNodeRadius(d);
-        d3.select(this).attr("r", currentR).attr("fill", neutralNodeColor);
+        d3.select(this)
+          .attr("r", currentR)
+          .attr(
+            "fill",
+            d.type == "folder"
+              ? folderNodeColor
+              : d.type == ".md" || d.type == ".canvas" || d.type == ".base"
+                ? neutralNodeColor
+                : assetNodeColor,
+          );
 
         link.style("stroke", neutralLinkColor);
         link.style("stroke-opacity", 0.6);

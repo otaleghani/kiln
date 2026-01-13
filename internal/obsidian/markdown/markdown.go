@@ -1,4 +1,4 @@
-package obsidianmarkdown
+package markdown
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 
 	chromaHTML "github.com/alecthomas/chroma/v2/formatters/html"
 	mathjax "github.com/litao91/goldmark-mathjax"
+	"github.com/otaleghani/kiln/internal/obsidian"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	meta "github.com/yuin/goldmark-meta"
@@ -22,12 +23,12 @@ import (
 // newMarkdownParser creates a Goldmark instance configured for Obsidian compatibility.
 // It enables GFM, MathJax, syntax highlighting, and custom link resolution.
 func New(
-	fileIndex map[string][]*File,
+	fileIndex map[string][]*obsidian.File,
 	loader func(path string) ([]byte, error),
 ) *ObsidianMarkdown {
 	resolver := &IndexResolver{
 		Index:    fileIndex,
-		Links:    []GraphLink{},
+		Links:    []obsidian.GraphLink{},
 		ReadFile: loader,
 	}
 	sourceMap := make(map[string]string)
@@ -72,7 +73,7 @@ func New(
 }
 
 // Render processes the given path
-func (o *ObsidianMarkdown) Render(file File) (NoteData, error) {
+func (o *ObsidianMarkdown) Render(file obsidian.File) (NoteData, error) {
 	// Sets the current source
 	o.Resolver.CurrentSource = file.WebPath
 

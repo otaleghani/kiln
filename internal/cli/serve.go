@@ -36,8 +36,10 @@ func runServe(cmd *cobra.Command, args []string) {
 	// This helps ensure absolute links or assets resolve correctly during local preview.
 	localBaseURL := "http://localhost:" + port
 
-	setLogger()
+	// builder.BaseURL = localBaseURL
+
+	log := getLogger()
 
 	// Start the static file server.
-	server.Serve(port, builder.OutputDir, localBaseURL)
+	server.Serve(port, builder.OutputDir, localBaseURL, log)
 }

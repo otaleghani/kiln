@@ -275,7 +275,7 @@ window.JsonCanvasRenderer = class JsonCanvasRenderer {
     const doc = parser.parseFromString(html, "text/html");
 
     // Find content
-    const content = doc.querySelector("main");
+    const content = doc.querySelector("#content");
 
     if (content) {
       // Strip out TOC if it exists inside the content to save space
@@ -283,7 +283,7 @@ window.JsonCanvasRenderer = class JsonCanvasRenderer {
       if (toc) toc.remove();
 
       // Render content only (Header is already handled in createNode)
-      container.innerHTML = `<div>${content.innerHTML}</div>`;
+      container.innerHTML = `<div class="content">${content.innerHTML}</div>`;
     }
   }
 

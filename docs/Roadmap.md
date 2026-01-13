@@ -25,6 +25,7 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 - [ ] **Customization:** Full support for custom CSS themes and user-defined fonts.
 - [ ] **Flexible Paths:** Configurable input/output directories in the config file.
 - [ ] **Localization:** i18n support for translating the UI.
+- [ ] **Structured data**: Automatically create articles and breadcrumbs markup
 
 ## UI & UX Improvements
 *Enhancing the reading experience.*

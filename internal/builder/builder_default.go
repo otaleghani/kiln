@@ -3,203 +3,299 @@ package builder
 import (
 	"encoding/json"
 	"html/template"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/otaleghani/kiln/internal/log"
-	obsidian "github.com/otaleghani/kiln/pkg/obsidian-markdown"
-	obsidianmarkdown "github.com/otaleghani/kiln/pkg/obsidian-markdown"
+	"github.com/otaleghani/kiln/internal/obsidian"
+	"github.com/otaleghani/kiln/internal/obsidian/bases"
+	"github.com/otaleghani/kiln/internal/obsidian/markdown"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/html"
+	"gopkg.in/yaml.v3"
 )
 
-func buildDefault() {
+func buildDefault(log *slog.Logger) {
 	start := time.Now()
 
 	// Resolves the theme
-	theme := resolveTheme(ThemeName, FontName)
+	theme := ResolveTheme(ThemeName, FontName, log)
 
 	// Resolves and loads layout
-	layout := resolveLayout(LayoutName)
+	layout := resolveLayout(LayoutName, log)
 	err := layout.loadLayout()
 	if err != nil {
-		log.Fatal("Error loading layout", log.FieldError, err)
+		log.Error("Error loading layout", "error", err)
+		os.Exit(1)
 	}
 
 	// Scans vault
-	vaultScan, err := scanVault()
+	obs := obsidian.New(
+		obsidian.WithBaseURL(BaseURL),
+		obsidian.WithFlatURLs(FlatUrls),
+		obsidian.WithInputDir(InputDir),
+		obsidian.WithOutputDir(OutputDir),
+		obsidian.WithLogger(log),
+	)
+	// vaultScan, err := scanVault()
+	err = obs.Scan()
 	if err != nil {
-		log.Fatal("Error scanning vault", log.FieldError, err)
-	}
-
-	// Convert scanned files into obsidian-markdown.File
-	index := make(map[string][]*obsidian.File)
-	for name, files := range vaultScan.FileIndex {
-		index[name] = []*obsidian.File{}
-		for _, file := range files {
-			index[name] = append(
-				index[name],
-				&obsidian.File{
-					RelPath: file.RelPath,
-					Path:    file.Path,
-					WebPath: file.WebPath,
-					Name:    file.Name,
-					Ext:     file.Ext,
-					OutPath: file.OutPath,
-				},
-			)
-		}
+		log.Error("Error scanning vault", "error", err)
+		os.Exit(1)
 	}
 
 	// Creates markdown renderer
-	obsidianMd := obsidian.New(index, func(path string) ([]byte, error) {
+	obsidianMd := markdown.New(obs.Vault.FileIndex, func(path string) ([]byte, error) {
 		return os.ReadFile(filepath.Join(InputDir, path))
 	})
 
 	// Get's the sidebar root node
-	rootNode := getSidebarRootNode(InputDir, BaseURL)
+	rootNode := obs.GenerateNavbar()
 
 	site := &DefaultSite{
-		Scan:              vaultScan,
+		// Scan:              vaultScan,
 		BaseURL:           BaseURL,
 		SiteName:          SiteName,
 		Theme:             theme,
 		Layout:            layout,
 		Markdown:          obsidianMd,
 		Minifier:          minify.New(),
-		SidebarRootNode:   rootNode,
+		NavbarRoot:        rootNode,
 		DisableLocalGraph: DisableLocalGraph,
 		DisableTOC:        DisableTOC,
+		log:               log,
+		Obsidian:          obs,
 	}
 	site.Minifier.AddFunc("text/html", html.Minify)
 
 	// Divide the different files and call "RenderType" directly, instaed of calling Render
-	notePages := []PageNote{}
+	notePages := []*obsidian.File{}
 	basePages := []PageBase{}
-	canvasPages := []PageCanvas{}
-	staticFiles := []*File{}
+	canvasPages := []*obsidian.File{}
+	staticFiles := []*obsidian.File{}
 
-	for _, page := range site.Scan.Files {
-		switch page.Ext {
+	for _, file := range site.Obsidian.Vault.Files {
+		l := log.With("file", file.Path)
+		switch file.Ext {
 		case ".md":
-			note := PageNote{}
-			notePages = append(notePages, note)
-		case ".canvas":
-			canvas := PageCanvas{}
-			canvasPages = append(canvasPages, canvas)
+			notePages = append(notePages, file)
 		case ".base":
-			base := PageBase{}
+			base, err := ParseBaseFile(file.Path)
+			if err != nil {
+				l.Error("Couldn't parse base file", "error", err)
+			}
+			base.File = file
 			basePages = append(basePages, base)
+		case ".canvas":
+			canvasPages = append(canvasPages, file)
 		default:
-			staticFiles = append(staticFiles, page)
+			if isAllowedExt(file.Ext) {
+				staticFiles = append(staticFiles, file)
+			}
 		}
 	}
 
+	// Adds base URL to fonts
+	site.Theme.Font.FontFaceReplaced = template.CSS(strings.Replace(
+		string(site.Theme.Font.FontFace),
+		"{{.Site.BaseURL}}",
+		site.BaseURL,
+		4,
+	))
+
+	nodes := []obsidian.GraphNode{}
+
+	log.Info("Copying static assets...")
 	for _, file := range staticFiles {
-		l := log.Default.WithFile(file.RelPath)
-		err := copyFile(file.Path, file.OutPath)
+		l := log.With("file", file.Path)
+		err := obsidian.CopyFile(file.Path, file.OutPath)
 		if err != nil {
-			l.Error("Couldn't copy file", log.FieldError, err)
+			l.Error("Couldn't copy file", "error", err)
 		}
 	}
 
-	log.Info("Rendering pages...")
-	for _, page := range site.Scan.Files {
-		l := log.Default.WithFile(page.RelPath)
-		l.Debug("Rendering...")
-		err := site.Render(page)
+	log.Info("Rendering canvas pages...")
+	for _, file := range canvasPages {
+		l := log.With("file", file.Path)
+		err := site.RenderCanvas(file)
 		if err != nil {
-			l.Error("Couldn't render note", log.FieldError, err)
+			l.Error("Couldn't copy file", "error", err)
+			continue
 		}
+		nodes = append(nodes, obsidian.GraphNode{
+			ID:    file.WebPath,
+			Label: file.Name,
+			URL:   file.WebPath,
+			Val:   1,
+			Type:  file.Ext,
+		})
+	}
+
+	log.Info("Rendering markdown pages...")
+	for _, note := range notePages {
+		l := log.With("file", note.RelPath)
+
+		err := site.RenderNote(note)
+		if err != nil {
+			l.Error("Couldn't render note", "error", err)
+			continue
+		}
+		nodes = append(nodes, obsidian.GraphNode{
+			ID:    note.WebPath,
+			Label: note.Name,
+			URL:   note.WebPath,
+			Val:   1,
+			Type:  note.Ext,
+		})
+	}
+
+	log.Info("Rendering base pages...")
+	for _, base := range basePages {
+		l := log.With("file", base.File.RelPath)
+		err := site.RenderBase(&base, site.Obsidian.Vault.Files)
+		if err != nil {
+			l.Error("Couldn't render base", "error", err)
+			continue
+		}
+		nodes = append(nodes, obsidian.GraphNode{
+			ID:    base.File.WebPath,
+			Label: base.File.Name,
+			URL:   base.File.WebPath,
+			Val:   1,
+			Type:  base.File.Ext,
+		})
+	}
+
+	log.Info("Rendering folder pages...")
+	for _, folder := range site.Obsidian.Vault.Folders {
+		l := log.With("folder", folder.RelPath)
+		if len(folder.Files) == 0 && len(folder.Folders) == 0 {
+			l.Debug("Skipped empty folder", "folder", folder.Name)
+			continue
+		}
+
+		err := site.RenderFolder(folder)
+		if err != nil {
+			l.Error("Couldn't render folder", "error", err)
+			continue
+		}
+		nodes = append(nodes, obsidian.GraphNode{
+			ID:    folder.WebPath,
+			Label: folder.Name,
+			URL:   folder.WebPath,
+			Val:   1,
+			Type:  "folder",
+		})
+	}
+
+	log.Info("Rendering tag pages...")
+	for _, tag := range site.Obsidian.Vault.Tags {
+		l := log.With("tag", tag.Name)
+		err := site.RenderTag(tag)
+		if err != nil {
+			l.Error("Couldn't render tag", "error", err)
+		}
+		nodes = append(nodes, obsidian.GraphNode{
+			ID:    tag.WebPath,
+			Label: tag.Name,
+			URL:   tag.WebPath,
+			Val:   1,
+			Type:  "tag",
+		})
 	}
 
 	log.Info("Rendering static files...")
 	// Generate CSS based on the given theme/font settings
 	cssOut, err := os.Create(filepath.Join(OutputDir, "style.css"))
 	if err != nil {
-		log.Error("Couldn't create 'style.css'", log.FieldError, err)
+		log.Error("Couldn't create 'style.css'", "error", err)
 	}
 	defer cssOut.Close()
 	err = site.Layout.CssTemplate.Execute(cssOut, site)
 	if err != nil {
-		log.Error("Couldn't execute template for 'style.css'", log.FieldError, err)
+		log.Error("Couldn't execute template for 'style.css'", "error", err)
 	}
 
 	// Generate app JS
 	jsOut, err := os.Create(filepath.Join(OutputDir, "app.js"))
 	if err != nil {
-		log.Error("Couldn't create 'app.js'", log.FieldError, err)
+		log.Error("Couldn't create 'app.js'", "error", err)
 	}
 	defer jsOut.Close()
 	err = site.Layout.JsTemplate.Execute(jsOut, site)
 	if err != nil {
-		log.Error("Couldn't execute template for 'app.js'", log.FieldError, err)
+		log.Error("Couldn't execute template for 'app.js'", "error", err)
 	}
 
 	// Generate graph JS
 	graphJsOut, err := os.Create(filepath.Join(OutputDir, "graph.js"))
 	if err != nil {
-		log.Error("Couldn't create 'graph.js'", log.FieldError, err)
+		log.Error("Couldn't create 'graph.js'", "error", err)
 	}
 	defer graphJsOut.Close()
 	err = site.Layout.JsGraphTemplate.Execute(graphJsOut, site)
 	if err != nil {
-		log.Error("Couldn't execute template for 'graph.js'", log.FieldError, err)
+		log.Error("Couldn't execute template for 'graph.js'", "error", err)
 	}
 
 	// Generate canvas JS
 	canvasJsOut, err := os.Create(filepath.Join(OutputDir, "canvas.js"))
 	if err != nil {
-		log.Error("Couldn't create 'canvas.js'", log.FieldError, err)
+		log.Error("Couldn't create 'canvas.js'", "error", err)
 	}
 	defer canvasJsOut.Close()
 	err = site.Layout.JsCanvasTemplate.Execute(canvasJsOut, site)
 	if err != nil {
-		log.Error("Couldn't execute template for 'canvas.js'", log.FieldError, err)
+		log.Error("Couldn't execute template for 'canvas.js'", "error", err)
 	}
 
 	// Extracts fonts
-	site.Theme.extractFonts(OutputDir)
+	site.Theme.extractFonts(OutputDir, log)
 
 	// Generate Graph JSON data
+	markdownLinks := site.Markdown.Resolver.Links
+	log.Debug("Markdown links", "amount", len(markdownLinks))
+	links := append(site.Obsidian.GetFolderLinks(), markdownLinks...)
+	links = append(site.Obsidian.GetTagLinks(), links...)
+	log.Debug("Total links", "amount", len(links))
 	graphJSON := map[string]any{
-		"nodes": site.Scan.GraphNodes,
-		"links": site.Markdown.Resolver.Links,
+		"nodes": nodes,
+		"links": links,
 	}
 	jsonBytes, err := json.Marshal(graphJSON)
 	if err != nil {
-		log.Error("Couldn't marshal JSON", log.FieldError, err)
+		log.Error("Couldn't marshal JSON", "error", err)
 	}
 	err = os.WriteFile(filepath.Join(OutputDir, "graph.json"), jsonBytes, 0644)
 	if err != nil {
-		log.Error("Couldn't create 'graph.json'", log.FieldError, err)
+		log.Error("Couldn't create 'graph.json'", "error", err)
 	}
 
 	err = site.RenderGraph()
 	if err != nil {
-		log.Error("Couldn't render 'graph.html'", log.FieldError, err)
+		log.Error("Couldn't render 'graph.html'", "error", err)
 	}
 
-	err = site.Scan.Sitemap.generate()
+	err = site.Obsidian.GenerateSitemap()
 	if err != nil {
-		log.Error("Couldn't render 'sitemap.xml'", log.FieldError, err)
+		log.Error("Couldn't render 'sitemap.xml'", "error", err)
 	}
 
-	err = site.Scan.Sitemap.generateRobots()
+	err = site.Obsidian.GenerateRobots()
 	if err != nil {
-		log.Error("Couldn't render 'robots.txt'", log.FieldError, err)
+		log.Error("Couldn't render 'robots.txt'", "error", err)
 	}
 
-	err = loadCname()
+	err = site.Obsidian.LoadCname()
 	if err != nil {
-		log.Error("Couldn't transfer 'CNAME' file", log.FieldError, err)
+		log.Error("Couldn't transfer 'CNAME' file", "error", err)
 	}
 
-	err = loadFavicon()
+	err = site.Obsidian.LoadFavicon()
 	if err != nil {
-		log.Error("Couldn't transfer 'favicon.ico' file", log.FieldError, err)
+		log.Error("Couldn't transfer 'favicon.ico' file", "error", err)
 	}
 
 	log.Info(
@@ -209,23 +305,128 @@ func buildDefault() {
 	)
 }
 
-// Render renders the given file based on it's extension.
-// It saves the result in the output directory.
-func (s *DefaultSite) Render(f *File) error {
-	switch f.Ext {
-	case ".md":
-		return s.RenderNote(f)
-	case ".canvas":
-		return s.RenderCanvas(f)
-	case ".base":
-		return s.RenderBase(f)
-	default:
-		return nil
+// Render folders
+func (s *DefaultSite) RenderFolder(f *obsidian.Folder) error {
+	obsidian.SetNavbarNodeActive(s.NavbarRoot.Children, f.WebPath)
+
+	// Creates outfile
+	outFile, err := os.Create(f.OutPath)
+	if err != nil {
+		return err
 	}
+	defer outFile.Close()
+
+	// Setups the minifier
+	minifierWriter := s.Minifier.Writer("text/html", outFile)
+	defer minifierWriter.Close()
+
+	// Get breadcrumbs
+	breadcrumbs, err := s.Obsidian.GetFolderBreadcrumbs(f)
+	if err != nil {
+		return err
+	}
+
+	// Executes the template
+	pageData := DefaultSitePageData{
+		Site:        s,
+		Folder:      f,
+		IsFolder:    true,
+		Breadcrumbs: breadcrumbs,
+	}
+
+	// Executes the template
+	err = s.Layout.HtmlTemplate.Execute(minifierWriter, pageData)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (s *DefaultSite) RenderBase(f *File) error {
-	log.Info("Found base", "path", f.Path)
+// Render tags
+func (s *DefaultSite) RenderTag(t *obsidian.Tag) error {
+	s.log.Debug("Rendering tag", "name", t.Name, "files", len(t.Files))
+
+	// Creates outfile
+	outFile, err := os.Create(t.OutPath)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	// Setups the minifier
+	minifierWriter := s.Minifier.Writer("text/html", outFile)
+	defer minifierWriter.Close()
+
+	// Get breadcrumbs
+	breadcrumbs := []obsidian.Breadcrumb{
+		{Label: t.Name, Url: "#"},
+	}
+
+	// Executes the template
+	pageData := DefaultSitePageData{
+		Site:        s,
+		Tag:         t,
+		IsTag:       true,
+		Breadcrumbs: breadcrumbs,
+	}
+
+	// Executes the template
+	err = s.Layout.HtmlTemplate.Execute(minifierWriter, pageData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *DefaultSite) RenderBase(b *PageBase, allFiles []*obsidian.File) error {
+	s.log.Info("Found base", "path", b.File.Path)
+	obsidian.SetNavbarNodeActive(s.NavbarRoot.Children, b.File.WebPath)
+
+	// Creates outfile
+	outFile, err := os.Create(b.File.OutPath)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	breadcrumbs, err := s.Obsidian.GetBreadcrumbs(b.File)
+	if err != nil {
+		return err
+	}
+
+	// Setups the minifier
+	minifierWriter := s.Minifier.Writer("text/html", outFile)
+	defer minifierWriter.Close()
+
+	activeFiles := bases.FilterFiles(allFiles, b.Filters)
+	activeFiles = bases.FilterFiles(activeFiles, b.Views[0].Filters)
+	var fileGroups []*bases.FileGroup
+	if b.Views[0].GroupBy.Property != "" {
+		fileGroups = bases.GroupFiles(activeFiles, b.Views[0].GroupBy.Property)
+	}
+
+	// Executes the template
+	pageData := DefaultSitePageData{
+		Site:        s,
+		File:        b.File,
+		IsBase:      true,
+		Breadcrumbs: breadcrumbs,
+		Base: BaseData{
+			Groups:  fileGroups,
+			Notes:   activeFiles,
+			File:    b,
+			Columns: b.Views[0].Order,
+		},
+	}
+
+	// Executes the template
+	err = s.Layout.HtmlTemplate.Execute(minifierWriter, pageData)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -240,7 +441,7 @@ func (s *DefaultSite) RenderGraph() error {
 	} else {
 		graphOutPath = filepath.Join(OutputDir, "graph.html")
 	}
-	setSidebarNodeActive(s.SidebarRootNode.Children, "/graph")
+	obsidian.SetNavbarNodeActive(s.NavbarRoot.Children, "/graph")
 
 	fGraph, err := os.Create(graphOutPath)
 	if err != nil {
@@ -260,11 +461,12 @@ func (s *DefaultSite) RenderGraph() error {
 		Content:     template.HTML(graphHTML),
 		IsGraph:     true,
 		Frontmatter: make(map[string]any),
-		File: &File{
+		File: &obsidian.File{
 			Name:    "Graph",
 			WebPath: BaseURL + "/graph",
 		},
-		Breadcrumbs: []string{"Home", "Graph"},
+		Breadcrumbs: []obsidian.Breadcrumb{
+			{Label: "Home", Url: "/"}, {Label: "Graph", Url: "/graph"}},
 	}
 
 	s.Layout.HtmlTemplate.Execute(minifiedWriter, data)
@@ -272,8 +474,8 @@ func (s *DefaultSite) RenderGraph() error {
 }
 
 // RenderNote renders the given markdown file
-func (s *DefaultSite) RenderNote(f *File) error {
-	setSidebarNodeActive(s.SidebarRootNode.Children, f.WebPath)
+func (s *DefaultSite) RenderNote(f *obsidian.File) error {
+	obsidian.SetNavbarNodeActive(s.NavbarRoot.Children, f.WebPath)
 
 	// Creates outfile
 	outFile, err := os.Create(f.OutPath)
@@ -286,22 +488,16 @@ func (s *DefaultSite) RenderNote(f *File) error {
 	minifierWriter := s.Minifier.Writer("text/html", outFile)
 	defer minifierWriter.Close()
 
-	// Renders markdown
-	obsidianFile := obsidianmarkdown.File{
-		Path:    f.Path,
-		RelPath: f.RelPath,
-		Ext:     f.Ext,
-		Name:    f.Name,
-		OutPath: f.OutPath,
-		WebPath: f.WebPath,
-	}
-	obsidianData, err := s.Markdown.Render(obsidianFile)
+	obsidianData, err := s.Markdown.Render(*f)
 	if err != nil {
 		return err
 	}
 
 	// Creates breadcrumbs
-	breadcrumbs := f.Breadcrumbs()
+	breadcrumbs, err := s.Obsidian.GetBreadcrumbs(f)
+	if err != nil {
+		return err
+	}
 
 	// Executes the template
 	pageData := DefaultSitePageData{
@@ -323,10 +519,10 @@ func (s *DefaultSite) RenderNote(f *File) error {
 	return nil
 }
 
-func (s *DefaultSite) RenderCanvas(f *File) error {
-	setSidebarNodeActive(s.SidebarRootNode.Children, f.WebPath)
+func (s *DefaultSite) RenderCanvas(f *obsidian.File) error {
+	obsidian.SetNavbarNodeActive(s.NavbarRoot.Children, f.WebPath)
 
-	l := log.Default.WithFile(f.RelPath)
+	l := s.log.With("path", f.RelPath)
 
 	// Read file
 	source, err := os.ReadFile(f.Path)
@@ -369,22 +565,26 @@ func (s *DefaultSite) RenderCanvas(f *File) error {
 					)
 					continue
 				}
-				slugPath := getSlugPath(relImgPath)
-				webPath := getPageWebPath(slugPath, linkedExt)
+				slugPath := s.Obsidian.GetSlugPath(relImgPath)
+				webPath, err := s.Obsidian.GetPageWebPath(slugPath, linkedExt)
+				if err != nil {
+					l.Warn("Canvas rendering: Couldn't get web path", "error", err)
+					continue
+				}
 
 				canvasData.Nodes[i].Src = webPath
 			} else if linkedExt == ".md" {
 				// Handle notes
 				noteContent, err := os.ReadFile(linkedFilePath)
 				if err != nil {
-					l.Warn("Canvas rendering: Couldn't read note data", "note", linkedFilePath, log.FieldError, err)
+					l.Warn("Canvas rendering: Couldn't read note data", "note", linkedFilePath, "error", err)
 					continue
 				}
 
 				// Render Markdown to HTML using the shared renderer
 				renderedNote, err := s.Markdown.RenderNote(noteContent)
 				if err != nil {
-					l.Warn("Canvas rendering: Couldn't render note", "note", linkedFilePath, log.FieldError, err)
+					l.Warn("Canvas rendering: Couldn't render note", "note", linkedFilePath, "error", err)
 					continue
 				}
 				canvasData.Nodes[i].HtmlContent = renderedNote
@@ -404,7 +604,10 @@ func (s *DefaultSite) RenderCanvas(f *File) error {
 	defer minifierWriter.Close()
 
 	// Creates breadcrumbs
-	breadcrumbs := f.Breadcrumbs()
+	breadcrumbs, err := s.Obsidian.GetBreadcrumbs(f)
+	if err != nil {
+		return err
+	}
 
 	// Executes the template
 	pageData := DefaultSitePageData{
@@ -420,33 +623,59 @@ func (s *DefaultSite) RenderCanvas(f *File) error {
 	return nil
 }
 
+// ParseBaseFile parses the given base
+func ParseBaseFile(filePath string) (PageBase, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return PageBase{}, err
+	}
+
+	var base PageBase
+	err = yaml.Unmarshal(content, &base)
+	return base, err
+}
+
 // DefaultSite holds the global state for a default generation
 type DefaultSite struct {
-	Scan              *VaultScan                 // The result of scanVault
 	BaseURL           string                     // Base URL, used for sitemap.xml, robots.txt etc.
 	SiteName          string                     // The Name of the site
 	Theme             *Theme                     // Selected theme
 	Layout            *Layout                    // Selected and loaded layout
-	SidebarRootNode   *SidebarNode               // The root node of the sidebar
-	Markdown          *obsidian.ObsidianMarkdown // Handles the rendering of obsidian markdown
+	NavbarRoot        *obsidian.NavbarNode       // The root node of the sidebar
+	Markdown          *markdown.ObsidianMarkdown // Handles the rendering of obsidian markdown
 	Minifier          *minify.M                  // Minifier to minify html pages
 	DisableLocalGraph bool                       // If set, disables the local graph
 	DisableTOC        bool                       // If set, disables the Table of contents
+	log               *slog.Logger
+	Obsidian          *obsidian.Obsidian
 }
 
 // DefaultSitePage represents a page to be generated
 type DefaultSitePageData struct {
-	Site          *DefaultSite   // Default site data (to get theme, font, base path etc.)
-	Content       template.HTML  // Rendered HTML content of the page
-	TOC           template.HTML  // Table of contents
-	Breadcrumbs   []string       // Breadcrumbs of the page
-	File          *File          // Infomation about the file
-	CanvasContent template.JS    // Raw JS content for canvas hydration
-	IsGraph       bool           // Is the page a graph page?
-	IsCanvas      bool           // Is the page a canvas page?
-	IsBase        bool           // Is the page a base page?
-	IsNote        bool           // Is the page a note page?
-	Frontmatter   map[string]any // Frontmatter data
+	Site          *DefaultSite          // Default site data (to get theme, font, base path etc.)
+	Content       template.HTML         // Rendered HTML content of the page
+	TOC           template.HTML         // Table of contents
+	Breadcrumbs   []obsidian.Breadcrumb // Breadcrumbs of the page
+	File          *obsidian.File        // Infomation about the file
+	Folder        *obsidian.Folder      // Information about the folder
+	Tag           *obsidian.Tag         // Information about the folder
+	CanvasContent template.JS           // Raw JS content for canvas hydration
+	IsGraph       bool                  // Is the page a graph page?
+	IsCanvas      bool                  // Is the page a canvas page?
+	IsBase        bool                  // Is the page a base page?
+	IsNote        bool                  // Is the page a note page?
+	IsFolder      bool                  // Is the page a folder page?
+	IsTag         bool                  // Is the page a tag page?
+	Frontmatter   map[string]any        // Frontmatter data
+	Base          BaseData
+}
+
+// BaseData is the data of the base
+type BaseData struct {
+	Groups  []*bases.FileGroup // File group
+	Notes   []*obsidian.File   // Used for rendering bases
+	File    *PageBase          // Used for rendering bases
+	Columns []string
 }
 
 // CanvasData represents the top-level structure of an Obsidian Canvas file.
@@ -473,50 +702,4 @@ type CanvasNode struct {
 	IsImage     bool   `json:"isImage,omitempty"`     // Flag for image nodes
 	Src         string `json:"src,omitempty"`         // Web path for image source
 	URL         string `json:"url,omitempty"`         // Link URL
-}
-
-type BaseFilterGroup struct {
-	Operator   string          `yaml:"operator"` // "and", "or" (simplified for this example)
-	Conditions []BaseCondition `yaml:"conditions"`
-}
-
-// Individual filter condition (e.g., status == "done")
-type BaseCondition struct {
-	Field    string `yaml:"field"`    // e.g., "file.folder" or "status"
-	Operator string `yaml:"operator"` // "==", "!=", "contains", ">"
-	Value    any    `yaml:"value"`
-}
-
-type BaseViewConfig struct {
-	Type    string          `yaml:"type"` // "table", "list", "cards"
-	Name    string          `yaml:"name"`
-	Columns []BaseColumnDef `yaml:"columns"` // Used for Tables
-}
-
-type BaseColumnDef struct {
-	Field string `yaml:"field"` // The property key to show
-	Title string `yaml:"title"` // Optional override
-}
-
-type BasePropConfig struct {
-	DisplayName string `yaml:"displayName"`
-}
-
-// PageCanvas represents a '.canvas' file to be rendered
-type PageCanvas struct {
-	File *File
-}
-
-// PageBase represents a '.base' file to be rendered
-type PageBase struct {
-	File       *File                     // Original file
-	Filters    BaseFilterGroup           `yaml:"filters"`
-	Properties map[string]BasePropConfig `yaml:"properties"`
-	Views      []BaseViewConfig          `yaml:"views"`
-}
-
-// PageNote represents a '.md' file to be rendered
-type PageNote struct {
-	File        *File          // Original file
-	Frontmatter map[string]any // Extracted frontmatter
 }

@@ -1,0 +1,68 @@
+---
+title: Changelog
+description: A list of all the addition to kiln.
+---
+# Changelog
+
+## v0.3.0
+- ADD: [[Bases]] page generation
+- ADD: [[Folders]] page generation
+- ADD: [[Tags]] page generation
+- ADD: Simple layout
+- ADD: New [[Themes]] (`tokionight`, `rose-pine`, `gruvbox`, `everforest`, `cyberdream`)
+- ADD: New [[Fonts]] (`lora`, | `libre-baskerville`, `noto-serif`, `ibm-plex-sans`, `google-sans`, `roboto`
+- CHORE: Default layout refactor
+	- REMOVED: Lucide as a dependency
+	- ADD: TailwindCSS instead of raw CSS
+
+
+## v0.2.6
+- FIX: Static data, like images, where not copied over
+
+## v0.2.5
+- FIX: Flat-urls where not working properly
+- FIX: `deploy.sh` and flat-urls flag
+
+## v0.2.4
+- FIX: Wikilinks labels where not displaying
+
+## v0.2.3
+- FIX: Anchor links where not slugified
+- FIX: CNAME and favicon.ico file where not copied over
+
+## v0.2.2
+- FIX: Embed empty files
+
+## v0.2.1
+- ADD: Better logs
+- CHORE: Refactored most of the markdown parsing
+- CHORE: Refactored default generation
+
+## v0.2.0
+- ADD: [[What is Custom Mode|Custom mode]]
+
+## v0.1.5
+- FIX: Graph not showing links
+- FIX: Default output directory not being set
+
+## v0.1.4
+- WIP: Custom mode
+- ADD: Text embedding
+
+## v0.1.3
+- FIX: Missing site name in configuration
+- FIX: [[Doctor]] command not working properly
+- FIX: Local graph links not working
+- FIX: URL generation
+- FIX: UI mobile experience
+
+## v0.1.2
+- ADD: CNAME file handling
+- FIX: Layout footer
+- FIX: UI 
+
+## v0.1.1
+- FIX: Deployment crash
+
+## v0.1.0
+- Initial release

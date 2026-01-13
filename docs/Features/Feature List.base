@@ -1,0 +1,25 @@
+properties:
+  file.name:
+    displayName: Name
+  note.description:
+    displayName: Summary
+  note.title:
+    displayName: Title
+views:
+  - type: table
+    name: Table
+    filters:
+      and:
+        - file.inFolder("Features")
+        - file.ext != "base"
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.name
+      - description
+    sort:
+      - property: title
+        direction: DESC
+    columnSize:
+      note.description: 1379

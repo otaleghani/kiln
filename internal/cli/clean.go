@@ -29,8 +29,8 @@ func runClean(cmd *cobra.Command, args []string) {
 	// If a custom output directory was provided via flags, update the builder configuration.
 	builder.OutputDir = outputDir
 
-	setLogger()
+	log := getLogger()
 
 	// Delegate the actual deletion logic to the builder package.
-	builder.CleanOutputDir()
+	builder.CleanOutputDir(log)
 }
