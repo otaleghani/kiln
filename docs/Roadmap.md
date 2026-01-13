@@ -9,21 +9,12 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 > [!note] Contributing
 > Have a suggestion? Feel free to open an issue or contribute to the discussion on our GitHub repository.
 
-## Planned immediate enhancements 
-*Priority items to stabilize the current beta.*
-
-- [ ] **Support bases**: Support for Obsidian bases.
-- [ ] **Layouts**: Other layouts to chose from
-- [ ] **More themes to pick**
-- [ ] **More fonts to choose**
-
 ## Core Features
 *Major functionality upgrades.*
 
 - [ ] **Configuration File:** Support for `kiln.yaml` to save preferences (flags) persistently.
 - [ ] **Performance:** Automatic image optimization (WebP conversion).
 - [ ] **Customization:** Full support for custom CSS themes and user-defined fonts.
-- [ ] **Flexible Paths:** Configurable input/output directories in the config file.
 - [ ] **Localization:** i18n support for translating the UI.
 - [ ] **Structured data**: Automatically create articles and breadcrumbs markup
 
@@ -41,16 +32,12 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 *Tools to help you manage your digital garden.*
 
 - [ ] **Metadata:** Display "Last Updated" and "Time to Read" on pages.
-- [ ] **Tags:** Dedicated tag pages and tag-based search.
 - [ ] **Backlinks:** A dedicated section in the sidebar showing incoming links.
 - [ ] **RSS:** Automatic RSS feed generation for blog posts.
 - [ ] **Drafts:** Better handling for draft pages (exclude from build).
-- [ ] **Folder Pages:** Auto-generated index pages for folders.
 - [ ] **Privacy:** Ability to hide specific pages or folders via frontmatter.
 
 ## Advanced Configuration
 - [ ] **Permalinks:** Custom URL slugs via frontmatter.
 - [ ] **Social Cards:** Auto-generated Open Graph images for social sharing.
 - [ ] **Custom 404:** Support for a user-defined `404.md`.
-- [ ] **Layouts:** Support for alternative page layouts (e.g., full-width, landing page).
-- [ ] **Custom layouts**: Create custom layouts for specific folders.

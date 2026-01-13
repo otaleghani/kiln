@@ -85,8 +85,6 @@ The output of Kiln is a static website, which makes it really easy to deploy on 
 
 Kiln is open source and distributed under the MIT License. If you spot a bug or have a feature request, please check our [[Roadmap]] or [open an issue on GitHub](https://github.com/otaleghani/kiln/releases/latest).
 
-![[Roadmap#Planned immediate enhancements]]
-
 ## Credits
 
 Check out the [[Credits]] page for a full list of credits.
