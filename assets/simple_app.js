@@ -202,6 +202,28 @@ window.initThemeToggle = function () {
   });
 };
 
+window.addCopyButtons = function () {
+  document.querySelectorAll(".chroma").forEach((block) => {
+    if (block.querySelector(".copy-code-btn")) return;
+    const btn = document.createElement("button");
+    btn.className = "copy-code-btn";
+    btn.textContent = "Copy";
+    btn.addEventListener("click", () => {
+      const code = block.querySelector("code").innerText;
+      navigator.clipboard
+        .writeText(code)
+        .then(() => {
+          btn.textContent = "Copied!";
+          setTimeout(() => {
+            btn.textContent = "Copy";
+          }, 2000);
+        })
+        .catch((err) => {});
+    });
+    block.appendChild(btn);
+  });
+};
+
 // Called from HTML to init canvas with Go data
 window.initCanvasMode = function (canvasData) {
   if (window.renderer) window.renderer.cleanup();
@@ -223,6 +245,7 @@ window.initCanvasMode = function (canvasData) {
 window.initAll = function () {
   window.initThemeToggle();
   window.initToggles();
+  window.addCopyButtons();
   Promise.all([window.initMathJax(), window.initMermaid()]);
 };
 

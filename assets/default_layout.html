@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    {{ template "canonical" . }}
     <script>
       (function () {
         // Check localStorage or System preference for prefered color scheme
@@ -474,8 +475,8 @@
 <!-- Content: Note -->
 {{ define "content-note" }}
   {{ if .IsNote }}
-    <div id="content">
-      <div class="p-4 content">
+    <div id="content " class="h-dvh overflow-scroll">
+      <div class="p-4 content ">
         {{ .Content }}
       </div>
     </div>
@@ -572,11 +573,11 @@
       class="overflow-x-auto border-b border-b-sidebar-border bg-background mb-4"
     >
       <table class="w-full border-collapse border-spacing-0 text-sm">
-        <thead class="w-full">
-          <tr>
+        <thead class="">
+          <tr class="w-full">
             {{ range .Base.Columns }}
               <th
-                class="bg-sidebar text-foreground font-semibold text-left px-3 py-2.5 border-b border-r border-sidebar-border whitespace-nowrap last:border-r-0 w-full"
+                class="bg-sidebar text-foreground font-semibold text-left px-3 py-2.5 border-b border-r border-sidebar-border whitespace-nowrap last:border-r-0 "
               >
                 {{ getDisplayName $.Base.File . }}
               </th>
@@ -918,5 +919,17 @@
     <title>{{ .Tag.Name }} • {{ .Site.SiteName }}</title>
     <meta name="description" content="{{ .Tag.Name }}" />
     <meta property="og:title" content="{{ .Tag.Name }}" />
+  {{ end }}
+{{ end }}
+
+{{ define "canonical" }}
+  {{ if and (not .IsFolder) (not .IsTag) }}
+    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .File.WebPath }}" />
+  {{ end }}
+  {{ if .IsFolder }}
+    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .Folder.WebPath }}" />
+  {{ end }}
+  {{ if .IsTag }}
+    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .Tag.WebPath }}" />
   {{ end }}
 {{ end }}

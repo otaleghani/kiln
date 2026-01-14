@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    {{ template "canonical" . }}
     <script>
       (function () {
         // Check localStorage or System preference for prefered color scheme
@@ -470,6 +471,18 @@
   {{ end }}
 {{ end }}
 
+{{ define "canonical" }}
+  {{ if and (not .IsFolder) (not .IsTag) }}
+    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .File.WebPath }}" />
+  {{ end }}
+  {{ if .IsFolder }}
+    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .Folder.WebPath }}" />
+  {{ end }}
+  {{ if .IsTag }}
+    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .Tag.WebPath }}" />
+  {{ end }}
+{{ end }}
+
 
 <!-- Content: Canvas -->
 {{ define "content-canvas" }}
@@ -594,10 +607,10 @@
     >
       <table class="w-full border-collapse border-spacing-0 text-sm">
         <thead>
-          <tr>
+          <tr class="w-full">
             {{ range .Base.Columns }}
               <th
-                class="bg-sidebar text-foreground font-semibold text-left px-3 py-2.5 border-b border-r border-sidebar-border whitespace-nowrap last:border-r-0 w-full"
+                class="bg-sidebar text-foreground font-semibold text-left px-3 py-2.5 border-b border-r border-sidebar-border whitespace-nowrap last:border-r-0 "
               >
                 {{ getDisplayName $.Base.File . }}
               </th>

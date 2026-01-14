@@ -391,7 +391,6 @@ path.edge {
   color: var(--sidebar-border);
 }
 .content {
-  overflow: hidden;
   width: 100%;
 }
 .content h1,
