@@ -40,3 +40,4 @@ Bases are a complex obsidian feature that allow you to manipulate the view by fi
 - The filter `file, links to` uses a simple contain filter and not relative paths like Obsidian. This means that if you have multiple notes with the same name they will all be picked up. This poses no problems if you have unique names.
 - Links filters use case-insensitive equality. This is something that regular notes support but not bases.
 - `file.links`, `file.embeds`, `file.backlinks` have some filters that I'm still trying to figure out, like `is exactly`, `is not exactly`
+- Checkout the [[Quirks#Same filename, multiple extensions]] for more information about files overrides. 

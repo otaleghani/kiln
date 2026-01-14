@@ -3,6 +3,12 @@ title: Changelog
 description: A list of all the addition to kiln.
 ---
 # Changelog
+## v0.3.3
+- FIX: Navbar was displaying notes with the same name
+- ADD: Documentation about overlapping files
+
+## v0.3.2
+- FIX: Command `version` was not updating correctly
 
 ## v0.3.1
 - FIX: `simple_layout.html` and `default_layout.html` had issues with scrolling

@@ -28,3 +28,6 @@ If your canvas includes a "Link Node" (e.g., a card displaying `https://google.c
 Currently, Kiln doesn't support custom colors, but only the default ones.
 
 *We are actively working on expanding support for these styling features in future updates.*
+
+## Quirks
+Checkout the [[Quirks#Same filename, multiple extensions]] for more information about files overrides. 

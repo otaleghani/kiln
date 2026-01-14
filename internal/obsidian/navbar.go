@@ -74,6 +74,21 @@ func (o *Obsidian) GenerateNavbar() *NavbarNode {
 			continue
 		}
 
+		if node, exists := folderMap[strings.TrimSuffix(file.RelPath, file.Ext)]; exists {
+			switch file.Ext {
+			case ".md":
+				node.IsNote = true
+			case ".canvas":
+				node.IsCanvas = true
+			case ".base":
+				node.IsBase = true
+			default:
+				continue
+			}
+			// Do not add again the same if a folder exists
+			continue
+		}
+
 		node := &NavbarNode{
 			Name: strings.TrimSuffix(
 				file.Name,

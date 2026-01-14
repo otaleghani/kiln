@@ -133,6 +133,23 @@ func buildDefault(log *slog.Logger) {
 		})
 	}
 
+	log.Info("Rendering base pages...")
+	for _, base := range basePages {
+		l := log.With("file", base.File.RelPath)
+		err := site.RenderBase(&base, site.Obsidian.Vault.Files)
+		if err != nil {
+			l.Error("Couldn't render base", "error", err)
+			continue
+		}
+		nodes = append(nodes, obsidian.GraphNode{
+			ID:    base.File.WebPath,
+			Label: base.File.Name,
+			URL:   base.File.WebPath,
+			Val:   1,
+			Type:  base.File.Ext,
+		})
+	}
+
 	log.Info("Rendering markdown pages...")
 	for _, note := range notePages {
 		l := log.With("file", note.RelPath)
@@ -148,23 +165,6 @@ func buildDefault(log *slog.Logger) {
 			URL:   note.WebPath,
 			Val:   1,
 			Type:  note.Ext,
-		})
-	}
-
-	log.Info("Rendering base pages...")
-	for _, base := range basePages {
-		l := log.With("file", base.File.RelPath)
-		err := site.RenderBase(&base, site.Obsidian.Vault.Files)
-		if err != nil {
-			l.Error("Couldn't render base", "error", err)
-			continue
-		}
-		nodes = append(nodes, obsidian.GraphNode{
-			ID:    base.File.WebPath,
-			Label: base.File.Name,
-			URL:   base.File.WebPath,
-			Val:   1,
-			Type:  base.File.Ext,
 		})
 	}
 
