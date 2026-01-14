@@ -6,6 +6,7 @@ description: A list of all the addition to kiln.
 ## v0.3.3
 - FIX: Navbar was displaying notes with the same name
 - ADD: Documentation about overlapping files
+- FIX: Various small UI fixes
 
 ## v0.3.2
 - FIX: Command `version` was not updating correctly

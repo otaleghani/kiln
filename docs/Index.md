@@ -2,89 +2,97 @@
 title: Bake your Obsidian vault into a website
 description: Turn your Obsidian vault into a blazing fast, interactive website. Kiln natively supports Canvas, Graphs, Math, and Wikilinks with zero configuration required.
 ---
-> [!Info] New: Custom Mode
-> You can now use the flag `--mode "custom"` to activate custom mode, a feature that allows you to use Obsidian as an headless CMS. Check it out at [[What is Custom Mode]] or follow the [[Quick Start Guide]] to get started building custom static websites with Kiln. 
-# Kiln: an Obsidian static website generator
+# Kiln: Your Obsidian Vault, Online.
 
-> **Bake your Obsidian vault into a blazing fast static site.**
+> **Zero Config. Zero Compromise. Blazing Fast.**
 
-**Kiln** is a zero-config static site generator built specifically for [Obsidian](https://obsidian.md/). It takes your local Markdown vault—including your images, canvases, graphs, and math—and "bakes" it into a highly optimized, interactive HTML website.
+**Kiln** turns your local Obsidian vault into a high-performance, interactive website. It is built with a **"Parity First"** philosophy: if it works in Obsidian, it works in your browser.
 
-Unlike other generators that require complex configuration or rigid folder structures, Kiln follows a **"Parity First"** philosophy: if it renders in Obsidian, it should render in Kiln.
+No complex config files, no rigid folder structures, and no broken links. Just write, bake, and ship.
 
-## Get Started
+[Get Started](#installation) · [View Demo](https://kiln.talesign.com) · [Roadmap]([[Roadmap]])
 
-Kiln is distributed as a single binary with no dependencies. You can be up and running in seconds.
+---
+## Why Kiln?
+Most static site generators require you to fight against your tools. Kiln embraces them.
+
+### Parity First Rendering
+Stop worrying if your notes will break when you publish them. Kiln natively supports the features you rely on to think:
+* **[[Obsidian Canvas|Interactive Canvas]]**: Render your `.canvas` files as fully zoomable, pan-able diagrams.
+* **[[Mermaid Graphs]]**: Flowcharts, sequence diagrams, and Gantt charts work out of the box.
+* **[[Math|Math & LaTeX]]**: Complex equations rendered beautifully via MathJax.
+* **[[Callouts]] & [[Wikilinks]]**: First-class citizens, not afterthoughts.
+
+### Built for Speed (SPA Feel)
+Kiln sites don't feel like static documents; they feel like apps.
+* **Powered by HTMX**: We use [[Client Side Navigation]] to load pages instantly without full refreshes. 
+* **Single Binary**: Written in Go. No Node_modules, no Ruby gems, no dependencies. Just a simple binary.
+
+### Visual Navigation
+Your knowledge is a network, not a list.
+* **[[Global Graph]]**: Visualize your entire vault's connections.
+* **[[Local Graph]]**: Context-aware network views for every note.
+* **[[Explorer|File Explorer]]**: A "What You See Is What You Get" sidebar that mirrors your vault structure exactly.
+
+### Make it yours
+Every vault is different, so let's reflect that!
+- [[Themes]]: Choose from a big collection of themes.
+- [[Fonts]]: We have them! Tons of them!
+- [[Light-Dark Mode]]: Every theme comes with a light and a dark mode.
+
+---
+
+## Get Started in Seconds
+Kiln is a single binary. You can go from Vault to Website in under 60 seconds.
 
 ### Installation
-The recommended way to install Kiln is via Go:
 ```bash
+# Install via Go
 go install github.com/otaleghani/kiln/cmd/kiln@latest
 ```
 
-(See [[Installation]] for binary downloads).
+(See [[Installation]] for pre-compiled binaries for Windows, Mac, and Linux).
 
-### Bake your Site
-Locate your Obsidian vault folder using [[generate]] and preview it locally with [[serve]]:
+### Bake & Serve
+Locate your Obsidian vault and run:
+
 ```bash
-# Generate the static website from your vault
-kiln generate --input ./path-to-your-vault --output ./output-directory
+# Generate the site
+kiln generate --input ./my-vault --output ./public
 
-# Preview your site locally
-kiln serve ./output-directory
+# Preview locally
+kiln serve ./public
 ```
 
-Open `http://localhost:8080` to see your vault transformed into a website. 
-
-## Features
-
-Kiln is packed with features designed to bridge the gap between your personal knowledge base and a public-facing website.
-### Content & Rendering
-
-We support the tools you use to think.
-
-- **[[Obsidian Markdown|Obsidian Parity]]**: Full support for **[[Wikilinks]]**, **[[Callouts]]**, and standard Markdown.
-- **[[Obsidian Canvas|Interactive Canvas]]**: Render `.canvas` files as zoomable, pan-able diagrams directly on your site. Check it out [[Canvas.canvas|Canvas]]
-- **[[Mermaid Graphs]]**: Native support for flowcharts, sequence diagrams, and Gantt charts.
-- **[[Math|Math & LaTeX]]**: Beautiful equation rendering via MathJax.
-- **[[Syntax Highlighting]]**: Automatic language detection and coloring for code blocks.
-- **[[Bases]]**: Group, filter and view your notes like a database. Check them out [[Feature List.base|here]]
-
-### Navigation & UX
-
-Your site behaves like a modern app, not a static document.
-
-- **[[Client Side Navigation|Instant Navigation]]**: Powered by **HTMX**, pages load instantly without full refreshes (SPA feel).
-- **[[Explorer|File Explorer]]**: A "What You See Is What You Get" sidebar that mirrors your vault structure.
-- **[[Search|Quick Find]]**: Real-time, fuzzy search to filter your file tree instantly.
-- **[[Table of Contents|Table of Contents]]**: Auto-generated right sidebar navigation for every note.
-- **[[Folders]]**: Navigate your notes with ease.
-- **[[Tags]]**: Group together different notes from different folders.
-
-### Visual Knowledge
-
-Visualize how your ideas connect.
-
-- **[[Global Graph]]**: An interactive visualization of your entire vault's connections.
-- **[[Local Graph]]**: A context-aware network view specific to the current note.
-
-### Technical & SEO
-
-Built for performance and discoverability.
-
-- **Zero-Config SEO**: Automatic generation of **[[Meta Tags]]**, **[[Sitemap xml|Sitemap xml]]**, and **[[Robots txt|Robots.txt]]**.
-- **[[Themes|Theming]]**: Built-in [[Light-Dark Mode]] and customizable color palettes baked directly into CSS.
-- **Linter**: A simple to use CLI linter using the [[doctor]] command to check your vault.
-- Other commands: Check out the stats of your vault with the [[stats]] command or initialize a new project with the [[init]] command.
+Open `http://localhost:8080`. Your digital garden is now live. 
 
 ## Deployment
+Kiln outputs standard HTML/CSS/JS. You can host it _anywhere_. Check our guides for [[Cloudflare Pages]], [[GitHub Pages]], [[Vercel]], [[Netlify]], or standard [[Web Servers]].
 
-The output of Kiln is a static website, which makes it really easy to deploy on your server. You can follow one of our guide for some popular services, like [[Cloudflare Pages]], [[GitHub Pages]], [[Vercel]], [[Netlify]] or just one of the many [[Web Servers]].
+---
 
-## Contributing
+## Advanced Features
+Ready to go beyond a simple knowledge base?
 
-Kiln is open source and distributed under the MIT License. If you spot a bug or have a feature request, please check our [[Roadmap]] or [open an issue on GitHub](https://github.com/otaleghani/kiln/releases/latest).
+> [!new] NEW: Custom Mode 
+> Want to use Obsidian as a Headless CMS? You can now use the flag `--mode "custom"` to take full control of the output. Check out [[What is Custom Mode]] or follow the [[Quick Start Guide]] to build completely custom layouts.
 
-## Credits
+### Data as a First-Class Citizen
+Organize your knowledge with **[[Bases]]**. Group, filter, and view your notes like a database—perfect for project trackers, book lists, or research logs.
 
-Check out the [[Credits]] page for a full list of credits.
+### Zero-Config SEO
+Search optimization made easy. Kiln handles it for you:
+
+- Automatic **[[Meta Tags]]** & Open Graph support (_soon_).
+- Auto-generated **[[Sitemap xml|Sitemap.xml]]** and **[[Robots txt|Robots.txt]]**.
+- Built-in **[[Themes|Light/Dark Mode]]**.
+
+---
+
+## Community & Contributing
+Kiln is open source (MIT).
+
+- **Found a bug?** [Open an issue on GitHub](https://github.com/otaleghani/kiln/issues).
+- **Want to help?** Check the [[Roadmap]].
+- **Love the project?** Give us a star!
+- **Interested about the how?**: Checkout the [[Credits]]!
