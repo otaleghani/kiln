@@ -104,10 +104,10 @@
       </div>
       <div class="flex gap-2 items-center">
         {{ template "theme-toggler" }}
-        {{ if (not .Site.DisableTOC) }}
+        {{ if and (not .Site.DisableTOC) (.TOC) }}
           {{ template "toc-button" }}
         {{ end }}
-        {{ if (not .Site.DisableLocalGraph) }}
+        {{ if and (not .Site.DisableLocalGraph) (not .IsGraph) }}
           {{ template "local-graph-button" }}
         {{ end }}
         {{ template "graph-button" }}

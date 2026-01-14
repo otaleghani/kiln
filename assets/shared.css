@@ -384,9 +384,21 @@ path.edge {
 }
 
 /* MARKDOWN */
+.content hr {
+  width: 100%;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  color: var(--sidebar-border);
+}
 .content {
   overflow: hidden;
   width: 100%;
+}
+.content h1,
+.content h2 {
+  border-bottom: 1px solid var(--sidebar-border);
+  padding-bottom: 0.3rem;
+  margin-bottom: 1rem;
 }
 .content h1 {
   font-size: 2em;
@@ -421,13 +433,6 @@ path.edge {
   line-height: 1.6;
 }
 .content p {
-  margin-bottom: 1rem;
-}
-
-.content h1,
-.content h2 {
-  border-bottom: 1px solid var(--sidebar-border);
-  padding-bottom: 0.3rem;
   margin-bottom: 1rem;
 }
 
