@@ -1,9 +1,13 @@
 {
 	"nodes":[
-		{"id":"5ff5c80213412956","type":"text","text":"Does it support canvases?","x":-118,"y":-369,"width":250,"height":60},
-		{"id":"6c3b4727aa3d96d8","type":"text","text":"Yes!","x":240,"y":-200,"width":250,"height":60}
+		{"id":"127834be64448dfd","type":"text","text":"Features","x":400,"y":-895,"width":250,"height":60},
+		{"id":"a217caba9f22d0c0","type":"file","file":"Features/Rendering/Bases.md","x":799,"y":-1416,"width":400,"height":400},
+		{"id":"5d513d6a6aa0e6da","type":"file","file":"Features/Rendering/Obsidian Canvas.md","x":799,"y":-940,"width":400,"height":400},
+		{"id":"6375b8912599bd85","type":"text","text":"Tables\nCards\nLists","x":1540,"y":-1416,"width":250,"height":96}
 	],
 	"edges":[
-		{"id":"4a285f72c012176e","fromNode":"5ff5c80213412956","fromSide":"right","toNode":"6c3b4727aa3d96d8","toSide":"left"}
+		{"id":"b7e3e68650524c7a","fromNode":"127834be64448dfd","fromSide":"right","toNode":"a217caba9f22d0c0","toSide":"left"},
+		{"id":"7abcc57a431fa248","fromNode":"127834be64448dfd","fromSide":"right","toNode":"5d513d6a6aa0e6da","toSide":"left"},
+		{"id":"ae66653369171df0","fromNode":"a217caba9f22d0c0","fromSide":"right","toNode":"6375b8912599bd85","toSide":"left","label":"Supported views"}
 	]
 }
