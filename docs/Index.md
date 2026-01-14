@@ -48,7 +48,7 @@ We support the tools you use to think.
 - **[[Mermaid Graphs]]**: Native support for flowcharts, sequence diagrams, and Gantt charts.
 - **[[Math|Math & LaTeX]]**: Beautiful equation rendering via MathJax.
 - **[[Syntax Highlighting]]**: Automatic language detection and coloring for code blocks.
-- **[[Bases]]**: Group, filter and view your notes like a database.
+- **[[Bases]]**: Group, filter and view your notes like a database. Check them out [[Feature List.base|here]]
 
 ### Navigation & UX
 

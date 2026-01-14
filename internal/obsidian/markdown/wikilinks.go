@@ -67,19 +67,24 @@ func (r *IndexResolver) FindFile(target []byte) (*obsidian.File, string, error) 
 
 	name, ext := SplitExt(dest)
 	// Remove extension
-	if ext == ".md" || ext == ".canvas" {
+	if ext == ".md" {
 		dest = strings.TrimSuffix(dest, ext)
 	}
 
 	// Lookup in Index (case insensitive)
 	candidates, ok := r.Index[name]
-	// Fallback: Try looking up the full path lowercased (rare, but good for safety)
+	// Fallback: Try looking up the full path (for .base and .canvas files)
+	// Then try it lowercased (rare, but good for safety)
 	if !ok {
-		lowerDest := strings.ToLower(dest)
-		if alt, ok := r.Index[lowerDest]; ok {
+		if alt, ok := r.Index[dest]; ok {
 			candidates = alt
 		} else {
-			return &obsidian.File{}, anchor, ErrorCandidateNotFound // Not found
+			lowerDest := strings.ToLower(dest)
+			if alt, ok := r.Index[lowerDest]; ok {
+				candidates = alt
+			} else {
+				return &obsidian.File{}, anchor, ErrorCandidateNotFound // Not found
+			}
 		}
 	}
 
