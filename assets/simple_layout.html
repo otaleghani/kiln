@@ -22,6 +22,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {{ template "head" . }}
     <link rel="stylesheet" href="{{ .Site.BaseURL }}/style.css" />
+    <link rel="stylesheet" href="{{ .Site.BaseURL }}/shared.css" />
     <style>
       /* Font definitions */
       {{ .Site.Theme.Font.FontFaceReplaced }}
@@ -587,7 +588,7 @@
 {{ end }}
 
 {{ define "table" }}
-  <div class="w-full font-main text-foreground">
+  <div class="font-main text-foreground">
     <div
       class="overflow-x-auto border-b border-b-sidebar-border bg-background mb-4"
     >
@@ -596,7 +597,7 @@
           <tr>
             {{ range .Base.Columns }}
               <th
-                class="bg-sidebar text-foreground font-semibold text-left px-3 py-2.5 border-b border-r border-sidebar-border whitespace-nowrap last:border-r-0"
+                class="bg-sidebar text-foreground font-semibold text-left px-3 py-2.5 border-b border-r border-sidebar-border whitespace-nowrap last:border-r-0 w-full"
               >
                 {{ getDisplayName $.Base.File . }}
               </th>
@@ -607,7 +608,7 @@
         <tbody>
           {{ if .Base.Groups }}
             {{ range $group := .Base.Groups }}
-              <tr class="group-row">
+              <tr class="group-row w-full">
                 <td
                   colspan="{{ len $.Base.Columns }}"
                   class="bg-sidebar text-foreground font-bold text-[0.95em] px-3 py-2 text-left border-b border-sidebar-border"

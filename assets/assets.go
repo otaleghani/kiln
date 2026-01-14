@@ -16,6 +16,7 @@ import "embed"
 //
 //go:embed canvas.js
 //go:embed graph.js
+//go:embed shared.css
 //go:embed Inter-Regular.woff2
 //go:embed Inter-Bold.woff2
 //go:embed Lato-Regular.woff2

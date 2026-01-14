@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otaleghani/kiln/assets"
 	"github.com/otaleghani/kiln/internal/obsidian"
 	"github.com/otaleghani/kiln/internal/obsidian/bases"
 	"github.com/otaleghani/kiln/internal/obsidian/markdown"
@@ -216,6 +217,16 @@ func buildDefault(log *slog.Logger) {
 	err = site.Layout.CssTemplate.Execute(cssOut, site)
 	if err != nil {
 		log.Error("Couldn't execute template for 'style.css'", "error", err)
+	}
+
+	// Copies over shared.css - Contains shared styles between layouts
+	cssContent, err := assets.TemplateFS.ReadFile("shared.css")
+	if err != nil {
+		log.Error("Couldn't read 'shared.css'", "error", err)
+	}
+	err = os.WriteFile(filepath.Join(OutputDir, "shared.css"), cssContent, 0644)
+	if err != nil {
+		log.Error("Couldn't write 'shared.css'", "error", err)
 	}
 
 	// Generate app JS
