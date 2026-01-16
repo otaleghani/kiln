@@ -3,6 +3,13 @@ title: Changelog
 description: A list of all the addition to kiln.
 ---
 # Changelog
+
+## v0.3.5
+- FIX: Canonical tags in `flat-urls` mode
+- FIX: `![new]` callout had no style
+- 
+## v0.3.4
+- ADD: Canonical tags
 ## v0.3.3
 - FIX: Navbar was displaying notes with the same name
 - ADD: Documentation about overlapping files

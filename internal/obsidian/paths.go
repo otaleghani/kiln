@@ -112,6 +112,7 @@ func (o *Obsidian) GetPageOutputPath(slugPath, ext string) (string, error) {
 	}
 
 	// Ensure the parent directory exists before returning
+	// TODO: Ensure not to craete a path when a file doesn't end in an extension.
 	err := os.MkdirAll(filepath.Dir(outputPath), 0755)
 	if err != nil {
 		return "", err

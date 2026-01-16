@@ -292,7 +292,7 @@ window.JsonCanvasRenderer = class JsonCanvasRenderer {
       if (toc) toc.remove();
 
       // Render content only (Header is already handled in createNode)
-      container.innerHTML = `<div class="content">${content.innerHTML}</div>`;
+      container.innerHTML = `<div class="content" style="padding: 1rem;">${content.innerHTML}</div>`;
     }
   }
 

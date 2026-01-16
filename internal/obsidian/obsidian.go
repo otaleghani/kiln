@@ -539,6 +539,29 @@ func (o *Obsidian) LoadFavicon() error {
 	return nil
 }
 
+// loadRedirects loads the _redirects file if it exists. Used for cloudflare pages
+// deployment for handling redirects.
+//
+// For more information check out this link:
+// https://developers.cloudflare.com/pages/configuration/redirects/
+func (o *Obsidian) LoadRedirects() error {
+	redirectsSrc := filepath.Join(o.InputDir, "_redirects")
+	if _, err := os.Stat(redirectsSrc); err != nil {
+		return err
+	}
+	err := os.RemoveAll(filepath.Join(o.OutputDir, "_redirects"))
+	if err != nil {
+		return err
+	}
+
+	err = CopyFile(redirectsSrc, filepath.Join(o.OutputDir, "_redirects"))
+	if err != nil {
+		return err
+	}
+	o.log.Debug("'_redirects' file loaded correctly")
+	return nil
+}
+
 // loadCname loads the CNAME file if it exists
 func (o *Obsidian) LoadCname() error {
 	faviconSrc := filepath.Join(o.InputDir, "CNAME")

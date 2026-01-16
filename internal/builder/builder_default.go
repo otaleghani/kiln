@@ -310,6 +310,11 @@ func buildDefault(log *slog.Logger) {
 		log.Error("Couldn't transfer 'favicon.ico' file", "error", err)
 	}
 
+	err = site.Obsidian.LoadRedirects()
+	if err != nil {
+		log.Error("Couldn't transfer '_redirects' file", "error", err)
+	}
+
 	log.Info(
 		"Build complete",
 		"seconds",
