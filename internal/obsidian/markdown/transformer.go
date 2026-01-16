@@ -171,46 +171,13 @@ func transformCallouts(htmlStr string) string {
 	})
 }
 
-// getCalloutIcon maps a callout type string (e.g., "info", "bug") to a corresponding Lucide icon name.
-// It supports various aliases common in markdown ecosystems.
-//
-//	func getCalloutIcon(cType string) string {
-//		switch cType {
-//		case "abstract", "summary", "tldr":
-//			return "clipboard-list"
-//		case "info":
-//			return "info"
-//		case "todo":
-//			return "check-circle-2"
-//		case "tip", "hint", "important":
-//			return "lightbulb"
-//		case "success", "check", "done":
-//			return "check"
-//		case "question", "help", "faq":
-//			return "help-circle"
-//		case "warning", "caution", "attention":
-//			return "alert-triangle"
-//		case "failure", "fail", "missing":
-//			return "x"
-//		case "danger", "error":
-//			return "zap"
-//		case "bug":
-//			return "bug"
-//		case "example":
-//			return "list"
-//		case "quote", "cite":
-//			return "quote"
-//		default:
-//			return "pencil"
-//		}
-//	}
 func getCalloutIcon(cType string) string {
 	switch cType {
 	case "abstract", "summary", "tldr":
 		// Icon: clipboard-list
 		return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list-icon lucide-clipboard-list h-5 w-5"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>`
 
-	case "info":
+	case "info", "new":
 		// Icon: info
 		return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info-icon lucide-info h-5 w-5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`
 

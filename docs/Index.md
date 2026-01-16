@@ -74,7 +74,7 @@ Kiln outputs standard HTML/CSS/JS. You can host it _anywhere_. Check our guides 
 ## Advanced Features
 Ready to go beyond a simple knowledge base?
 
-> [!warning] NEW: Custom Mode 
+> [!new] NEW: Custom Mode 
 > Want to use Obsidian as a Headless CMS? You can now use the flag `--mode "custom"` to take full control of the output. Check out [[What is Custom Mode]] or follow the [[Quick Start Guide]] to build completely custom layouts.
 
 ### Data as a First-Class Citizen

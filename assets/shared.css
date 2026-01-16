@@ -606,6 +606,7 @@ details.callout[open] > summary .callout-title::after {
 
 .callout[data-callout="note"],
 .callout[data-callout="info"],
+.callout[data-callout="new"],
 .callout[data-callout="todo"] {
   --callout-color: var(--color-blue);
 }
