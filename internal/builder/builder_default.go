@@ -66,6 +66,7 @@ func buildDefault(log *slog.Logger) {
 		NavbarRoot:        rootNode,
 		DisableLocalGraph: DisableLocalGraph,
 		DisableTOC:        DisableTOC,
+		FlatURLs:          FlatUrls,
 		log:               log,
 		Obsidian:          obs,
 	}
@@ -657,6 +658,7 @@ type DefaultSite struct {
 	Minifier          *minify.M                  // Minifier to minify html pages
 	DisableLocalGraph bool                       // If set, disables the local graph
 	DisableTOC        bool                       // If set, disables the Table of contents
+	FlatURLs          bool                       // If set, handles flat urls (used in canonical)
 	log               *slog.Logger
 	Obsidian          *obsidian.Obsidian
 }

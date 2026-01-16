@@ -500,9 +500,6 @@
   .bg-sidebar-border {
     background-color: var(--color-sidebar-border);
   }
-  .mask-repeat {
-    mask-repeat: repeat;
-  }
   .p-0 {
     padding: calc(var(--spacing) * 0);
   }

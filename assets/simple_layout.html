@@ -473,13 +473,23 @@
 
 {{ define "canonical" }}
   {{ if and (not .IsFolder) (not .IsTag) }}
-    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .File.WebPath }}" />
+    <link
+      rel="canonical"
+      href="{{ .Site.BaseURL }}{{ .File.WebPath }}{{ if .Site.FlatURLs }}
+        /
+      {{ end }}"
+    />
   {{ end }}
   {{ if .IsFolder }}
-    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .Folder.WebPath }}" />
+    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .Folder.WebPath }}/" />
   {{ end }}
   {{ if .IsTag }}
-    <link rel="canonical" href="{{ .Site.BaseURL }}{{ .Tag.WebPath }}" />
+    <link
+      rel="canonical"
+      href="{{ .Site.BaseURL }}{{ .Tag.WebPath }}{{ if .Site.FlatURLs }}
+        /
+      {{ end }}"
+    />
   {{ end }}
 {{ end }}
 
