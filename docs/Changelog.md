@@ -4,6 +4,8 @@ description: A list of all the addition to kiln.
 ---
 # Changelog
 
+## v0.3.6
+- FIX: Navbar had links to redirects for folders
 ## v0.3.5
 - ADD: Handle for `_redirects` file (for [[Cloudflare Pages]])
 - FIX: Canonical tags in `flat-urls` mode
