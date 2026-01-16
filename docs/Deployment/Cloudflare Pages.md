@@ -100,3 +100,7 @@ Change `SITE_NAME` to change the navbar name and site meta tags.
 6. Click **Save and Deploy**.
 
 Cloudflare will now clone your repository, run your script (which downloads Kiln), and deploy the resulting `./public` folder to the global edge network.
+
+## `_redirects`
+
+Cloudflare Pages handles redirects using a special file in the root directory named `_redirects`. Kiln directly supports this feature and copies over if present the `_redirects` file found in the root of your vault. For more information about redirects in Cloudflare Pages, check out the [official documentation](https://developers.cloudflare.com/pages/configuration/redirects/).

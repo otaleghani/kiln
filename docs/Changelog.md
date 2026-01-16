@@ -5,9 +5,10 @@ description: A list of all the addition to kiln.
 # Changelog
 
 ## v0.3.5
+- ADD: Handle for `_redirects` file (for [[Cloudflare Pages]])
 - FIX: Canonical tags in `flat-urls` mode
 - FIX: `![new]` callout had no style
-- 
+- FIX: Canvas notes not being displayed
 ## v0.3.4
 - ADD: Canonical tags
 ## v0.3.3
