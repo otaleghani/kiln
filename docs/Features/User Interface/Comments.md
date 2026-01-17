@@ -35,7 +35,12 @@ After that hope into [the official giscus website](https://giscus.app/) and foll
 
 ## Themes
 
-Kiln automatically tries to sync the theme of `giscus` with the current active theme. You can find a list of all the available [[Themes]] here. This happens on page load and whenever the user changes theme.
+Kiln automatically tries to sync the theme of `giscus` with the current active theme. This allows you to have visual consistency across your site. You can find a list of all the available [[Themes]] here. This happens whenever `discus` get's loaded and on theme change ([[Light-Dark Mode]]).
+
+To make this feature work you'll need to specify the `--url` flag on the [[generate]] command. Reason why is that the Discus `iframe` needs absolute URLs to load the files. As a refresher, the `--url` flag describes the final URL of your site, included the protocol. It is used usually for creating the [[Robots txt]] and [[Sitemap xml]] files. As an example if the final URL of your site is `https://www.amazingsite.net` you need to generate the website with the following command:
+```bash
+kiln generate --url "https://www.amazingsite.net"
+```
 
 ## Example
 
