@@ -1,0 +1,45 @@
+/* giscus-theme-light.css */
+main {
+  /* Main Background & Text */
+  --color-canvas-default: {{ .Theme.Light.Bg }};
+  --color-canvas-overlay: {{ .Theme.Light.SidebarBg }};
+  --color-canvas-subtle: {{ .Theme.Light.SidebarBg }}; /* Used for input fields */
+  --color-fg-default: {{ .Theme.Light.Text }};
+  --color-fg-muted: {{ .Theme.Light.Comment }}; /* Muted text/metadata */
+  --color-fg-subtle: {{ .Theme.Light.Comment }};
+
+  /* Borders */
+  --color-border-default: {{ .Theme.Light.SidebarBorder }};
+  --color-border-primary: {{ .Theme.Light.SidebarBorder }};
+  --color-border-muted: {{ .Theme.Light.SidebarBorder }};
+
+  /* Links & Accents */
+  --color-accent-fg: {{ .Theme.Light.Accent }};
+  --color-accent-emphasis: {{ .Theme.Light.Accent }};
+  --color-accent-muted: {{ .Theme.Light.Hover }};
+  --color-accent-subtle: {{ .Theme.Light.Hover }};
+
+  /* Buttons (Submit Comment) */
+  --color-btn-text: {{ .Theme.Light.Bg }};
+  --color-btn-bg: {{ .Theme.Light.Accent }};
+  --color-btn-border: {{ .Theme.Light.Accent }};
+  --color-btn-hover-bg: {{ .Theme.Light.Hover }};
+  --color-btn-hover-border: {{ .Theme.Light.Hover }};
+  --color-btn-active-bg: {{ .Theme.Light.Hover }};
+  --color-btn-primary-bg: {{ .Theme.Light.Accent }};
+  --color-btn-primary-border: {{ .Theme.Light.Accent }};
+  
+  /* Reaction & Markdown Colors (Using your palette) */
+  --color-danger-fg: {{ .Theme.Light.Red }};
+  --color-success-fg: {{ .Theme.Light.Green }};
+  --color-attention-fg: {{ .Theme.Light.Yellow }};
+  
+  /* Code Blocks */
+  --color-prettylights-syntax-comment: {{ .Theme.Light.Comment }};
+  --color-prettylights-syntax-entity: {{ .Theme.Light.Purple }};
+  --color-prettylights-syntax-string: {{ .Theme.Light.Green }};
+  --color-prettylights-syntax-keyword: {{ .Theme.Light.Red }};
+  
+  /* Font */
+  font-family: {{ .Theme.Font.Family }}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

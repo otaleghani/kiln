@@ -14,6 +14,8 @@ import "embed"
 // - HTML/CSS: The base layout templates and styling.
 // - Fonts: WOFF2 font files for the supported typography themes (Inter, Lato, Merriweather).
 //
+//go:embed giscus_theme_light.css
+//go:embed giscus_theme_dark.css
 //go:embed canvas.js
 //go:embed graph.js
 //go:embed shared.css

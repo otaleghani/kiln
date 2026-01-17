@@ -1,0 +1,45 @@
+/* giscus-theme-dark.css */
+main {
+  /* Main Background & Text */
+  --color-canvas-default: {{ .Theme.Dark.Bg }};
+  --color-canvas-overlay: {{ .Theme.Dark.SidebarBg }};
+  --color-canvas-subtle: {{ .Theme.Dark.SidebarBg }}; /* Used for input fields */
+  --color-fg-default: {{ .Theme.Dark.Text }};
+  --color-fg-muted: {{ .Theme.Dark.Comment }}; /* Muted text/metadata */
+  --color-fg-subtle: {{ .Theme.Dark.Comment }};
+
+  /* Borders */
+  --color-border-default: {{ .Theme.Dark.SidebarBorder }};
+  --color-border-primary: {{ .Theme.Dark.SidebarBorder }};
+  --color-border-muted: {{ .Theme.Dark.SidebarBorder }};
+
+  /* Links & Accents */
+  --color-accent-fg: {{ .Theme.Dark.Accent }};
+  --color-accent-emphasis: {{ .Theme.Dark.Accent }};
+  --color-accent-muted: {{ .Theme.Dark.Hover }};
+  --color-accent-subtle: {{ .Theme.Dark.Hover }};
+
+  /* Buttons (Submit Comment) */
+  --color-btn-text: {{ .Theme.Dark.Bg }}; /* Usually dark text on light button for dark mode, or vice versa depending on contrast */
+  --color-btn-bg: {{ .Theme.Dark.Accent }};
+  --color-btn-border: {{ .Theme.Dark.Accent }};
+  --color-btn-hover-bg: {{ .Theme.Dark.Hover }};
+  --color-btn-hover-border: {{ .Theme.Dark.Hover }};
+  --color-btn-active-bg: {{ .Theme.Dark.Hover }};
+  --color-btn-primary-bg: {{ .Theme.Dark.Accent }};
+  --color-btn-primary-border: {{ .Theme.Dark.Accent }};
+
+  /* Reaction & Markdown Colors */
+  --color-danger-fg: {{ .Theme.Dark.Red }};
+  --color-success-fg: {{ .Theme.Dark.Green }};
+  --color-attention-fg: {{ .Theme.Dark.Yellow }};
+
+  /* Code Blocks */
+  --color-prettylights-syntax-comment: {{ .Theme.Dark.Comment }};
+  --color-prettylights-syntax-entity: {{ .Theme.Dark.Purple }};
+  --color-prettylights-syntax-string: {{ .Theme.Dark.Green }};
+  --color-prettylights-syntax-keyword: {{ .Theme.Dark.Red }};
+
+  /* Font */
+  font-family: {{ .Theme.Font.Family }}, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

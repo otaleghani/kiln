@@ -263,6 +263,32 @@ func buildDefault(log *slog.Logger) {
 		log.Error("Couldn't execute template for 'canvas.js'", "error", err)
 	}
 
+	// Generate discus CSS themes
+	log.Debug("Generating light giscus theme")
+	giscusLightOut, err := os.Create(filepath.Join(OutputDir, "giscus-theme-light.css"))
+	if err != nil {
+		log.Error("Couldn't create 'giscus-theme-light.css'", "error", err)
+	}
+	defer giscusLightOut.Close()
+	log.Debug("Rendering light giscus theme")
+	err = site.Layout.CssGiscusLightTemplate.Execute(giscusLightOut, site)
+	if err != nil {
+		log.Error("Couldn't execute template for 'giscus-theme-light.css'", "error", err)
+	}
+	log.Debug("Done generating light theme")
+	log.Debug("Generating dark giscus theme")
+	giscusDarkOut, err := os.Create(filepath.Join(OutputDir, "giscus-theme-dark.css"))
+	if err != nil {
+		log.Error("Couldn't create 'giscus-theme-dark.css'", "error", err)
+	}
+	defer giscusDarkOut.Close()
+	log.Debug("Rendering dark giscus theme")
+	err = site.Layout.CssGiscusDarkTemplate.Execute(giscusDarkOut, site)
+	if err != nil {
+		log.Error("Couldn't execute template for 'giscus-theme-dark.css'", "error", err)
+	}
+	log.Debug("Done generating dark theme")
+
 	// Extracts fonts
 	site.Theme.extractFonts(OutputDir, log)
 

@@ -101,6 +101,28 @@ func (l *Layout) loadLayout() error {
 	}
 	l.JsCanvasTemplate = tmplCanvasJS
 
+	// Load and parse the giscus CSS template
+	cssGiscusLightContent, err := assets.TemplateFS.ReadFile("giscus_theme_light.css")
+	if err != nil {
+		return err
+	}
+	tmplGiscusLightCSS, err := textTemplate.New("css").Parse(string(cssGiscusLightContent))
+	if err != nil {
+		return err
+	}
+	l.CssGiscusLightTemplate = tmplGiscusLightCSS
+
+	// Discus dark theme
+	cssGiscusDarkContent, err := assets.TemplateFS.ReadFile("giscus_theme_dark.css")
+	if err != nil {
+		return err
+	}
+	tmplGiscusDarkCSS, err := textTemplate.New("css").Parse(string(cssGiscusDarkContent))
+	if err != nil {
+		return err
+	}
+	l.CssGiscusDarkTemplate = tmplGiscusDarkCSS
+
 	return nil
 }
 
@@ -127,14 +149,16 @@ func safeHTML(s string) template.HTML {
 // layout to the name of the file. If you have a layout called "default" it should have the
 // following files: default_layout.html, default_style.css and default_app.js
 type Layout struct {
-	Name             string
-	HtmlPath         string                 // Path of the HTML file
-	CssPath          string                 // Path of the CSS file
-	JsPath           string                 // Path of the JS file
-	HtmlTemplate     *template.Template     // The template
-	CssTemplate      *textTemplate.Template // Used to add the theme variables
-	JsTemplate       *textTemplate.Template // If you need to change some data
-	JsGraphTemplate  *textTemplate.Template // Usually you'll need to update the graph base url
-	JsCanvasTemplate *textTemplate.Template // If you need to change some data
-	log              *slog.Logger
+	Name                   string
+	HtmlPath               string                 // Path of the HTML file
+	CssPath                string                 // Path of the CSS file
+	JsPath                 string                 // Path of the JS file
+	HtmlTemplate           *template.Template     // The template
+	CssTemplate            *textTemplate.Template // Used to add the theme variables
+	JsTemplate             *textTemplate.Template // If you need to change some data
+	JsGraphTemplate        *textTemplate.Template // Usually you'll need to update the graph base url
+	JsCanvasTemplate       *textTemplate.Template // If you need to change some data
+	CssGiscusLightTemplate *textTemplate.Template // Giscus template
+	CssGiscusDarkTemplate  *textTemplate.Template // Giscus template
+	log                    *slog.Logger
 }
