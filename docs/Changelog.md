@@ -3,10 +3,10 @@ title: Changelog
 description: A list of all the addition to kiln.
 ---
 # Changelog
-
+## v0.3.9
+- FIX: giscus theme was inverted
 ## v0.3.8
 - FIX: giscus change theme not being loaded when giscus loads
-
 ## v0.3.7
 - ADD: Comments support 
 - FIX: Links to javascript redirects
