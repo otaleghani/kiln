@@ -91,28 +91,27 @@ window.initMermaid = async function () {
 
 // Changes the giscus theme based on the current theme
 window.changeGiscusTheme = function () {
-  // Get the Giscus iframe
   const iframe = document.querySelector("iframe.giscus-frame");
-
   if (!iframe) return;
 
-  // Define the URL based on the mode ('light' or 'dark')
-  // REPLACE these URLs with your actual file paths
   const current = document.documentElement.getAttribute("data-theme");
   const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  let target = !current
-    ? sysDark
-      ? "light"
-      : "dark"
-    : current === "dark"
-      ? "light"
-      : "dark";
+
+  // If 'current' exists, use it.
+  // If 'current' is missing, check system preference (sysDark).
+  let target;
+  if (current) {
+    target = current; // e.g., if data-theme="dark", target is "dark"
+  } else {
+    target = sysDark ? "dark" : "light";
+  }
+
+  // Now 'target' holds the correct theme name ("dark" or "light")
   const themeUrl =
     target === "dark"
-      ? "{{.BaseURL}}/giscus-theme-dark.css"
-      : "{{.BaseURL}}/giscus-theme-light.css";
+      ? "{{.BaseURL}}/giscus-theme-light.css"
+      : "{{.BaseURL}}/giscus-theme-dark.css";
 
-  // Send the message to Giscus
   iframe.contentWindow.postMessage(
     {
       giscus: {
@@ -121,7 +120,7 @@ window.changeGiscusTheme = function () {
         },
       },
     },
-    "https://giscus.app", // This origin is required for security
+    "https://giscus.app",
   );
 };
 
@@ -345,7 +344,6 @@ window.addCopyButtons = function () {
 
 // Calls every init function
 window.initAll = function () {
-  window.changeGiscusTheme();
   window.initThemeToggle();
   window.initNavbarSearch();
   window.setupRightSidebarInteraction();
