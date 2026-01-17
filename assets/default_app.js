@@ -109,8 +109,8 @@ window.changeGiscusTheme = function () {
   // Now 'target' holds the correct theme name ("dark" or "light")
   const themeUrl =
     target === "dark"
-      ? "{{.BaseURL}}/giscus-theme-light.css"
-      : "{{.BaseURL}}/giscus-theme-dark.css";
+      ? "{{.BaseURL}}/giscus-theme-dark.css"
+      : "{{.BaseURL}}/giscus-theme-light.css";
 
   iframe.contentWindow.postMessage(
     {
