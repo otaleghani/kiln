@@ -377,6 +377,12 @@ func (o *Obsidian) Scan() error {
 			return nil
 		}
 
+		// Skip
+		if strings.HasPrefix(relPath, "_hidden_") {
+			l.Debug("Skipping hidden file", "reason", "File has prefix _hidden_")
+			return nil
+		}
+
 		// Skip directories
 		if info.IsDir() {
 			folder, err := o.NewFolder(path)
