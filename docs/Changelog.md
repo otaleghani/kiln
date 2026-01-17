@@ -3,22 +3,31 @@ title: Changelog
 description: A list of all the addition to kiln.
 ---
 # Changelog
+## v0.3.10
+- FIX: giscus theme was inverted (again...)
+
 ## v0.3.9
 - FIX: giscus theme was inverted
+
 ## v0.3.8
 - FIX: giscus change theme not being loaded when giscus loads
+
 ## v0.3.7
 - ADD: Comments support 
 - FIX: Links to javascript redirects
+
 ## v0.3.6
 - FIX: Navbar had links to redirects for folders
+
 ## v0.3.5
 - ADD: Handle for `_redirects` file (for [[Cloudflare Pages]])
 - FIX: Canonical tags in `flat-urls` mode
 - FIX: `![new]` callout had no style
 - FIX: Canvas notes not being displayed
+
 ## v0.3.4
 - ADD: Canonical tags
+
 ## v0.3.3
 - FIX: Navbar was displaying notes with the same name
 - ADD: Documentation about overlapping files
@@ -30,6 +39,7 @@ description: A list of all the addition to kiln.
 ## v0.3.1
 - FIX: `simple_layout.html` and `default_layout.html` had issues with scrolling
 - FIX: `canvas.js` didn't have mobile events
+
 ## v0.3.0
 - ADD: [[Bases]] page generation
 - ADD: [[Folders]] page generation
