@@ -4,10 +4,12 @@ description: A list of all the addition to kiln.
 ---
 # Changelog
 
+## v0.3.8
+- FIX: giscus change theme not being loaded when giscus loads
+
 ## v0.3.7
 - ADD: Comments support 
 - FIX: Links to javascript redirects
-- 
 ## v0.3.6
 - FIX: Navbar had links to redirects for folders
 ## v0.3.5
