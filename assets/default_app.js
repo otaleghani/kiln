@@ -369,3 +369,19 @@ document.addEventListener("htmx:afterSwap", () => {
     window.MathJax.typesetPromise();
   }
 });
+
+window.addEventListener("message", function (event) {
+  // Security check: Only allow messages from Giscus
+  if (event.origin !== "https://giscus.app") return;
+
+  // Check if the message is specifically about Giscus data
+  // (Giscus sends a distinctive message structure)
+  if (!(typeof event.data === "object" && event.data.giscus)) return;
+
+  // Fire your theme function
+  // We double-check that the frame exists just to be safe
+  const iframe = document.querySelector("iframe.giscus-frame");
+  if (iframe) {
+    window.changeGiscusTheme();
+  }
+});
