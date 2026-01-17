@@ -12,8 +12,7 @@ Kiln is an evolving project. Below is the current plan for upcoming features and
 ## Planned immediate enhancements 
 *Priority items to stabilize the current beta.*
 
-- [x] **Divide core styles**: Every layout uses the same markdown style. 
-
+_nothing for now..._
 ## Core Features
 *Major functionality upgrades.*
 
