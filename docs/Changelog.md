@@ -4,6 +4,9 @@ description: A list of all the addition to kiln.
 ---
 # Changelog
 
+## v0.3.13
+- FIX: mobile sidebar was by default open on mobile
+
 ## v0.3.12
 - FIX: sitemap not generating
 
