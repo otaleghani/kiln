@@ -110,7 +110,7 @@
     <!-- Left sidebar -->
     <nav
       id="left-sidebar"
-      class="w-72 h-screen bg-sidebar border-r border-r-sidebar-border flex-col justify-between flex xl:hidden fixed xl:relative top-0 left-0 z-50"
+      class="w-72 h-screen bg-sidebar border-r border-r-sidebar-border flex-col justify-between hidden xl:flex fixed xl:relative top-0 left-0 z-50"
     >
       <script>
         try {
@@ -180,7 +180,7 @@
     {{ if or (not .Site.DisableLocalGraph) (not .Site.DisableTOC) }}
       <aside
         id="right-sidebar"
-        class="w-72 h-screen bg-sidebar border-l border-l-sidebar-border flex xl:hidden fixed xl:relative top-0 right-0 z-50 flex-col"
+        class="w-72 h-screen bg-sidebar border-l border-l-sidebar-border hidden xl:flex fixed xl:relative top-0 right-0 z-50 flex-col"
       >
         <script>
           try {
