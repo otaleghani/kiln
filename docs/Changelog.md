@@ -3,6 +3,13 @@ title: Changelog
 description: A list of all the addition to kiln.
 ---
 # Changelog
+
+## v0.3.12
+- FIX: sitemap not generating
+
+## v0.3.11
+- FIX: folder pages overrides
+
 ## v0.3.10
 - FIX: giscus theme was inverted (again...)
 
