@@ -24,6 +24,7 @@ func (o *Obsidian) GenerateRobots() error {
 }
 
 func (o *Obsidian) GenerateSitemap() error {
+	o.log.Debug("Generating sitemap...")
 	sitemapFile, err := os.Create(filepath.Join(o.OutputDir, "sitemap.xml"))
 	if err != nil {
 		return err
@@ -34,6 +35,7 @@ func (o *Obsidian) GenerateSitemap() error {
 		`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n",
 	)
 	for _, entry := range o.Vault.Sitemap.Entries {
+		o.log.Debug("Sitemap adding", "entry", entry)
 		output, _ := xml.MarshalIndent(entry, "  ", "  ")
 		sitemapFile.Write(output)
 		sitemapFile.WriteString("\n")

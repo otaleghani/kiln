@@ -72,6 +72,9 @@ func (o *Obsidian) NewFolder(path string) (*Folder, error) {
 		Modified: info.ModTime(),
 	}
 
+	// Add folder to sitemap
+	o.AddSitemapEntry(info.ModTime(), o.BaseURL, webPath)
+
 	return f, nil
 }
 
@@ -143,6 +146,9 @@ func (o *Obsidian) NewFile(path string) (*File, error) {
 		Tags:      make(map[string]struct{}),
 		Embeds:    []string{},
 	}
+
+	// Add file to sitemap
+	o.AddSitemapEntry(modTime, o.BaseURL, webPath)
 
 	// 3. Conditional Processing for Markdown
 	if ext == ".md" {
@@ -409,8 +415,6 @@ func (o *Obsidian) Scan() error {
 			l.Error("Couldn't create new file", "error", err)
 			return nil
 		}
-
-		// l.Debug("Processed file", "file", file)
 
 		// Register the file in the global index (filename -> public URL)
 		// This is used later for resolving [[WikiLinks]]
