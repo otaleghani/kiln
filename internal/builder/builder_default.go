@@ -118,6 +118,29 @@ func buildDefault(log *slog.Logger) {
 		}
 	}
 
+	log.Info("Rendering folder pages...")
+	for _, folder := range site.Obsidian.Vault.Folders {
+		l := log.With("folder", folder.RelPath)
+		// Check if there are some other that have the same
+		if len(folder.Files) == 0 && len(folder.Folders) == 0 {
+			l.Debug("Skipped empty folder", "folder", folder.Name)
+			continue
+		}
+
+		err := site.RenderFolder(folder)
+		if err != nil {
+			l.Error("Couldn't render folder", "error", err)
+			continue
+		}
+		nodes = append(nodes, obsidian.GraphNode{
+			ID:    folder.WebPath,
+			Label: folder.Name,
+			URL:   folder.WebPath,
+			Val:   1,
+			Type:  "folder",
+		})
+	}
+
 	log.Info("Rendering canvas pages...")
 	for _, file := range canvasPages {
 		l := log.With("file", file.Path)
@@ -167,28 +190,6 @@ func buildDefault(log *slog.Logger) {
 			URL:   note.WebPath,
 			Val:   1,
 			Type:  note.Ext,
-		})
-	}
-
-	log.Info("Rendering folder pages...")
-	for _, folder := range site.Obsidian.Vault.Folders {
-		l := log.With("folder", folder.RelPath)
-		if len(folder.Files) == 0 && len(folder.Folders) == 0 {
-			l.Debug("Skipped empty folder", "folder", folder.Name)
-			continue
-		}
-
-		err := site.RenderFolder(folder)
-		if err != nil {
-			l.Error("Couldn't render folder", "error", err)
-			continue
-		}
-		nodes = append(nodes, obsidian.GraphNode{
-			ID:    folder.WebPath,
-			Label: folder.Name,
-			URL:   folder.WebPath,
-			Val:   1,
-			Type:  "folder",
 		})
 	}
 

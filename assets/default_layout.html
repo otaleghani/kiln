@@ -137,7 +137,7 @@
           class="w-full p-2 rounded border border-sidebar-border text-sm"
         />
         <ul class="font-main text-sm">
-          {{ template "navbar" .Site.NavbarRoot.Children }}
+          {{ template "navbar" (dict "Nodes" .Site.NavbarRoot.Children "Site" .Site) }}
         </ul>
       </div>
       <footer class="p-6 text-sm text-center item-end">
@@ -210,7 +210,8 @@
 </html>
 <!-- NAVBAR -->
 {{ define "navbar" }}
-  {{ range . }}
+  {{ $site := .Site }}
+  {{ range .Nodes }}
     <li class="py-1 pl-4">
       {{ if .IsFolder }}
         <details class="[&[open]>summary>svg]:rotate-90">
@@ -231,7 +232,9 @@
             >
               <path d="m9 18 6-6-6-6" />
             </svg>
-            <a href="{{ .Path }}/" class="flex items-baseline gap-2"
+            <a
+              href="{{ .Path }}{{ if ($site.FlatURLs) }}/{{ end }}"
+              class="flex items-baseline gap-2"
               >{{ .Name }}
 
               {{ if and (.IsCanvas) (not .IsNote) (not .IsBase) }}
@@ -255,11 +258,16 @@
             </a>
           </summary>
           <ul class="border-l border-l-sidebar-border py-0.5 pl-6 -ml-4">
-            {{ template "navbar" .Children }}
+            {{ template "navbar" (dict "Nodes" .Children "Site" $site) }}
           </ul>
         </details>
       {{ else }}
-        <a href="{{ .Path }}" class="flex items-baseline gap-2">
+        <a
+          href="{{ .Path }}{{ if and ($site.FlatURLs) (ne .Path "/") }}
+            /
+          {{ end }}"
+          class="flex items-baseline gap-2"
+        >
           <span>{{ .Name }}</span>
           {{ if .IsCanvas }}
             <span

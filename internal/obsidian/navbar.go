@@ -51,7 +51,7 @@ func (o *Obsidian) GenerateNavbar() *NavbarNode {
 
 		node := &NavbarNode{
 			Name:     filepath.Base(folder.RelPath),
-			Path:     folder.WebPath, // Use pre-calculated WebPath
+			Path:     folder.WebPath,
 			IsFolder: true,
 			Children: []*NavbarNode{},
 		}
@@ -74,18 +74,24 @@ func (o *Obsidian) GenerateNavbar() *NavbarNode {
 			continue
 		}
 
-		if node, exists := folderMap[strings.TrimSuffix(file.RelPath, file.Ext)]; exists {
+		// Do not the file again if a folder with the same name exists
+		// Also change the folder path to the current file webpath.
+		// This should solve non-flat-urls links
+		if folder, exists := folderMap[strings.TrimSuffix(file.RelPath, file.Ext)]; exists {
 			switch file.Ext {
 			case ".md":
-				node.IsNote = true
+				folder.IsNote = true
+				folder.Path = file.WebPath
 			case ".canvas":
-				node.IsCanvas = true
+				folder.IsCanvas = true
+				folder.Path = file.WebPath
 			case ".base":
-				node.IsBase = true
+				folder.IsBase = true
+				folder.Path = file.WebPath
 			default:
+				folder.Path = file.WebPath
 				continue
 			}
-			// Do not add again the same if a folder exists
 			continue
 		}
 
