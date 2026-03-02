@@ -1,0 +1,83 @@
+// @feature:layouts Recursive navbar component for sidebar navigation tree.
+package templates
+
+import (
+	"github.com/otaleghani/kiln/internal/obsidian"
+)
+
+templ Navbar(nodes []*obsidian.NavbarNode, flatURLs bool) {
+	for _, node := range nodes {
+		<li class="py-1 pl-4">
+			if node.IsFolder {
+				<details class="[&[open]>summary>svg]:rotate-90">
+					<summary
+						class="relative flex cursor-pointer items-center list-none font-bold"
+					>
+						<svg
+							class="h-4 w-4 mr-2 opacity-50 transition-transform duration-200 -ml-6"
+							xmlns="http://www.w3.org/2000/svg"
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<path d="m9 18 6-6-6-6"></path>
+						</svg>
+						<a
+							href={ navbarHref(node.Path, flatURLs) }
+							class="flex items-baseline gap-2"
+						>
+							{ node.Name }
+							if node.IsCanvas && !node.IsNote && !node.IsBase {
+								<span
+									class="uppercase text-[8px] bg-sidebar-border rounded px-1 py-0.5 font-bold tracking-wider"
+								>Canvas</span>
+							}
+							if node.IsBase && !node.IsNote {
+								<span
+									class="uppercase text-[8px] bg-sidebar-border rounded px-1 py-0.5 font-bold tracking-wider"
+								>Base</span>
+							}
+							if node.IsNote {
+								<span
+									class="uppercase text-[8px] bg-sidebar-border rounded px-1 py-0.5 font-bold tracking-wider"
+								>Note</span>
+							}
+						</a>
+					</summary>
+					<ul class="border-l border-l-sidebar-border py-0.5 pl-6 -ml-4">
+						@Navbar(node.Children, flatURLs)
+					</ul>
+				</details>
+			} else {
+				<a
+					href={ navbarHref(node.Path, flatURLs) }
+					class="flex items-baseline gap-2"
+				>
+					<span>{ node.Name }</span>
+					if node.IsCanvas {
+						<span
+							class="uppercase text-[8px] bg-sidebar-border rounded px-1 py-0.5 font-bold tracking-wider"
+						>Canvas</span>
+					}
+					if node.IsBase {
+						<span
+							class="uppercase text-[8px] bg-sidebar-border rounded px-1 py-0.5 font-bold tracking-wider"
+						>Base</span>
+					}
+				</a>
+			}
+		</li>
+	}
+}
+
+func navbarHref(path string, flatURLs bool) templ.SafeURL {
+	if flatURLs {
+		return templ.SafeURL(path + "/")
+	}
+	return templ.SafeURL(path)
+}

@@ -1,0 +1,227 @@
+// @feature:layouts Reusable templ components: theme toggler, sidebar toggles, breadcrumbs, head, canonical, theme style.
+package templates
+
+import (
+	"github.com/otaleghani/kiln/internal/obsidian"
+)
+
+templ ThemeToggler() {
+	<button
+		id="theme-toggle"
+		aria-label="Toggle theme"
+		class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+	>
+		<!-- Sun -->
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="24"
+			height="24"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="block dark:hidden w-5 h-5"
+		>
+			<circle cx="12" cy="12" r="4"></circle>
+			<path d="M12 2v2"></path>
+			<path d="M12 20v2"></path>
+			<path d="m4.93 4.93 1.41 1.41"></path>
+			<path d="m17.66 17.66 1.41 1.41"></path>
+			<path d="M2 12h2"></path>
+			<path d="M20 12h2"></path>
+			<path d="m6.34 17.66-1.41 1.41"></path>
+			<path d="m19.07 4.93-1.41 1.41"></path>
+		</svg>
+		<!-- Moon -->
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="24"
+			height="24"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="hidden dark:block w-5 h-5"
+		>
+			<path
+				d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"
+			></path>
+		</svg>
+	</button>
+}
+
+templ LeftSidebarToggle() {
+	<button
+		class="cursor-pointer p-1 rounded hover:bg-hover transition-colors sidebar-toggle left-toggle"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="24"
+			height="24"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="w-5 h-5 sidebar-toggle left-toggle"
+		>
+			<rect width="18" height="18" x="3" y="3" rx="2"></rect>
+			<path d="M9 3v18"></path>
+		</svg>
+	</button>
+}
+
+templ RightSidebarToggle() {
+	<button
+		class="cursor-pointer p-1 rounded hover:bg-hover transition-colors sidebar-toggle right-toggle"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="24"
+			height="24"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="w-5 h-5 sidebar-toggle right-toggle"
+		>
+			<rect width="18" height="18" x="3" y="3" rx="2"></rect>
+			<path d="M15 3v18"></path>
+		</svg>
+	</button>
+}
+
+templ GraphButton(baseURL string) {
+	<a
+		href={ templ.SafeURL(baseURL + "/graph") }
+		class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="24"
+			height="24"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="w-5 h-5"
+		>
+			<circle cx="12" cy="12" r="10"></circle>
+			<path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+			<path d="M2 12h20"></path>
+		</svg>
+	</a>
+}
+
+templ Breadcrumbs(crumbs []obsidian.Breadcrumb) {
+	<nav class="flex items-center text-sm text-foreground opacity-85 flex-wrap">
+		for i, c := range crumbs {
+			if i > 0 {
+				<span class="mx-2 text-foreground select-none">/</span>
+			}
+			<a
+				href={ templ.SafeURL(c.Url) }
+				class="text-foreground hover:text-accent hover:underline transition-colors"
+			>{ c.Label }</a>
+		}
+	</nav>
+}
+
+templ SimpleBreadcrumbs(crumbs []obsidian.Breadcrumb, siteName string) {
+	<nav
+		class="flex items-center text-sm text-foreground opacity-85 flex-nowrap text-nowrap overflow-x-auto py-2"
+	>
+		for i, c := range crumbs {
+			if i > 0 {
+				<span class="mx-2 text-foreground select-none hidden md:block">/</span>
+			}
+			if i == 0 {
+				<a
+					href={ templ.SafeURL(c.Url) }
+					class="text-accent hover:underline transition-colors"
+				>{ siteName }</a>
+			} else {
+				<a
+					href={ templ.SafeURL(c.Url) }
+					class="text-foreground hover:text-accent hover:underline transition-colors hidden md:block"
+				>{ c.Label }</a>
+			}
+		}
+	</nav>
+}
+
+templ PageName(data *PageData) {
+	if !data.IsFolder && !data.IsTag && data.File != nil {
+		<div id="page-title-data" data-title={ data.File.WebPath } hidden></div>
+	}
+	if data.IsFolder && data.Folder != nil {
+		<div id="page-title-data" data-title={ data.Folder.WebPath } hidden></div>
+	}
+	if data.IsTag && data.Tag != nil {
+		<div id="page-title-data" data-title={ data.Tag.WebPath } hidden></div>
+	}
+}
+
+templ Canonical(data *PageData) {
+	if !data.IsFolder && !data.IsTag && data.File != nil {
+		if data.Site.FlatURLs {
+			<link rel="canonical" href={ data.Site.BaseURL + data.File.WebPath + "/" }/>
+		} else {
+			<link rel="canonical" href={ data.Site.BaseURL + data.File.WebPath }/>
+		}
+	}
+	if data.IsFolder && data.Folder != nil {
+		<link rel="canonical" href={ data.Site.BaseURL + data.Folder.WebPath + "/" }/>
+	}
+	if data.IsTag && data.Tag != nil {
+		if data.Site.FlatURLs {
+			<link rel="canonical" href={ data.Site.BaseURL + data.Tag.WebPath + "/" }/>
+		} else {
+			<link rel="canonical" href={ data.Site.BaseURL + data.Tag.WebPath }/>
+		}
+	}
+}
+
+templ Head(data *PageData) {
+	if !data.IsFolder && !data.IsTag && data.File != nil {
+		<title>
+			if title, ok := data.Frontmatter["title"]; ok {
+				{ title.(string) }
+			} else {
+				{ data.File.Name }
+			}
+			{ " • " + data.Site.SiteName }
+		</title>
+		if desc, ok := data.Frontmatter["description"]; ok {
+			<meta name="description" content={ desc.(string) }/>
+		} else if data.File != nil {
+			<meta name="description" content={ "Notes on " + data.File.Name }/>
+		}
+		if data.File != nil {
+			<meta property="og:title" content={ data.File.Name }/>
+		}
+	}
+	if data.IsFolder && data.Folder != nil {
+		<title>{ data.Folder.RelPath + " • " + data.Site.SiteName }</title>
+		<meta name="description" content={ data.Folder.RelPath }/>
+		<meta property="og:title" content={ data.Folder.RelPath }/>
+	}
+	if data.IsTag && data.Tag != nil {
+		<title>{ data.Tag.Name + " • " + data.Site.SiteName }</title>
+		<meta name="description" content={ data.Tag.Name }/>
+		<meta property="og:title" content={ data.Tag.Name }/>
+	}
+}
+
+templ ThemeStyle(theme *ThemeData) {
+	@templ.Raw(buildThemeCSS(theme))
+}
