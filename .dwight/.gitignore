@@ -11,6 +11,7 @@ auto/
 audits/
 plans/
 agentic-logs/
+auto-logs/
 whiteboard.md
 
 # Everything else (.dwight/skills/, libs/, templates/, dev/)
