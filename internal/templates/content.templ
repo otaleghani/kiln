@@ -445,6 +445,60 @@ templ SimpleLocalGraphContainer() {
 	</div>
 }
 
+// SimpleMenuButton renders the hamburger menu icon button for the simple layout header.
+templ SimpleMenuButton() {
+	<div>
+		<button
+			id="menu-button"
+			aria-label="Toggle navbar"
+			title="Navbar"
+			class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="h-5 w-5 text-foreground"
+				id="menu-icon"
+			>
+				<path d="M4 5h16"></path>
+				<path d="M4 12h16"></path>
+				<path d="M4 19h16"></path>
+			</svg>
+		</button>
+	</div>
+}
+
+// SimpleMenu renders the full-screen overlay navbar menu for the simple layout.
+templ SimpleMenu(data *PageData) {
+	<div
+		class="fixed inset-0 z-40 bg-background pb-4 hidden overflow-scroll p-4 md:p-0"
+		id="menu-wrapper"
+	>
+		<nav
+			class="max-w-prose mx-auto w-full rounded-xl border border-sidebar-border p-6 mt-20 md:mt-24"
+		>
+			<ul>
+				if data.Site.NavbarRoot != nil {
+					@Navbar(data.Site.NavbarRoot.Children, data.Site.FlatURLs)
+				}
+			</ul>
+		</nav>
+		<footer class="p-6 text-sm text-center item-end">
+			Generated with
+			<a href="https://kiln.talesign.com" target="_blank" class="underline">Kiln</a>
+			{ " • " }
+			<a href="https://github.com/otaleghani/kiln" target="_blank" class="underline">Github</a>
+		</footer>
+	</div>
+}
+
 // tableRow renders a single row in the base table view.
 templ tableRow(data *PageData, note *obsidian.File) {
 	<tr class="hover:bg-hover transition-colors">

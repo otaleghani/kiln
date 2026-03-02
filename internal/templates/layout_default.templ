@@ -1,0 +1,135 @@
+// @feature:layouts Full HTML document for the default layout with sidebars, breadcrumbs, and graph.
+package templates
+
+templ DefaultLayout(data *PageData) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			@Canonical(data)
+			<script>
+				(function () {
+					const savedTheme = localStorage.getItem("theme");
+					const sysDark = window.matchMedia(
+						"(prefers-color-scheme: dark)",
+					).matches;
+					if (savedTheme === "dark" || (!savedTheme && sysDark)) {
+						document.documentElement.classList.add("dark");
+						document.documentElement.setAttribute("data-theme", "dark");
+					} else {
+						document.documentElement.classList.remove("dark");
+						document.documentElement.setAttribute("data-theme", "light");
+					}
+				})();
+			</script>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			@Head(data)
+			<link rel="stylesheet" href={ data.Site.BaseURL + "/style.css" }/>
+			<link rel="stylesheet" href={ data.Site.BaseURL + "/shared.css" }/>
+			@ThemeStyle(data.Site.Theme)
+			<script src={ data.Site.BaseURL + "/app.js" } defer></script>
+			<script src={ data.Site.BaseURL + "/graph.js" } defer></script>
+			<script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js" defer></script>
+		</head>
+		<body
+			hx-boost="true"
+			hx-select="#kiln-main"
+			hx-target="#kiln-main"
+			hx-swap="outerHTML"
+			class="bg-background flex overflow-hidden relative"
+		>
+			<!-- Left sidebar -->
+			<nav
+				id="left-sidebar"
+				class="w-72 h-screen bg-sidebar border-r border-r-sidebar-border flex-col justify-between hidden xl:flex fixed xl:relative top-0 left-0 z-50"
+			>
+				<script>
+					try {
+						if (localStorage.getItem("left-sidebar") === "true")
+							document.getElementById("left-sidebar").classList.add("collapsed");
+					} catch (e) {}
+				</script>
+				<header
+					class="p-4 border-b border-b-sidebar-border flex items-center justify-between gap-2"
+				>
+					<a class="font-bold" href={ templ.SafeURL(data.Site.BaseURL) }>{ data.Site.SiteName }</a>
+					<div class="flex items-center gap-1">
+						@ThemeToggler()
+						<div class="xl:hidden flex items-center">
+							@LeftSidebarToggle()
+						</div>
+					</div>
+				</header>
+				<div class="p-6 flex-1 overflow-y-auto flex flex-col gap-2">
+					<input
+						type="text"
+						id="navbar-search"
+						placeholder="Search notes..."
+						class="w-full p-2 rounded border border-sidebar-border text-sm"
+					/>
+					<ul class="font-main text-sm">
+						if data.Site.NavbarRoot != nil {
+							@Navbar(data.Site.NavbarRoot.Children, data.Site.FlatURLs)
+						}
+					</ul>
+				</div>
+				<footer class="p-6 text-sm text-center item-end">
+					Generated with
+					<a href="https://kiln.talesign.com" target="_blank" class="underline">Kiln</a>
+					{ " • " }
+					<a href="https://github.com/otaleghani/kiln" target="_blank" class="underline">Github</a>
+				</footer>
+			</nav>
+			<!-- Main content -->
+			<main class="flex-1 flex flex-col h-dvh overflow-hidden" id="kiln-main">
+				@PageName(data)
+				<header
+					class="p-4 border-b border-b-sidebar-border flex justify-between items-center"
+				>
+					@LeftSidebarToggle()
+					@Breadcrumbs(data.Breadcrumbs)
+					if data.Site.DisableLocalGraph && data.Site.DisableTOC {
+						@GraphButton(data.Site.BaseURL)
+					}
+					if !data.Site.DisableLocalGraph || !data.Site.DisableTOC {
+						@RightSidebarToggle()
+					}
+				</header>
+				@ContentCanvas(data)
+				@ContentNote(data)
+				@ContentGraph(data)
+				@ContentBase(data)
+				@ContentFolder(data)
+				@ContentTag(data)
+			</main>
+			<!-- Right sidebar -->
+			if !data.Site.DisableLocalGraph || !data.Site.DisableTOC {
+				<aside
+					id="right-sidebar"
+					class="w-72 h-screen bg-sidebar border-l border-l-sidebar-border hidden xl:flex fixed xl:relative top-0 right-0 z-50 flex-col"
+				>
+					<script>
+						try {
+							if (localStorage.getItem("right-sidebar") === "true")
+								document.getElementById("right-sidebar").classList.add("collapsed");
+						} catch (e) {}
+					</script>
+					<header
+						class="p-4 border-b border-b-sidebar-border flex justify-between items-center"
+					>
+						<div class="flex items-center gap-1">
+							<div class="xl:hidden flex items-center">
+								@RightSidebarToggle()
+							</div>
+							@GraphButton(data.Site.BaseURL)
+						</div>
+					</header>
+					<div class="p-4 flex flex-col gap-8">
+						@LocalGraph(data.Site.DisableLocalGraph)
+						@TOCPanel(data)
+					</div>
+				</aside>
+			}
+		</body>
+	</html>
+}
