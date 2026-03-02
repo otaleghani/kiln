@@ -40,7 +40,7 @@ func (r *IndexResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 	file, anchor, err := r.FindFile(rawInput)
 
 	// Default anchor return if not found
-	if err != nil {
+	if err != nil || file == nil {
 		return []byte(anchor), nil
 	}
 
@@ -84,9 +84,13 @@ func (r *IndexResolver) FindFile(target []byte) (*obsidian.File, string, error) 
 			if alt, ok := r.Index[lowerDest]; ok {
 				candidates = alt
 			} else {
-				return &obsidian.File{}, anchor, ErrorCandidateNotFound // Not found
+				return nil, anchor, ErrorCandidateNotFound
 			}
 		}
+	}
+
+	if len(candidates) == 0 {
+		return nil, anchor, ErrorCandidateNotFound
 	}
 
 	// Select best match
@@ -102,7 +106,7 @@ func (r *IndexResolver) FindFile(target []byte) (*obsidian.File, string, error) 
 		}
 
 		// Fallback: If contains failed, return first match
-		if bestMatch.Name == "" && len(candidates) > 0 {
+		if bestMatch == nil {
 			bestMatch = candidates[0]
 		}
 
