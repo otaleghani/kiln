@@ -6,7 +6,7 @@ properties:
   note.title:
     displayName: Title
 views:
-  - type: table
+  - type: cards
     name: Table
     filters:
       and:

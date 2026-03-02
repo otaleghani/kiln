@@ -11,7 +11,7 @@ import (
 // ContentNote renders a markdown note.
 templ ContentNote(data *PageData) {
 	if data.IsNote {
-		<div id="content" class="h-dvh overflow-scroll">
+		<div id="content" class="h-dvh overflow-y-auto overflow-x-hidden">
 			<div class="p-4 content">
 				@templ.Raw(data.Content)
 			</div>
@@ -63,9 +63,10 @@ templ ContentCanvas(data *PageData) {
 
 // canvasInitScript outputs the inline <script> that boots the canvas renderer.
 templ canvasInitScript(canvasJSON string) {
+	<div id="canvas-data" hidden data-json={ canvasJSON }></div>
 	<script>
 		(function() {
-			var data = JSON.parse(document.getElementById("canvas-data").textContent);
+			var data = JSON.parse(document.getElementById("canvas-data").getAttribute("data-json"));
 			if (window.initCanvasMode) {
 				window.initCanvasMode(data);
 			} else {
@@ -74,9 +75,6 @@ templ canvasInitScript(canvasJSON string) {
 				});
 			}
 		})();
-	</script>
-	<script id="canvas-data" type="application/json">
-		{ canvasJSON }
 	</script>
 }
 
@@ -152,7 +150,7 @@ templ ContentTag(data *PageData) {
 // ContentBase dispatches to the appropriate base view (table/cards/list) by ViewType.
 templ ContentBase(data *PageData) {
 	if data.IsBase {
-		<div id="content">
+		<div id="content" class="h-dvh overflow-y-auto">
 			if data.Base.ViewType == "table" {
 				@BaseTable(data)
 			}
@@ -535,11 +533,11 @@ templ cardItem(data *PageData, note *obsidian.File) {
 		<div class="flex flex-col gap-1.5">
 			for _, col := range data.Base.Columns {
 				if col != "file.name" {
-					<div class="flex justify-between text-sm leading-snug">
-						<span class="text-foreground/60 font-medium mr-2.5 shrink-0">
-							{ col }:
+					<div class="flex flex-col text-sm leading-snug">
+						<span class="text-foreground/60 font-medium">
+							{ col }
 						</span>
-						<span class="text-foreground text-right break-words">
+						<span class="text-foreground break-words">
 							if data.Base.ValueFn != nil {
 								if val := data.Base.ValueFn(note, col); val != "" {
 									@templ.Raw(val)

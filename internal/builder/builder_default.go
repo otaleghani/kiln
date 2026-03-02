@@ -111,6 +111,17 @@ func buildDefault(log *slog.Logger) {
 
 	nodes := []obsidian.GraphNode{}
 
+	// Build a set of WebPaths claimed by content files (notes, bases, canvases).
+	// When a file shares its WebPath with a folder, it overrides the folder page.
+	// We use this set to avoid adding duplicate folder nodes to the graph.
+	fileWebPaths := make(map[string]struct{})
+	for _, file := range site.Obsidian.Vault.Files {
+		switch file.Ext {
+		case ".md", ".base", ".canvas":
+			fileWebPaths[file.WebPath] = struct{}{}
+		}
+	}
+
 	log.Info("Copying static assets...")
 	for _, file := range staticFiles {
 		l := log.With("file", file.Path)
@@ -126,6 +137,12 @@ func buildDefault(log *slog.Logger) {
 		// Check if there are some other that have the same
 		if len(folder.Files) == 0 && len(folder.Folders) == 0 {
 			l.Debug("Skipped empty folder", "folder", folder.Name)
+			continue
+		}
+
+		// Skip rendering and graph node for folders overridden by a content file
+		if _, overridden := fileWebPaths[folder.WebPath]; overridden {
+			l.Debug("Skipped overridden folder", "folder", folder.Name)
 			continue
 		}
 
