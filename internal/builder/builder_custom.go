@@ -850,7 +850,7 @@ func (s *CustomSite) normalizeConfigField(
 			for _, val := range rawValues {
 				str, ok := val.(string)
 				if !ok {
-					s.log.Debug("Couldn't parse enum data for field %s", typeName)
+					s.log.Debug("Couldn't parse enum data for field %s", "type", typeName)
 					continue
 				}
 				config.AllowedValues = append(config.AllowedValues, str)
