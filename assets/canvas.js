@@ -1,3 +1,4 @@
+// Obsidian canvas renderer for JSON-based node and edge visualization. @feature:graph
 /**
  * Canvas Renderer
  * Handles the rendering of JSON Canvas nodes and edges.

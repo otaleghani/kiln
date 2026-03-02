@@ -1,3 +1,4 @@
+// Cobra serve command that starts a local development server. @feature:cli
 package cli
 
 import (

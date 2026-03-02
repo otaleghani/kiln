@@ -1,3 +1,4 @@
+// Color theme and font registry with embedded font extraction. @feature:themes
 package builder
 
 import (

@@ -1,3 +1,4 @@
+// Cobra stats command that displays vault statistics. @feature:cli
 package cli
 
 import (

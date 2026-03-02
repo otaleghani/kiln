@@ -1,3 +1,4 @@
+// Custom mode site generation with collection configs, template functions, and field validation. @feature:builder-custom
 package builder
 
 import (

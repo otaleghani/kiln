@@ -1,3 +1,4 @@
+// Cobra doctor command that scans the vault for broken links. @feature:cli
 package cli
 
 import (

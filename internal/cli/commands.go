@@ -1,3 +1,4 @@
+// Root CLI command registration, flag definitions, and logger setup. @feature:cli
 // Package cli provides the command-line interface entry points for the Kiln static site generator.
 // It orchestrates the various subcommands (generate, serve, etc.) using the Cobra library.
 package cli

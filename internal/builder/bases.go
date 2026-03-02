@@ -1,3 +1,4 @@
+// Base file rendering with frontmatter field accessors and data filtering. @feature:bases
 package builder
 
 import (

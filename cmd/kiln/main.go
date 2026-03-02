@@ -1,3 +1,7 @@
+// Obsidian vault to static site generator with themes, wikilinks, and graph visualization. @project
+// Go 1.25, Cobra CLI, Goldmark, Chroma, Minify, YAML, embed.FS. @stack
+// Single binary distribution. No database. Obsidian-compatible markdown only. @constraint
+// Functional options pattern. Package-per-domain. Embedded assets via go:embed. @convention
 package main
 
 import (

@@ -1,3 +1,4 @@
+// Default mode site generation with note, folder, tag, canvas, and graph rendering. @feature:builder
 package builder
 
 import (

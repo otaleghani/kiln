@@ -1,3 +1,4 @@
+// Vault statistics calculation for note count, word count, and longest note. @feature:cli
 package builder
 
 import (

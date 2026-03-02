@@ -1,3 +1,4 @@
+// Local development server with clean URL support and base path handling. @feature:dev-server
 package server
 
 import (

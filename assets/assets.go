@@ -1,3 +1,4 @@
+// Embedded static resources for templates, styles, scripts, and fonts via go:embed. @feature:assets
 // Package assets handles the embedding of static resources into the compiled binary.
 // This allows the Kiln CLI to be distributed as a single, standalone executable
 // without requiring users to manage external template or css files.

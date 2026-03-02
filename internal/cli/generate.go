@@ -1,3 +1,4 @@
+// Cobra generate command that triggers static site building. @feature:cli
 package cli
 
 import (

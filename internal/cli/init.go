@@ -1,3 +1,4 @@
+// Cobra init command that scaffolds a new vault directory. @feature:cli
 package cli
 
 import (

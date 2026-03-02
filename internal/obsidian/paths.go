@@ -1,3 +1,4 @@
+// URL slugification, web path resolution, output path calculation, and breadcrumbs. @feature:paths
 package obsidian
 
 import (

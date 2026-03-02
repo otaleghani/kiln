@@ -1,3 +1,4 @@
+// Sitemap XML and robots.txt generation for SEO. @feature:sitemap
 package obsidian
 
 import (

@@ -1,3 +1,4 @@
+// Vault diagnostics that scans for broken wikilinks across markdown files. @feature:linter
 package linter
 
 import (

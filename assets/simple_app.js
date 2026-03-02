@@ -1,3 +1,4 @@
+// Client-side JS for simple layout: sidebar, search, theme toggle, and local graph. @feature:layouts
 // Script loading helper
 window.loadScript = function (src, id) {
   return new Promise((resolve, reject) => {

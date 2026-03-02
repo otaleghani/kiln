@@ -1,3 +1,4 @@
+// Vault initialization, output cleanup, and file extension helpers. @feature:builder
 package builder
 
 import (

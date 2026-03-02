@@ -1,3 +1,4 @@
+// Cobra version command that prints the current kiln version. @feature:cli
 package cli
 
 import (

@@ -1,3 +1,4 @@
+// Legacy app JS from a previous layout version. @feature:layouts
 /**
  * Kiln Logic - app.js
  */

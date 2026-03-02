@@ -1,3 +1,4 @@
+// Table of contents extraction from the Goldmark AST. @feature:markdown
 package markdown
 
 import (

@@ -1,3 +1,4 @@
+// Cobra clean command that removes generated build artifacts. @feature:cli
 package cli
 
 import (

@@ -1,3 +1,4 @@
+// Vault scanning, file/folder processing, backlink generation, and core domain types. @feature:vault-scan
 package obsidian
 
 import (

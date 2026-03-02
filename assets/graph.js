@@ -1,3 +1,4 @@
+// Interactive force-directed graph visualization using force-graph library. @feature:graph
 (function () {
   // 1. Define Base URL globally for the script (Removing trailing slash if present)
   const BASE_URL = "{{.BaseURL}}".replace(/\/$/, "");

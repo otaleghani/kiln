@@ -1,3 +1,4 @@
+// Wikilink resolution, embed rendering, image handling, and graph link tracking. @feature:wikilinks
 package markdown
 
 import (

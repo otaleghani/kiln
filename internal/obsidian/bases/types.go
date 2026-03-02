@@ -1,3 +1,4 @@
+// Type definitions for base view configuration, filters, sorts, and grouping. @feature:bases
 package bases
 
 import "github.com/otaleghani/kiln/internal/obsidian"

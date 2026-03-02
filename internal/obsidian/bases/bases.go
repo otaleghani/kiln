@@ -1,3 +1,4 @@
+// Expression parser and evaluator for database-like file filtering and grouping. @feature:bases
 package bases
 
 import (

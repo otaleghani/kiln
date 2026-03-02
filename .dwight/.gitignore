@@ -1,0 +1,17 @@
+# Private/session data — don't share
+usage.json
+session.log
+logs/
+runs/
+prompts/
+brainstorm/
+agent/
+artifacts/
+auto/
+audits/
+plans/
+agentic-logs/
+whiteboard.md
+
+# Everything else (.dwight/skills/, libs/, templates/, dev/)
+# is safe and recommended to commit.

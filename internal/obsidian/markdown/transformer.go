@@ -1,3 +1,4 @@
+// Post-processing transforms for highlights, mermaid diagrams, callouts, and tags. @feature:markdown
 package markdown
 
 import (

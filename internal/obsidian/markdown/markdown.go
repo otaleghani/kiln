@@ -1,3 +1,4 @@
+// Goldmark-based Obsidian markdown renderer with GFM, MathJax, and syntax highlighting. @feature:markdown
 package markdown
 
 import (

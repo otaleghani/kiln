@@ -1,3 +1,4 @@
+// Sidebar navigation tree construction from vault folder and file structure. @feature:navbar
 package obsidian
 
 import (

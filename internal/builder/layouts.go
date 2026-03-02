@@ -1,3 +1,4 @@
+// Layout resolution, template loading, and template function registration. @feature:layouts
 package builder
 
 import (

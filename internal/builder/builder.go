@@ -1,3 +1,4 @@
+// Build orchestrator that dispatches default or custom site generation. @feature:builder
 package builder
 
 import "log/slog"

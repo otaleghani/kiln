@@ -1,3 +1,4 @@
+# Cloudflare Pages build script that downloads and runs kiln. @feature:deploy
 #!/bin/bash
 
 INPUT_DIR="./docs"

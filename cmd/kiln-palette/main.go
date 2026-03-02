@@ -1,3 +1,4 @@
+// Generates PNG palette previews for theme documentation. @feature:palette
 // kiln-palette is a utility used to generate PNG preview of a theme palette for the documentation.
 //
 // Usage: go run ./cmd/kiln-palette/main.go --theme "dracula"
