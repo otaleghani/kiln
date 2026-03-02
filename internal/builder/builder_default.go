@@ -89,6 +89,7 @@ func buildDefault(log *slog.Logger) {
 			base, err := ParseBaseFile(file.Path)
 			if err != nil {
 				l.Error("Couldn't parse base file", "error", err)
+				continue
 			}
 			base.File = file
 			basePages = append(basePages, base)
@@ -468,10 +469,15 @@ func (s *DefaultSite) RenderBase(b *PageBase, allFiles []*obsidian.File) error {
 	defer minifierWriter.Close()
 
 	activeFiles := bases.FilterFiles(allFiles, b.Filters)
-	activeFiles = bases.FilterFiles(activeFiles, b.Views[0].Filters)
+
 	var fileGroups []*bases.FileGroup
-	if b.Views[0].GroupBy.Property != "" {
-		fileGroups = bases.GroupFiles(activeFiles, b.Views[0].GroupBy.Property)
+	var columns []string
+	if len(b.Views) > 0 {
+		activeFiles = bases.FilterFiles(activeFiles, b.Views[0].Filters)
+		if b.Views[0].GroupBy.Property != "" {
+			fileGroups = bases.GroupFiles(activeFiles, b.Views[0].GroupBy.Property)
+		}
+		columns = b.Views[0].Order
 	}
 
 	// Executes the template
@@ -484,7 +490,7 @@ func (s *DefaultSite) RenderBase(b *PageBase, allFiles []*obsidian.File) error {
 			Groups:  fileGroups,
 			Notes:   activeFiles,
 			File:    b,
-			Columns: b.Views[0].Order,
+			Columns: columns,
 		},
 	}
 
