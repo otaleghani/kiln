@@ -102,10 +102,15 @@
     input.placeholder = "Search...";
     input.autocomplete = "off";
 
+    var hint = document.createElement("div");
+    hint.className = "search-hint";
+    hint.textContent = navigator.platform.indexOf("Mac") > -1 ? "⌘K" : "Ctrl+K";
+
     var results = document.createElement("div");
     results.id = "search-modal-results";
 
     modal.appendChild(input);
+    modal.appendChild(hint);
     modal.appendChild(results);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
@@ -121,6 +126,14 @@
     return document.getElementById("search-overlay") || createOverlay();
   }
 
+  function showEmptyMessage(container, text) {
+    container.innerHTML = "";
+    var msg = document.createElement("div");
+    msg.className = "search-empty";
+    msg.textContent = text;
+    container.appendChild(msg);
+  }
+
   function showOverlay() {
     var overlay = getOverlay();
     overlay.classList.remove("hidden");
@@ -130,7 +143,7 @@
       input.focus();
     }
     var results = document.getElementById("search-modal-results");
-    if (results) results.innerHTML = "";
+    if (results) showEmptyMessage(results, "Start typing to search...");
   }
 
   function hideOverlay() {
@@ -142,7 +155,10 @@
     var container = document.getElementById("search-modal-results");
     if (!container) return;
     container.innerHTML = "";
-    if (results.length === 0) return;
+    if (results.length === 0) {
+      showEmptyMessage(container, "No results found");
+      return;
+    }
 
     for (var i = 0; i < results.length; i++) {
       var entry = results[i];
@@ -168,6 +184,9 @@
       snip.textContent = snippet(entry.content, query);
       item.appendChild(snip);
 
+      item.addEventListener("click", function () {
+        hideOverlay();
+      });
       container.appendChild(item);
     }
   }
@@ -204,7 +223,7 @@
     modalInput.addEventListener("input", function (e) {
       var term = e.target.value.trim();
       if (term.length < MIN_QUERY_LEN) {
-        resultsContainer.innerHTML = "";
+        showEmptyMessage(resultsContainer, "Start typing to search...");
         return;
       }
       var results = searchEntries(term);

@@ -887,3 +887,16 @@ details.callout[open] > summary .callout-title::after {
   font-size: 0.75rem;
   margin-top: 0.125rem;
 }
+.search-hint {
+  text-align: right;
+  padding: 0.25rem 1rem;
+  font-size: 0.7rem;
+  color: var(--color-comment, #888);
+  border-bottom: 1px solid var(--sidebar-border);
+}
+.search-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-comment, #888);
+  font-size: 0.875rem;
+}
