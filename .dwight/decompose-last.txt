@@ -1,103 +1,148 @@
 -- DwightAuto decomposition output
--- Request: Change the rendering engine from template/html to templ. Maintain the style and the other dependencies like tailwindcss. Create a new module inside for this.
--- Timestamp: Mon 02 Mar 2026 01:41:13 PM CET
+-- Request: ### Full-Text Search (Client-Side)
+Build a search index at build time (JSON or a lightweight format like Pagefind / Lunr-compatible) and ship a small client-side search UI. The default layout already 
+-- Timestamp: Tue 03 Mar 2026 02:31:08 PM CET
 
-I'll finish the decomposition concisely. Here's the complete task list from the beginning:
+
+
+I have all the context I need from my earlier exploration. Let me finish the decomposition concisely.
 
 <tasks>
-<task order="1" title="Install templ and create module scaffolding">
-Install templ dependency and CLI, create `internal/templates/` package with shared types and helpers.
+<task order="1" title="Build search index generator">
+Create `internal/search/search.go` and `internal/search/search_test.go`. Add `// @feature:search` pragma on line 1 of both files.
 
-1. Run: `cd /home/oliviero/Workspace/kiln && go get github.com/a-h/templ`
-2. Run: `go install github.com/a-h/templ/cmd/templ@latest`
-3. Create `internal/templates/types.go` — `// @feature:layouts` on line 1. Package `templates`. Define:
-   - `PageData` struct (Site *SiteData, Content/TOC/CanvasJSON string, Breadcrumbs []obsidian.Breadcrumb, File *obsidian.File, Folder *obsidian.Folder, Tag *obsidian.Tag, IsGraph/IsCanvas/IsBase/IsNote/IsFolder/IsTag bool, Frontmatter map[string]any, Base BaseViewData)
-   - `SiteData` struct (BaseURL/SiteName string, Theme *ThemeData, NavbarRoot *obsidian.NavbarNode, DisableLocalGraph/DisableTOC/FlatURLs bool)
-   - `ThemeData` struct (Light/Dark *ThemeColors, FontFamily/FontFaceCSS string)
-   - `ThemeColors` struct (Bg/Text/SidebarBg/SidebarBorder/Accent/Hover/Comment/Red/Orange/Yellow/Green/Blue/Purple/Cyan string)
-   - `BaseViewData` struct (Groups []*bases.FileGroup, Notes []*obsidian.File, Columns []string, ViewType string, DisplayNameFn func(string)string, ValueFn func(*obsidian.File,string)string)
-4. Create `internal/templates/helpers.go` — `// @feature:layouts` on line 1. `FormatDate(t time.Time) string` returns `t.Format("Jan 02, 2006")`.
+**Types in `search.go`:**
+```go
+type SearchEntry struct {
+    Title   string   `json:"title"`
+    URL     string   `json:"url"`
+    Content string   `json:"content"`
+    Tags    []string `json:"tags,omitempty"`
+    Folder  string   `json:"folder,omitempty"`
+}
+```
 
-**Verify:** `cd /home/oliviero/Workspace/kiln && go build ./internal/templates/...`
+**Functions:**
+1. `func BuildIndex(files []*obsidian.File) []SearchEntry` — For each file, create a SearchEntry using `file.Name` as Title, `file.WebPath` as URL, `stripMarkdown(file.Content)` truncated to 500 chars as Content, keys of `file.Tags` (type `map[string]struct{}`) as Tags, `file.Folder` as Folder.
+2. `func stripMarkdown(source []byte) string` — Strip headings (`# `), bold/italic (`*`,`_`), links `[text](url)` → text, wikilinks `[[target|alias]]` → alias, images, code blocks, HTML tags, collapse whitespace.
+3. `func WriteIndex(entries []SearchEntry, outputDir string) error` — Marshal to JSON, write to `filepath.Join(outputDir, "search-index.json")`.
+
+Import `github.com/otaleghani/kiln/internal/obsidian` for `obsidian.File`. The File struct has fields: `Name string`, `WebPath string`, `Folder string`, `Content []byte`, `Tags map[string]struct{}`.
+
+**Tests (write first):**
+- `TestStripMarkdown` — headings, bold, links, wikilinks, code blocks → clean text
+- `TestBuildIndex` — create `[]*obsidian.File`, verify SearchEntry fields
+- `TestBuildIndex_EmptyContent` — empty Content bytes
+- `TestWriteIndex` — use `t.TempDir()`, write, read back, verify JSON
+
+**Verify:** `go test ./internal/search/...`
 </task>
 
-<task order="2" title="Create shared and navbar templ components" depends_on="1">
-Create reusable templ components: theme toggler, sidebar toggles, breadcrumbs, head/canonical, theme CSS style block, and recursive navbar. Copy exact HTML/CSS classes from `assets/default_layout.html` and `assets/simple_layout.html`.
+<task order="2" title="Wire index generation into build pipeline">
+Edit `internal/builder/builder_default.go` to call the search index generator.
 
-Create `internal/templates/shared.templ` — `// @feature:layouts` on line 1:
-- `templ ThemeToggler()` — sun/moon button (default_layout.html:337-384)
-- `templ LeftSidebarToggle()` — panel icon button (default_layout.html:291-312)
-- `templ RightSidebarToggle()` — right panel button (default_layout.html:314-335)
-- `templ GraphButton(baseURL string)` — globe link (default_layout.html:386-408)
-- `templ Breadcrumbs(crumbs []obsidian.Breadcrumb)` — default layout breadcrumbs (lines 410-423)
-- `templ SimpleBreadcrumbs(crumbs []obsidian.Breadcrumb, siteName string)` — simple variant (simple_layout.html:443-471)
-- `templ PageName(data *PageData)` — hidden data-title div (lines 427-437)
-- `templ Canonical(data *PageData)` — `<link rel="canonical">` (lines 937-957)
-- `templ Head(data *PageData)` — title + meta tags (lines 902-935)
-- `templ ThemeStyle(theme *ThemeData)` — inline `<style>` with CSS vars for light/dark and @font-face (lines 29-96)
+**Existing context:** The `buildDefault` function processes files sequentially. After the tag rendering loop (ends around line 230, before "Rendering static files..." at line 232), insert:
+```go
+log.Info("Generating search index...")
+searchEntries := search.BuildIndex(notePages)
+err = search.WriteIndex(searchEntries, OutputDir)
+if err != nil {
+    log.Error("Couldn't generate search index", "error", err)
+}
+```
 
-Create `internal/templates/navbar.templ` — `// @feature:layouts` on line 1:
-- `templ Navbar(nodes []*obsidian.NavbarNode, flatURLs bool)` — recursive. Folders get `<details>` with chevron SVG, recursive call. Non-folders get `<a>`. Badge spans for Canvas/Base/Note. (default_layout.html:213-289)
+Add import `"github.com/otaleghani/kiln/internal/search"`. The variable `notePages` is `[]*obsidian.File` already populated earlier. `OutputDir` is a package-level var.
 
-**Verify:** `cd /home/oliviero/Workspace/kiln && templ generate ./internal/templates/ && go build ./internal/templates/...`
+**Verify:** `go build ./... && go test ./...`
 </task>
 
-<task order="3" title="Create content and base view templ components" depends_on="2">
-Create content-type renderers and base view variants (table/cards/list), plus sidebar components (local graph, TOC).
+<task order="3" title="Create client-side search JS and embed it">
+**Create `assets/search.js`** with `// @feature:search` on line 1. Uses `{{.BaseURL}}` template syntax (same as `default_app.js`).
 
-Create `internal/templates/content.templ` — `// @feature:layouts` on line 1:
-- `templ ContentNote(data *PageData)` — `@templ.Raw(data.Content)` (default_layout.html:488-496)
-- `templ ContentGraph(data *PageData)` — graph div (lines 498-504)
-- `templ ContentCanvas(data *PageData)` — canvas with inline script injecting CanvasJSON (lines 441-484)
-- `templ ContentFolder(data *PageData)` — folder listing with FormatDate (lines 811-863)
-- `templ ContentTag(data *PageData)` — tag listing with FormatDate (lines 865-900)
-- `templ ContentBase(data *PageData)` — dispatches to table/cards/list by ViewType (lines 566-580)
-- `templ BaseTable(data *PageData)` — uses DisplayNameFn/ValueFn with templ.Raw (lines 582-673)
-- `templ BaseCards(data *PageData)` — card grid (lines 675-745)
-- `templ BaseList(data *PageData)` — list view (lines 747-809)
-- `templ LocalGraph(disabled bool)` — expand button + container (lines 508-545)
-- `templ TOCPanel(data *PageData)` — "On this page" with templ.Raw(data.TOC) (lines 549-562)
-- `templ SimpleTOCButton()` / `templ SimpleLocalGraphButton()` — icon buttons from simple_layout.html
-- `templ SimpleTOCContainer(data *PageData)` / `templ SimpleLocalGraphContainer()` — overlay modals from simple_layout.html
+Implement `window.initFullSearch()`:
+1. Lazy-fetch `{{.BaseURL}}/search-index.json`, cache in `window._searchIndex`.
+2. Build in-memory inverted index: split each entry's title+content into lowercase words, map word→Set of entry indices.
+3. Listen on `#navbar-search` input events. For queries >= 2 chars: tokenize query, find entries matching ALL tokens via prefix match, show up to 15 results in a `#search-results` dropdown created as sibling of the input. Each result: linked title, folder, 120-char snippet. For queries < 2 chars: hide dropdown and fall back to existing sidebar filtering (call `window.initNavbarSearch` logic inline — filter `#left-sidebar li` by textContent).
+4. Keyboard nav: arrow up/down highlights, Enter navigates, Escape closes.
+5. Click outside closes dropdown.
 
-**Verify:** `cd /home/oliviero/Workspace/kiln && templ generate ./internal/templates/ && go build ./internal/templates/...`
+**Edit `assets/default_app.js`** line 345: change `window.initNavbarSearch();` to:
+```js
+if (window.initFullSearch) {
+    window.initFullSearch();
+} else {
+    window.initNavbarSearch();
+}
+```
+
+**Edit `assets/assets.go`**: add `//go:embed search.js` before `var TemplateFS embed.FS` (line 45), alongside existing embed directives.
+
+**Edit `internal/builder/layouts.go`**: Add `JsSearchTemplate *textTemplate.Template` field to `Layout` struct (after `JsCanvasTemplate` at line 137). In `loadLayout()`, add loading block after canvas JS loading (after line 96):
+```go
+jsSearchContent, err := assets.TemplateFS.ReadFile("search.js")
+if err != nil {
+    return err
+}
+tmplSearchJS, err := textTemplate.New("js").Parse(string(jsSearchContent))
+if err != nil {
+    return err
+}
+l.JsSearchTemplate = tmplSearchJS
+```
+
+**Edit `internal/builder/builder_default.go`**: After the app.js generation block (around line 263), add:
+```go
+searchJsOut, err := os.Create(filepath.Join(OutputDir, "search.js"))
+if err != nil {
+    log.Error("Couldn't create 'search.js'", "error", err)
+}
+defer searchJsOut.Close()
+err = site.Layout.JsSearchTemplate.Execute(searchJsOut, site)
+if err != nil {
+    log.Error("Couldn't execute template for 'search.js'", "error", err)
+}
+```
+
+**Verify:** `go build ./...`
 </task>
 
-<task order="4" title="Create full-page layout components" depends_on="3">
-Create the two top-level page components assembling all shared components into complete HTML documents.
+<task order="4" title="Add search script tag and dropdown CSS">
+**Edit `internal/templates/layout_default.templ`**: 
+1. Wrap the search input (around line 64-69) in a `<div class="relative">` for dropdown positioning.
+2. Find where `app.js` script tag is included in the layout and add a `<script defer src={data.Site.BaseURL + "/search.js"}></script>` after it.
 
-Create `internal/templates/layout_default.templ` — `// @feature:layouts` on line 1:
-- `templ DefaultLayout(data *PageData)` — Full `<html>` doc from default_layout.html:1-211. Head: Canonical, theme-init script, meta, Head, stylesheets, ThemeStyle, scripts. Body: left nav (ThemeToggler, search, Navbar, footer), main (PageName, header with toggles/Breadcrumbs, all Content* components), right aside (conditional, LocalGraph + TOCPanel).
+**Edit `assets/shared.css`**: Append dropdown styles:
+```css
+.search-results-dropdown {
+  position: absolute;
+  left: 0; right: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 0.375rem;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.search-results-dropdown a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  text-decoration: none;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--sidebar-border);
+  font-size: 0.875rem;
+}
+.search-results-dropdown a:hover,
+.search-results-dropdown a.active {
+  background: var(--hover-color);
+}
+.search-result-title { font-weight: 600; }
+.search-result-snippet { color: var(--color-comment, #888); font-size: 0.75rem; margin-top: 0.125rem; }
+.search-result-folder { color: var(--accent-color); font-size: 0.7rem; }
+```
 
-Create `internal/templates/layout_simple.templ` — `// @feature:layouts` on line 1:
-- `templ SimpleLayout(data *PageData)` — Full `<html>` doc from simple_layout.html:1-199. Fixed top header (site name, SimpleBreadcrumbs, action buttons), main content, overlay containers for TOC/graph. No persistent sidebars.
+**Regenerate templ:** Run `templ generate` from the project root (or `go run github.com/a-h/templ/cmd/templ@v0.3.1001 generate`). If templ binary unavailable, edit `internal/templates/layout_default_templ.go` directly to match changes.
 
-**Verify:** `cd /home/oliviero/Workspace/kiln && templ generate ./internal/templates/ && go build ./internal/templates/...`
-</task>
-
-<task order="5" title="Wire templ into builder rendering pipeline" depends_on="4">
-Integrate templ components into the builder. Create an adapter to convert builder types to template types, and update render methods to use templ.
-
-1. Create `internal/builder/templ_adapter.go` — `// @feature:builder` on line 1. Functions:
-   - `toTemplPageData(p *DefaultSitePageData) *templates.PageData` — maps all fields. Content: `string(p.Content)`, TOC: `string(p.TOC)`, CanvasJSON: `string(p.CanvasContent)`. For Base: set ViewType from `p.Base.File.Views[0].Type`, DisplayNameFn wrapping `GetDisplayName`, ValueFn wrapping `GetValue`.
-   - `toTemplTheme(t *Theme) *templates.ThemeData` — maps Light/Dark ThemeColors and Font fields.
-
-2. Edit `internal/builder/layouts.go`:
-   - Add to Layout struct: `TemplRender func(*templates.PageData) templ.Component`
-   - In `layouts` map, set for "default": `TemplRender: func(d *templates.PageData) templ.Component { return templates.DefaultLayout(d) }`, for "simple": `TemplRender: func(d *templates.PageData) templ.Component { return templates.SimpleLayout(d) }`
-
-3. Edit `internal/builder/builder_default.go` — in each render method (RenderNote, RenderFolder, RenderTag, RenderBase, RenderCanvas, RenderGraph), replace `s.Layout.HtmlTemplate.Execute(minifierWriter, pageData)` with:
-   ```go
-   templData := toTemplPageData(&pageData)
-   component := s.Layout.TemplRender(templData)
-   err = component.Render(context.Background(), minifierWriter)
-   ```
-   Add `"context"` import. Remove the old `HtmlTemplate.Execute` calls. The `loadLayout()` method no longer needs to parse HTML templates — remove that section (keep CSS/JS text/template parsing).
-
-4. Remove from `layouts.go`: `HtmlPath` field, `HtmlTemplate` field, HTML parsing in `loadLayout()` (lines 51-58), `funcMap` var (lines 131-139), `safeHTML` func (lines 142-144). Keep `dict` function only if still needed by CSS/JS text/templates — check and remove if unused.
-
-5. Remove the HTML layout files from embed: edit `assets/assets.go` to remove `//go:embed default_layout.html` and `//go:embed simple_layout.html`. Delete `assets/default_layout.html`, `assets/simple_layout.html`, and `assets/old_layout.html`.
-
-**Verify:** `cd /home/oliviero/Workspace/kiln && templ generate ./internal/templates/ && go build ./... && go test ./...`
+**Verify:** `templ generate && go build ./... && go test ./...`
 </task>
 </tasks>
