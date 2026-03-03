@@ -203,22 +203,51 @@ templ Head(data *PageData) {
 		</title>
 		if desc, ok := data.Frontmatter["description"]; ok && toStr(desc) != "" {
 			<meta name="description" content={ toStr(desc) }/>
-		} else if data.File != nil {
+			<meta property="og:description" content={ toStr(desc) }/>
+			<meta name="twitter:description" content={ toStr(desc) }/>
+		} else {
 			<meta name="description" content={ "Notes on " + data.File.Name }/>
+			<meta property="og:description" content={ "Notes on " + data.File.Name }/>
+			<meta name="twitter:description" content={ "Notes on " + data.File.Name }/>
 		}
-		if data.File != nil {
+		if title, ok := data.Frontmatter["title"]; ok && toStr(title) != "" {
+			<meta property="og:title" content={ toStr(title) }/>
+			<meta name="twitter:title" content={ toStr(title) }/>
+		} else {
 			<meta property="og:title" content={ data.File.Name }/>
+			<meta name="twitter:title" content={ data.File.Name }/>
 		}
+		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.File.WebPath, "og.png") }/>
+		<meta property="og:url" content={ data.Site.BaseURL + data.File.WebPath }/>
+		<meta property="og:type" content="article"/>
+		<meta name="twitter:card" content="summary_large_image"/>
+		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.File.WebPath, "twitter.png") }/>
 	}
 	if data.IsFolder && data.Folder != nil {
 		<title>{ data.Folder.RelPath + " • " + data.Site.SiteName }</title>
 		<meta name="description" content={ data.Folder.RelPath }/>
 		<meta property="og:title" content={ data.Folder.RelPath }/>
+		<meta property="og:description" content={ data.Folder.RelPath }/>
+		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.Folder.WebPath, "og.png") }/>
+		<meta property="og:url" content={ data.Site.BaseURL + data.Folder.WebPath }/>
+		<meta property="og:type" content="website"/>
+		<meta name="twitter:card" content="summary_large_image"/>
+		<meta name="twitter:title" content={ data.Folder.RelPath }/>
+		<meta name="twitter:description" content={ data.Folder.RelPath }/>
+		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.Folder.WebPath, "twitter.png") }/>
 	}
 	if data.IsTag && data.Tag != nil {
 		<title>{ data.Tag.Name + " • " + data.Site.SiteName }</title>
 		<meta name="description" content={ data.Tag.Name }/>
 		<meta property="og:title" content={ data.Tag.Name }/>
+		<meta property="og:description" content={ data.Tag.Name }/>
+		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.Tag.WebPath, "og.png") }/>
+		<meta property="og:url" content={ data.Site.BaseURL + data.Tag.WebPath }/>
+		<meta property="og:type" content="website"/>
+		<meta name="twitter:card" content="summary_large_image"/>
+		<meta name="twitter:title" content={ data.Tag.Name }/>
+		<meta name="twitter:description" content={ data.Tag.Name }/>
+		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.Tag.WebPath, "twitter.png") }/>
 	}
 }
 

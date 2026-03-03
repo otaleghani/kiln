@@ -25,6 +25,11 @@ func toStr(v any) string {
 	return s
 }
 
+// ogImageURL builds a full URL for an Open Graph or Twitter Card image.
+func ogImageURL(baseURL, webPath, filename string) string {
+	return baseURL + webPath + "/" + filename
+}
+
 // buildThemeCSS builds the inline <style> block with CSS custom properties
 // for light/dark themes and @font-face declarations.
 func buildThemeCSS(theme *ThemeData) string {
