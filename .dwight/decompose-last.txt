@@ -1,103 +1,182 @@
 -- DwightAuto decomposition output
--- Request: Change the rendering engine from template/html to templ. Maintain the style and the other dependencies like tailwindcss. Create a new module inside for this.
--- Timestamp: Mon 02 Mar 2026 01:41:13 PM CET
+-- Request: The new search script works, but the display is not good: it hovers over the navbar and is illegible. We should rework it and make it like a hover panel. Maybe add a simple button for the search featu
+-- Timestamp: Tue 03 Mar 2026 02:56:47 PM CET
 
-I'll finish the decomposition concisely. Here's the complete task list from the beginning:
+Now I have the full picture. Let me formulate the decomposition.
 
 <tasks>
-<task order="1" title="Install templ and create module scaffolding">
-Install templ dependency and CLI, create `internal/templates/` package with shared types and helpers.
+<task order="1" title="Rework search.js to modal overlay pattern">
+Rewrite `assets/search.js` to display search results in a centered modal overlay instead of a dropdown that hovers over the navbar.
 
-1. Run: `cd /home/oliviero/Workspace/kiln && go get github.com/a-h/templ`
-2. Run: `go install github.com/a-h/templ/cmd/templ@latest`
-3. Create `internal/templates/types.go` — `// @feature:layouts` on line 1. Package `templates`. Define:
-   - `PageData` struct (Site *SiteData, Content/TOC/CanvasJSON string, Breadcrumbs []obsidian.Breadcrumb, File *obsidian.File, Folder *obsidian.Folder, Tag *obsidian.Tag, IsGraph/IsCanvas/IsBase/IsNote/IsFolder/IsTag bool, Frontmatter map[string]any, Base BaseViewData)
-   - `SiteData` struct (BaseURL/SiteName string, Theme *ThemeData, NavbarRoot *obsidian.NavbarNode, DisableLocalGraph/DisableTOC/FlatURLs bool)
-   - `ThemeData` struct (Light/Dark *ThemeColors, FontFamily/FontFaceCSS string)
-   - `ThemeColors` struct (Bg/Text/SidebarBg/SidebarBorder/Accent/Hover/Comment/Red/Orange/Yellow/Green/Blue/Purple/Cyan string)
-   - `BaseViewData` struct (Groups []*bases.FileGroup, Notes []*obsidian.File, Columns []string, ViewType string, DisplayNameFn func(string)string, ValueFn func(*obsidian.File,string)string)
-4. Create `internal/templates/helpers.go` — `// @feature:layouts` on line 1. `FormatDate(t time.Time) string` returns `t.Format("Jan 02, 2006")`.
+**Current problem:** The search JS creates a `#search-results` dropdown positioned absolutely inside the sidebar search input's parent, which causes it to overlap the navbar and be illegible.
 
-**Verify:** `cd /home/oliviero/Workspace/kiln && go build ./internal/templates/...`
+**Changes to `assets/search.js`:**
+1. Remove the `getOrCreateDropdown(input)` function that creates an absolutely-positioned dropdown inside the input's parent.
+2. Replace it with a modal-based approach. The search UI should be a fixed overlay (`#search-overlay`) centered on the page with a backdrop, similar to how the graph expand works in the existing codebase (see `.expanded` pattern in `assets/default_style_input.css`).
+3. The overlay modal should contain:
+   - A search input at the top (separate from the sidebar input)
+   - A scrollable results list below it
+   - Close on Escape key or clicking the backdrop
+4. Replace `showResults(input, results, query)` to render results inside the modal panel instead of the old dropdown.
+5. Replace `hideDropdown()` with a function that hides the modal overlay.
+6. The `window.initFullSearch` function should:
+   - Still fetch and build the inverted index on init
+   - Create the modal overlay DOM structure once (a fixed backdrop + centered panel with an input + results container)
+   - Listen for input events on the modal's own search input
+   - Keep keyboard navigation (ArrowUp/ArrowDown/Enter/Escape) working
+   - Remove the old `#navbar-search` input listener for full-text results (the sidebar input should only do sidebar filtering, handled by `initNavbarSearch` in `default_app.js`)
+7. Export a `window.openSearchModal()` function that shows the overlay and focuses the modal input. This will be called from a sidebar button (added in next task).
+8. Keep the `@feature:search` pragma on line 1.
+9. Keep the `BASE_URL` template variable `"{{.BaseURL}}"` on line 3.
+10. Keep `searchEntries()`, `snippet()`, `buildInvertedIndex()`, `fetchIndex()` functions unchanged.
+
+**Also update `assets/shared.css`:**
+Replace the existing search CSS block (lines 825-851, the `.search-results-dropdown` section and `.search-result-*` classes) with new styles for:
+- `#search-overlay`: fixed inset-0, z-index 9999, flex centered, backdrop with `background: rgba(0,0,0,0.6)` and `backdrop-filter: blur(2px)`
+- `#search-modal`: background `var(--bg-color)`, max-width 600px, width 90vw, max-height 70vh, border-radius 0.5rem, border `2px solid var(--accent-color)`, box-shadow, flex column, overflow hidden
+- `#search-modal-input`: full-width input styled like the existing sidebar input (padding 0.75rem 1rem, font-size 1rem, border-bottom only, background transparent, color `var(--text-color)`)
+- `#search-modal-results`: flex-1, overflow-y auto (scrollable results container)
+- `.search-result-item`: display block, padding 0.75rem 1rem, text-decoration none, color `var(--text-color)`, border-bottom `1px solid var(--sidebar-border)`, cursor pointer
+- `.search-result-item:hover`, `.search-result-item.highlighted`: background `var(--hover-color)`
+- `.search-result-title`: font-weight 600
+- `.search-result-folder`: color `var(--accent-color)`, font-size 0.75rem
+- `.search-result-snippet`: color `var(--color-comment, #888)`, font-size 0.75rem, margin-top 0.125rem
+- `#search-overlay.hidden`: display none
+
+Verify: `go build ./...` should pass (this only touches JS/CSS assets, not Go code). Manually check the JS has no syntax errors by reviewing the file.
 </task>
 
-<task order="2" title="Create shared and navbar templ components" depends_on="1">
-Create reusable templ components: theme toggler, sidebar toggles, breadcrumbs, head/canonical, theme CSS style block, and recursive navbar. Copy exact HTML/CSS classes from `assets/default_layout.html` and `assets/simple_layout.html`.
+<task order="2" title="Add search button to default layout sidebar" depends_on="1">
+Add a search button to the left sidebar in the default layout template that opens the search modal created in task 1.
 
-Create `internal/templates/shared.templ` — `// @feature:layouts` on line 1:
-- `templ ThemeToggler()` — sun/moon button (default_layout.html:337-384)
-- `templ LeftSidebarToggle()` — panel icon button (default_layout.html:291-312)
-- `templ RightSidebarToggle()` — right panel button (default_layout.html:314-335)
-- `templ GraphButton(baseURL string)` — globe link (default_layout.html:386-408)
-- `templ Breadcrumbs(crumbs []obsidian.Breadcrumb)` — default layout breadcrumbs (lines 410-423)
-- `templ SimpleBreadcrumbs(crumbs []obsidian.Breadcrumb, siteName string)` — simple variant (simple_layout.html:443-471)
-- `templ PageName(data *PageData)` — hidden data-title div (lines 427-437)
-- `templ Canonical(data *PageData)` — `<link rel="canonical">` (lines 937-957)
-- `templ Head(data *PageData)` — title + meta tags (lines 902-935)
-- `templ ThemeStyle(theme *ThemeData)` — inline `<style>` with CSS vars for light/dark and @font-face (lines 29-96)
+**Edit `internal/templates/layout_default.templ`:**
+1. In the left sidebar's `<div class="p-6 flex-1 overflow-y-auto flex flex-col gap-2">` section (around line 64), replace the existing search input block:
+```
+<div class="relative">
+    <input type="text" id="navbar-search" placeholder="Search notes..." class="w-full p-2 rounded border border-sidebar-border text-sm"/>
+</div>
+```
+with a search button that calls `window.openSearchModal()`:
+```
+<button
+    id="search-button"
+    onclick="if(window.openSearchModal)window.openSearchModal()"
+    class="w-full p-2 rounded border border-sidebar-border text-sm text-left cursor-pointer bg-transparent hover:bg-hover transition-colors flex items-center gap-2"
+>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 opacity-60"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+    <span class="opacity-60">Search notes...</span>
+</button>
+```
 
-Create `internal/templates/navbar.templ` — `// @feature:layouts` on line 1:
-- `templ Navbar(nodes []*obsidian.NavbarNode, flatURLs bool)` — recursive. Folders get `<details>` with chevron SVG, recursive call. Non-folders get `<a>`. Badge spans for Canvas/Base/Note. (default_layout.html:213-289)
+2. Keep the `@feature:layouts` pragma on line 1.
 
-**Verify:** `cd /home/oliviero/Workspace/kiln && templ generate ./internal/templates/ && go build ./internal/templates/...`
+**Edit `assets/default_app.js`:**
+In the `window.initAll` function (around line 343), the current logic is:
+```javascript
+if (window.initFullSearch) {
+    window.initFullSearch();
+} else {
+    window.initNavbarSearch();
+}
+```
+Change this to just:
+```javascript
+if (window.initFullSearch) {
+    window.initFullSearch();
+}
+```
+Since the sidebar no longer has a `#navbar-search` input in the default layout, the fallback to `initNavbarSearch` is not needed for the default layout. Keep the `initNavbarSearch` function itself in the file (it may be used by simple layout or as fallback).
+
+3. Also add a global keyboard shortcut in `default_app.js` — inside `window.initAll`, add:
+```javascript
+document.addEventListener("keydown", function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        if (window.openSearchModal) window.openSearchModal();
+    }
+});
+```
+This allows Ctrl+K / Cmd+K to open search, which is a common convention.
+
+Verify: Run `cd /home/oliviero/Workspace/kiln && go generate ./internal/templates/... && go build ./...` to regenerate templ files and verify build passes.
 </task>
 
-<task order="3" title="Create content and base view templ components" depends_on="2">
-Create content-type renderers and base view variants (table/cards/list), plus sidebar components (local graph, TOC).
+<task order="3" title="Add search button and modal to simple layout" depends_on="2">
+Add search support to the simple layout, which currently has no search at all.
 
-Create `internal/templates/content.templ` — `// @feature:layouts` on line 1:
-- `templ ContentNote(data *PageData)` — `@templ.Raw(data.Content)` (default_layout.html:488-496)
-- `templ ContentGraph(data *PageData)` — graph div (lines 498-504)
-- `templ ContentCanvas(data *PageData)` — canvas with inline script injecting CanvasJSON (lines 441-484)
-- `templ ContentFolder(data *PageData)` — folder listing with FormatDate (lines 811-863)
-- `templ ContentTag(data *PageData)` — tag listing with FormatDate (lines 865-900)
-- `templ ContentBase(data *PageData)` — dispatches to table/cards/list by ViewType (lines 566-580)
-- `templ BaseTable(data *PageData)` — uses DisplayNameFn/ValueFn with templ.Raw (lines 582-673)
-- `templ BaseCards(data *PageData)` — card grid (lines 675-745)
-- `templ BaseList(data *PageData)` — list view (lines 747-809)
-- `templ LocalGraph(disabled bool)` — expand button + container (lines 508-545)
-- `templ TOCPanel(data *PageData)` — "On this page" with templ.Raw(data.TOC) (lines 549-562)
-- `templ SimpleTOCButton()` / `templ SimpleLocalGraphButton()` — icon buttons from simple_layout.html
-- `templ SimpleTOCContainer(data *PageData)` / `templ SimpleLocalGraphContainer()` — overlay modals from simple_layout.html
+**Edit `internal/templates/layout_simple.templ`:**
+1. Add the search.js script tag in the `<head>` section, after the app.js line (line 30). Add:
+```
+<script defer src={ data.Site.BaseURL + "/search.js" }></script>
+```
+This matches how the default layout loads it (line 31 in `layout_default.templ`).
 
-**Verify:** `cd /home/oliviero/Workspace/kiln && templ generate ./internal/templates/ && go build ./internal/templates/...`
+2. In the header `<div class="flex gap-2 items-center">` section (around line 41), add a search button BEFORE the `@ThemeToggler()` call. Add a new templ component call `@SimpleSearchButton()`.
+
+**Edit `internal/templates/content.templ`:**
+Add a new `SimpleSearchButton` templ component (add it near the other Simple* button components like `SimpleMenuButton`, `SimpleTOCButton`, `SimpleLocalGraphButton`):
+```
+templ SimpleSearchButton() {
+	<div>
+		<button
+			id="search-button"
+			aria-label="Search notes"
+			title="Search"
+			onclick="if(window.openSearchModal)window.openSearchModal()"
+			class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="h-5 w-5 text-foreground"
+				id="search-icon"
+			>
+				<circle cx="11" cy="11" r="8"></circle>
+				<path d="m21 21-4.3-4.3"></path>
+			</svg>
+		</button>
+	</div>
+}
+```
+
+**Edit `assets/simple_app.js`:**
+1. In the `window.initToggles` function or at the end of the file, add search initialization similar to what default_app.js does. After the existing `window.initToggles();` call area, add a call to `window.initFullSearch()` if available. Look at how `simple_app.js` initializes — it uses `document.addEventListener("DOMContentLoaded", ...)`. In that handler (or create one), add:
+```javascript
+if (window.initFullSearch) {
+    window.initFullSearch();
+}
+```
+2. Also add the Ctrl+K / Cmd+K keyboard shortcut, same as in default_app.js.
+
+Keep all existing `@feature:` pragmas on the files.
+
+Verify: Run `cd /home/oliviero/Workspace/kiln && go generate ./internal/templates/... && go build ./...` to regenerate templ files and verify build passes.
 </task>
 
-<task order="4" title="Create full-page layout components" depends_on="3">
-Create the two top-level page components assembling all shared components into complete HTML documents.
+<task order="4" title="Add Ctrl+K hint and polish search modal UX" depends_on="3">
+Polish the search modal with a keyboard shortcut hint and empty state.
 
-Create `internal/templates/layout_default.templ` — `// @feature:layouts` on line 1:
-- `templ DefaultLayout(data *PageData)` — Full `<html>` doc from default_layout.html:1-211. Head: Canonical, theme-init script, meta, Head, stylesheets, ThemeStyle, scripts. Body: left nav (ThemeToggler, search, Navbar, footer), main (PageName, header with toggles/Breadcrumbs, all Content* components), right aside (conditional, LocalGraph + TOCPanel).
+**Edit `assets/search.js`:**
+1. In the modal DOM structure created by `initFullSearch`, add a subtle hint below the search input showing "Ctrl+K" (or "Cmd+K" on Mac) as the keyboard shortcut. This can be a small `<div>` with class `search-hint` showing the shortcut text.
+2. Add an empty state message in the results container: when there are no results and the query is >= 2 chars, show "No results found" text.
+3. Add an initial state message when the modal opens and the input is empty: show "Start typing to search..." as placeholder text in the results area.
+4. Ensure that when the modal is opened via `openSearchModal()`, the input is cleared and focused, and any previous results are cleared.
+5. Ensure clicking a search result link navigates and closes the modal.
 
-Create `internal/templates/layout_simple.templ` — `// @feature:layouts` on line 1:
-- `templ SimpleLayout(data *PageData)` — Full `<html>` doc from simple_layout.html:1-199. Fixed top header (site name, SimpleBreadcrumbs, action buttons), main content, overlay containers for TOC/graph. No persistent sidebars.
+**Edit `assets/shared.css`:**
+Add styles for:
+- `.search-hint`: text-align right, padding 0.25rem 1rem, font-size 0.7rem, color `var(--color-comment, #888)`, border-bottom `1px solid var(--sidebar-border)`
+- `.search-empty`: padding 2rem, text-align center, color `var(--color-comment, #888)`, font-size 0.875rem
 
-**Verify:** `cd /home/oliviero/Workspace/kiln && templ generate ./internal/templates/ && go build ./internal/templates/...`
-</task>
+Keep all `@feature:` pragmas.
 
-<task order="5" title="Wire templ into builder rendering pipeline" depends_on="4">
-Integrate templ components into the builder. Create an adapter to convert builder types to template types, and update render methods to use templ.
-
-1. Create `internal/builder/templ_adapter.go` — `// @feature:builder` on line 1. Functions:
-   - `toTemplPageData(p *DefaultSitePageData) *templates.PageData` — maps all fields. Content: `string(p.Content)`, TOC: `string(p.TOC)`, CanvasJSON: `string(p.CanvasContent)`. For Base: set ViewType from `p.Base.File.Views[0].Type`, DisplayNameFn wrapping `GetDisplayName`, ValueFn wrapping `GetValue`.
-   - `toTemplTheme(t *Theme) *templates.ThemeData` — maps Light/Dark ThemeColors and Font fields.
-
-2. Edit `internal/builder/layouts.go`:
-   - Add to Layout struct: `TemplRender func(*templates.PageData) templ.Component`
-   - In `layouts` map, set for "default": `TemplRender: func(d *templates.PageData) templ.Component { return templates.DefaultLayout(d) }`, for "simple": `TemplRender: func(d *templates.PageData) templ.Component { return templates.SimpleLayout(d) }`
-
-3. Edit `internal/builder/builder_default.go` — in each render method (RenderNote, RenderFolder, RenderTag, RenderBase, RenderCanvas, RenderGraph), replace `s.Layout.HtmlTemplate.Execute(minifierWriter, pageData)` with:
-   ```go
-   templData := toTemplPageData(&pageData)
-   component := s.Layout.TemplRender(templData)
-   err = component.Render(context.Background(), minifierWriter)
-   ```
-   Add `"context"` import. Remove the old `HtmlTemplate.Execute` calls. The `loadLayout()` method no longer needs to parse HTML templates — remove that section (keep CSS/JS text/template parsing).
-
-4. Remove from `layouts.go`: `HtmlPath` field, `HtmlTemplate` field, HTML parsing in `loadLayout()` (lines 51-58), `funcMap` var (lines 131-139), `safeHTML` func (lines 142-144). Keep `dict` function only if still needed by CSS/JS text/templates — check and remove if unused.
-
-5. Remove the HTML layout files from embed: edit `assets/assets.go` to remove `//go:embed default_layout.html` and `//go:embed simple_layout.html`. Delete `assets/default_layout.html`, `assets/simple_layout.html`, and `assets/old_layout.html`.
-
-**Verify:** `cd /home/oliviero/Workspace/kiln && templ generate ./internal/templates/ && go build ./... && go test ./...`
+Verify: `go build ./...` should pass. Review the JS for syntax correctness.
 </task>
 </tasks>

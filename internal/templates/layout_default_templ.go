@@ -94,46 +94,59 @@ func DefaultLayout(data *PageData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" defer></script><script src=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" defer></script><script defer src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(data.Site.BaseURL + "/graph.js")
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(data.Site.BaseURL + "/search.js")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 31, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 31, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" defer></script><script src=\"https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js\" defer></script></head><body hx-boost=\"true\" hx-select=\"#kiln-main\" hx-target=\"#kiln-main\" hx-swap=\"outerHTML\" class=\"bg-background flex overflow-hidden relative\"><!-- Left sidebar --><nav id=\"left-sidebar\" class=\"w-72 h-screen bg-sidebar border-r border-r-sidebar-border flex-col justify-between hidden xl:flex fixed xl:relative top-0 left-0 z-50\"><script>\n\t\t\t\t\ttry {\n\t\t\t\t\t\tif (window.innerWidth >= 1280 && localStorage.getItem(\"left-sidebar\") === \"true\")\n\t\t\t\t\t\t\tdocument.getElementById(\"left-sidebar\").classList.add(\"collapsed\");\n\t\t\t\t\t} catch (e) {}\n\t\t\t\t</script><header class=\"p-4 border-b border-b-sidebar-border flex items-center justify-between gap-2\"><a class=\"font-bold\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"></script><script src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var6 templ.SafeURL
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(data.Site.BaseURL))
+		var templ_7745c5c3_Var6 string
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(data.Site.BaseURL + "/graph.js")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 55, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 32, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" defer></script><script src=\"https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js\" defer></script></head><body hx-boost=\"true\" hx-select=\"#kiln-main\" hx-target=\"#kiln-main\" hx-swap=\"outerHTML\" class=\"bg-background flex overflow-hidden relative\"><!-- Left sidebar --><nav id=\"left-sidebar\" class=\"w-72 h-screen bg-sidebar border-r border-r-sidebar-border flex-col justify-between hidden xl:flex fixed xl:relative top-0 left-0 z-50\"><script>\n\t\t\t\t\ttry {\n\t\t\t\t\t\tif (window.innerWidth >= 1280 && localStorage.getItem(\"left-sidebar\") === \"true\")\n\t\t\t\t\t\t\tdocument.getElementById(\"left-sidebar\").classList.add(\"collapsed\");\n\t\t\t\t\t} catch (e) {}\n\t\t\t\t</script><header class=\"p-4 border-b border-b-sidebar-border flex items-center justify-between gap-2\"><a class=\"font-bold\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(data.Site.SiteName)
+		var templ_7745c5c3_Var7 templ.SafeURL
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(data.Site.BaseURL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 55, Col: 88}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 56, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</a><div class=\"flex items-center gap-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(data.Site.SiteName)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 56, Col: 88}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</a><div class=\"flex items-center gap-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -141,7 +154,7 @@ func DefaultLayout(data *PageData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"xl:hidden flex items-center\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"xl:hidden flex items-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -149,7 +162,7 @@ func DefaultLayout(data *PageData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div></div></header><div class=\"p-6 flex-1 overflow-y-auto flex flex-col gap-2\"><input type=\"text\" id=\"navbar-search\" placeholder=\"Search notes...\" class=\"w-full p-2 rounded border border-sidebar-border text-sm\"><ul class=\"font-main text-sm\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></div></header><div class=\"p-6 flex-1 overflow-y-auto flex flex-col gap-2\"><button id=\"search-button\" onclick=\"if(window.openSearchModal)window.openSearchModal()\" class=\"w-full p-2 rounded border border-sidebar-border text-sm text-left cursor-pointer bg-transparent hover:bg-hover transition-colors flex items-center gap-2\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"w-4 h-4 opacity-60\"><circle cx=\"11\" cy=\"11\" r=\"8\"></circle><path d=\"m21 21-4.3-4.3\"></path></svg> <span class=\"opacity-60\">Search notes...</span></button><ul class=\"font-main text-sm\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -159,20 +172,20 @@ func DefaultLayout(data *PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</ul></div><footer class=\"p-6 text-sm text-center item-end\">Generated with <a href=\"https://kiln.talesign.com\" target=\"_blank\" class=\"underline\">Kiln</a> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</ul></div><footer class=\"p-6 text-sm text-center item-end\">Generated with <a href=\"https://kiln.talesign.com\" target=\"_blank\" class=\"underline\">Kiln</a> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(" • ")
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(" • ")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 79, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/layout_default.templ`, Line: 82, Col: 14}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, " <a href=\"https://github.com/otaleghani/kiln\" target=\"_blank\" class=\"underline\">Github</a></footer></nav><!-- Main content --><main class=\"flex-1 flex flex-col h-dvh overflow-hidden\" id=\"kiln-main\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " <a href=\"https://github.com/otaleghani/kiln\" target=\"_blank\" class=\"underline\">Github</a></footer></nav><!-- Main content --><main class=\"flex-1 flex flex-col h-dvh overflow-hidden\" id=\"kiln-main\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -180,7 +193,7 @@ func DefaultLayout(data *PageData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<header class=\"p-4 border-b border-b-sidebar-border flex justify-between items-center\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<header class=\"p-4 border-b border-b-sidebar-border flex justify-between items-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -204,7 +217,7 @@ func DefaultLayout(data *PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -236,12 +249,12 @@ func DefaultLayout(data *PageData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</main><!-- Right sidebar -->")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</main><!-- Right sidebar -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if !data.Site.DisableLocalGraph || !data.Site.DisableTOC {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<aside id=\"right-sidebar\" class=\"w-72 h-screen bg-sidebar border-l border-l-sidebar-border hidden xl:flex fixed xl:relative top-0 right-0 z-50 flex-col\"><script>\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tif (window.innerWidth >= 1280 && localStorage.getItem(\"right-sidebar\") === \"true\")\n\t\t\t\t\t\t\t\tdocument.getElementById(\"right-sidebar\").classList.add(\"collapsed\");\n\t\t\t\t\t\t} catch (e) {}\n\t\t\t\t\t</script><header class=\"p-4 border-b border-b-sidebar-border flex justify-between items-center\"><div class=\"flex items-center gap-1\"><div class=\"xl:hidden flex items-center\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<aside id=\"right-sidebar\" class=\"w-72 h-screen bg-sidebar border-l border-l-sidebar-border hidden xl:flex fixed xl:relative top-0 right-0 z-50 flex-col\"><script>\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tif (window.innerWidth >= 1280 && localStorage.getItem(\"right-sidebar\") === \"true\")\n\t\t\t\t\t\t\t\tdocument.getElementById(\"right-sidebar\").classList.add(\"collapsed\");\n\t\t\t\t\t\t} catch (e) {}\n\t\t\t\t\t</script><header class=\"p-4 border-b border-b-sidebar-border flex justify-between items-center\"><div class=\"flex items-center gap-1\"><div class=\"xl:hidden flex items-center\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -249,7 +262,7 @@ func DefaultLayout(data *PageData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -257,7 +270,7 @@ func DefaultLayout(data *PageData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div></header><div class=\"p-4 flex flex-col gap-8\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</div></header><div class=\"p-4 flex flex-col gap-8\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -269,12 +282,12 @@ func DefaultLayout(data *PageData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</div></aside>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</div></aside>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

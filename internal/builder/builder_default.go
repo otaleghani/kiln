@@ -13,6 +13,7 @@ import (
 
 	"github.com/otaleghani/kiln/assets"
 	"github.com/otaleghani/kiln/internal/obsidian"
+	"github.com/otaleghani/kiln/internal/search"
 	"github.com/otaleghani/kiln/internal/obsidian/bases"
 	"github.com/otaleghani/kiln/internal/obsidian/markdown"
 	"github.com/tdewolff/minify/v2"
@@ -229,6 +230,13 @@ func buildDefault(log *slog.Logger) {
 		})
 	}
 
+	log.Info("Generating search index...")
+	searchEntries := search.BuildIndex(notePages)
+	err = search.WriteIndex(searchEntries, OutputDir)
+	if err != nil {
+		log.Error("Couldn't generate search index", "error", err)
+	}
+
 	log.Info("Rendering static files...")
 	// Generate CSS based on the given theme/font settings
 	cssOut, err := os.Create(filepath.Join(OutputDir, "style.css"))
@@ -282,6 +290,17 @@ func buildDefault(log *slog.Logger) {
 	err = site.Layout.JsCanvasTemplate.Execute(canvasJsOut, site)
 	if err != nil {
 		log.Error("Couldn't execute template for 'canvas.js'", "error", err)
+	}
+
+	// Generate search JS
+	searchJsOut, err := os.Create(filepath.Join(OutputDir, "search.js"))
+	if err != nil {
+		log.Error("Couldn't create 'search.js'", "error", err)
+	}
+	defer searchJsOut.Close()
+	err = site.Layout.JsSearchTemplate.Execute(searchJsOut, site)
+	if err != nil {
+		log.Error("Couldn't execute template for 'search.js'", "error", err)
 	}
 
 	// Generate discus CSS themes
