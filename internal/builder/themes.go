@@ -2,6 +2,7 @@
 package builder
 
 import (
+	"fmt"
 	"html/template"
 	"log/slog"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/otaleghani/kiln/assets"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
 )
 
 // ThemeColors defines the specific color palette for a UI state (Light or Dark).
@@ -47,14 +50,16 @@ type FontData struct {
 	Files            []string     // List of filenames (e.g., .woff2) that need to be extracted
 	FontFace         template.CSS // The raw CSS @font-face declaration to inject into the stylesheet
 	FontFaceReplaced template.CSS
+	TtfFile          string // Embedded TTF filename for OG image rendering (empty = use default)
 }
 
 // fonts is a registry of available font configurations supported by the builder.
 // It maps a short string ID to the specific FontData.
 var fonts = map[string]*FontData{
 	"inter": {
-		Family: "'Inter', sans-serif",
-		Files:  []string{"Inter-Regular.woff2", "Inter-Bold.woff2"},
+		Family:  "'Inter', sans-serif",
+		Files:   []string{"Inter-Regular.woff2", "Inter-Bold.woff2"},
+		TtfFile: "Inter-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'Inter';
@@ -73,8 +78,9 @@ var fonts = map[string]*FontData{
 		`,
 	},
 	"lato": {
-		Family: "'Lato', sans-serif",
-		Files:  []string{"Lato-Regular.woff2", "Lato-Bold.woff2"},
+		Family:  "'Lato', sans-serif",
+		Files:   []string{"Lato-Regular.woff2", "Lato-Bold.woff2"},
+		TtfFile: "Lato-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'Lato';
@@ -93,8 +99,9 @@ var fonts = map[string]*FontData{
 		`,
 	},
 	"merriweather": {
-		Family: "'Merriweather', serif",
-		Files:  []string{"Merriweather-Regular.woff2", "Merriweather-Bold.woff2"},
+		Family:  "'Merriweather', serif",
+		Files:   []string{"Merriweather-Regular.woff2", "Merriweather-Bold.woff2"},
+		TtfFile: "Merriweather-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'Merriweather';
@@ -113,8 +120,9 @@ var fonts = map[string]*FontData{
 		`,
 	},
 	"lora": {
-		Family: "'Lora', serif",
-		Files:  []string{"Lora-Regular.woff2", "Lora-Bold.woff2"},
+		Family:  "'Lora', serif",
+		Files:   []string{"Lora-Regular.woff2", "Lora-Bold.woff2"},
+		TtfFile: "Lora-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'Lora';
@@ -133,8 +141,9 @@ var fonts = map[string]*FontData{
 		`,
 	},
 	"libre-baskerville": {
-		Family: "'Libre Baskerville', serif",
-		Files:  []string{"LibreBaskerville-Regular.woff2", "LibreBaskerville-Bold.woff2"},
+		Family:  "'Libre Baskerville', serif",
+		Files:   []string{"LibreBaskerville-Regular.woff2", "LibreBaskerville-Bold.woff2"},
+		TtfFile: "LibreBaskerville-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'Libre Baskerville';
@@ -153,8 +162,9 @@ var fonts = map[string]*FontData{
 		`,
 	},
 	"noto-serif": {
-		Family: "'Noto Serif', serif",
-		Files:  []string{"NotoSerif-Regular.woff2", "NotoSerif-Bold.woff2"},
+		Family:  "'Noto Serif', serif",
+		Files:   []string{"NotoSerif-Regular.woff2", "NotoSerif-Bold.woff2"},
+		TtfFile: "NotoSerif-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'Noto Serif';
@@ -173,8 +183,9 @@ var fonts = map[string]*FontData{
 		`,
 	},
 	"ibm-plex-sans": {
-		Family: "'IBM Plex Sans', sans-serif",
-		Files:  []string{"IBMPlexSans-Regular.woff2", "IBMPlexSans-Bold.woff2"},
+		Family:  "'IBM Plex Sans', sans-serif",
+		Files:   []string{"IBMPlexSans-Regular.woff2", "IBMPlexSans-Bold.woff2"},
+		TtfFile: "IBMPlexSans-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'IBM Plex Sans';
@@ -193,8 +204,9 @@ var fonts = map[string]*FontData{
 		`,
 	},
 	"google-sans": {
-		Family: "'Google Sans', sans-serif",
-		Files:  []string{"GoogleSans-Regular.woff2", "GoogleSans-Bold.woff2"},
+		Family:  "'Google Sans', sans-serif",
+		Files:   []string{"GoogleSans-Regular.woff2", "GoogleSans-Bold.woff2"},
+		TtfFile: "Inter-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'Google Sans';
@@ -213,8 +225,9 @@ var fonts = map[string]*FontData{
 		`,
 	},
 	"roboto": {
-		Family: "'Roboto', sans-serif",
-		Files:  []string{"Roboto-Regular.woff2", "Roboto-Bold.woff2"},
+		Family:  "'Roboto', sans-serif",
+		Files:   []string{"Roboto-Regular.woff2", "Roboto-Bold.woff2"},
+		TtfFile: "Roboto-Regular.ttf",
 		FontFace: `
 			@font-face {
 				font-family: 'Roboto';
@@ -237,6 +250,7 @@ var fonts = map[string]*FontData{
 		Family:   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 		Files:    []string{},
 		FontFace: "",
+		TtfFile:  "Inter-Regular.ttf",
 	},
 }
 
@@ -356,6 +370,43 @@ func resolveFont(name string, log *slog.Logger) *FontData {
 		return fonts["inter"]
 	}
 	return font
+}
+
+// LoadFontFace loads the embedded TTF and returns a font.Face for OG image rendering.
+// Falls back to Inter-Regular.ttf if the font has no TTF or loading fails.
+func (fd *FontData) LoadFontFace(size float64, log *slog.Logger) font.Face {
+	ttfName := fd.TtfFile
+	if ttfName == "" {
+		ttfName = "Inter-Regular.ttf"
+	}
+
+	ttfBytes, err := assets.TemplateFS.ReadFile(ttfName)
+	if err != nil {
+		log.Warn("Couldn't read TTF for OG images, falling back to Inter", "file", ttfName, "error", err)
+		ttfBytes, err = assets.TemplateFS.ReadFile("Inter-Regular.ttf")
+		if err != nil {
+			log.Error("Couldn't read fallback TTF", "error", err)
+			return nil
+		}
+	}
+
+	parsed, err := opentype.Parse(ttfBytes)
+	if err != nil {
+		log.Error("Couldn't parse TTF for OG images", "file", ttfName, "error", err)
+		return nil
+	}
+
+	face, err := opentype.NewFace(parsed, &opentype.FaceOptions{
+		Size:    size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		log.Error(fmt.Sprintf("Couldn't create font face from %s", ttfName), "error", err)
+		return nil
+	}
+
+	return face
 }
 
 // extractFonts writes the font files associated with the given FontData to disk.

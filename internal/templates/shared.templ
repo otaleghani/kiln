@@ -217,37 +217,37 @@ templ Head(data *PageData) {
 			<meta property="og:title" content={ data.File.Name }/>
 			<meta name="twitter:title" content={ data.File.Name }/>
 		}
-		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.File.WebPath, "og.png") }/>
+		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.File.WebPath, data.File.Name, "og", data.Site.FlatURLs) }/>
 		<meta property="og:url" content={ data.Site.BaseURL + data.File.WebPath }/>
 		<meta property="og:type" content="article"/>
 		<meta name="twitter:card" content="summary_large_image"/>
-		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.File.WebPath, "twitter.png") }/>
+		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.File.WebPath, data.File.Name, "twitter", data.Site.FlatURLs) }/>
 	}
 	if data.IsFolder && data.Folder != nil {
 		<title>{ data.Folder.RelPath + " • " + data.Site.SiteName }</title>
 		<meta name="description" content={ data.Folder.RelPath }/>
 		<meta property="og:title" content={ data.Folder.RelPath }/>
 		<meta property="og:description" content={ data.Folder.RelPath }/>
-		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.Folder.WebPath, "og.png") }/>
+		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.Folder.WebPath, data.Folder.Name, "og", data.Site.FlatURLs) }/>
 		<meta property="og:url" content={ data.Site.BaseURL + data.Folder.WebPath }/>
 		<meta property="og:type" content="website"/>
 		<meta name="twitter:card" content="summary_large_image"/>
 		<meta name="twitter:title" content={ data.Folder.RelPath }/>
 		<meta name="twitter:description" content={ data.Folder.RelPath }/>
-		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.Folder.WebPath, "twitter.png") }/>
+		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.Folder.WebPath, data.Folder.Name, "twitter", data.Site.FlatURLs) }/>
 	}
 	if data.IsTag && data.Tag != nil {
 		<title>{ data.Tag.Name + " • " + data.Site.SiteName }</title>
 		<meta name="description" content={ data.Tag.Name }/>
 		<meta property="og:title" content={ data.Tag.Name }/>
 		<meta property="og:description" content={ data.Tag.Name }/>
-		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.Tag.WebPath, "og.png") }/>
+		<meta property="og:image" content={ ogImageURL(data.Site.BaseURL, data.Tag.WebPath, data.Tag.Name, "og", data.Site.FlatURLs) }/>
 		<meta property="og:url" content={ data.Site.BaseURL + data.Tag.WebPath }/>
 		<meta property="og:type" content="website"/>
 		<meta name="twitter:card" content="summary_large_image"/>
 		<meta name="twitter:title" content={ data.Tag.Name }/>
 		<meta name="twitter:description" content={ data.Tag.Name }/>
-		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.Tag.WebPath, "twitter.png") }/>
+		<meta name="twitter:image" content={ ogImageURL(data.Site.BaseURL, data.Tag.WebPath, data.Tag.Name, "twitter", data.Site.FlatURLs) }/>
 	}
 }
 

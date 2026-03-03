@@ -13,12 +13,13 @@ import (
 
 	"github.com/otaleghani/kiln/assets"
 	"github.com/otaleghani/kiln/internal/obsidian"
-	"github.com/otaleghani/kiln/internal/ogimage"
-	"github.com/otaleghani/kiln/internal/search"
 	"github.com/otaleghani/kiln/internal/obsidian/bases"
 	"github.com/otaleghani/kiln/internal/obsidian/markdown"
+	"github.com/otaleghani/kiln/internal/ogimage"
+	"github.com/otaleghani/kiln/internal/search"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/html"
+	"golang.org/x/image/font"
 	"gopkg.in/yaml.v3"
 )
 
@@ -59,6 +60,8 @@ func buildDefault(log *slog.Logger) {
 	// Get's the sidebar root node
 	rootNode := obs.GenerateNavbar()
 
+	ogFace := theme.Font.LoadFontFace(32, log)
+
 	site := &DefaultSite{
 		// Scan:              vaultScan,
 		BaseURL:           BaseURL,
@@ -71,6 +74,7 @@ func buildDefault(log *slog.Logger) {
 		DisableLocalGraph: DisableLocalGraph,
 		DisableTOC:        DisableTOC,
 		FlatURLs:          FlatUrls,
+		OGFontFace:        ogFace,
 		log:               log,
 		Obsidian:          obs,
 	}
@@ -431,7 +435,7 @@ func (s *DefaultSite) RenderFolder(f *obsidian.Folder) error {
 		return err
 	}
 
-	s.GeneratePageOGImages(f.RelPath, f.RelPath, filepath.Dir(f.OutPath))
+	s.GeneratePageOGImages(f.RelPath, f.RelPath, f.Name, filepath.Dir(f.OutPath))
 
 	return nil
 }
@@ -472,7 +476,7 @@ func (s *DefaultSite) RenderTag(t *obsidian.Tag) error {
 		return err
 	}
 
-	s.GeneratePageOGImages(t.Name, t.Name, filepath.Dir(t.OutPath))
+	s.GeneratePageOGImages(t.Name, t.Name, t.Name, filepath.Dir(t.OutPath))
 
 	return nil
 }
@@ -531,7 +535,7 @@ func (s *DefaultSite) RenderBase(b *PageBase, allFiles []*obsidian.File) error {
 		return err
 	}
 
-	s.GeneratePageOGImages(b.File.Name, b.File.Name, filepath.Dir(b.File.OutPath))
+	s.GeneratePageOGImages(b.File.Name, b.File.Name, b.File.Name, filepath.Dir(b.File.OutPath))
 
 	return nil
 }
@@ -662,7 +666,7 @@ func (s *DefaultSite) RenderNote(f *obsidian.File) error {
 	if d, ok := obsidianData.Frontmatter["description"].(string); ok && d != "" {
 		description = d
 	}
-	s.GeneratePageOGImages(title, description, filepath.Dir(f.OutPath))
+	s.GeneratePageOGImages(title, description, f.Name, filepath.Dir(f.OutPath))
 
 	return nil
 }
@@ -770,13 +774,15 @@ func (s *DefaultSite) RenderCanvas(f *obsidian.File) error {
 	component := s.Layout.TemplRender(templData)
 	component.Render(context.Background(), minifierWriter)
 
-	s.GeneratePageOGImages(f.Name, f.Name, filepath.Dir(f.OutPath))
+	s.GeneratePageOGImages(f.Name, f.Name, f.Name, filepath.Dir(f.OutPath))
 
 	return nil
 }
 
 // GeneratePageOGImages creates OG and Twitter Card images for a page.
-func (s *DefaultSite) GeneratePageOGImages(title, description, outDir string) {
+// The slug is used to derive unique filenames (e.g. "my-page-og.png") so that
+// sibling pages in the same directory don't overwrite each other's images.
+func (s *DefaultSite) GeneratePageOGImages(title, description, slug, outDir string) {
 	cfg := ogimage.ImageConfig{
 		Title:       title,
 		Description: description,
@@ -784,13 +790,17 @@ func (s *DefaultSite) GeneratePageOGImages(title, description, outDir string) {
 		AccentColor: s.Theme.Dark.Accent,
 		BgColor:     s.Theme.Dark.Bg,
 		TextColor:   s.Theme.Dark.Text,
+		Face:        s.OGFontFace,
 	}
 
-	if err := ogimage.GenerateOGImage(cfg, filepath.Join(outDir, "og.png")); err != nil {
+	ogName := slug + "-og.png"
+	twitterName := slug + "-twitter.png"
+
+	if err := ogimage.GenerateOGImage(cfg, filepath.Join(outDir, ogName)); err != nil {
 		s.log.Warn("Couldn't generate OG image", "error", err)
 	}
 
-	if err := ogimage.GenerateTwitterImage(cfg, filepath.Join(outDir, "twitter.png")); err != nil {
+	if err := ogimage.GenerateTwitterImage(cfg, filepath.Join(outDir, twitterName)); err != nil {
 		s.log.Warn("Couldn't generate Twitter image", "error", err)
 	}
 }
@@ -819,6 +829,7 @@ type DefaultSite struct {
 	DisableLocalGraph bool                       // If set, disables the local graph
 	DisableTOC        bool                       // If set, disables the Table of contents
 	FlatURLs          bool                       // If set, handles flat urls (used in canonical)
+	OGFontFace        font.Face                  // Font face for OG image text rendering
 	log               *slog.Logger
 	Obsidian          *obsidian.Obsidian
 }

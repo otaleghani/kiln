@@ -23,8 +23,8 @@ const (
 
 	accentBarHeight = 8
 	padding         = 60
-	titleY          = 220
-	descY           = 320
+	titleY          = 120
+	descY           = 260
 	siteNameY       = 560
 	maxTitleChars   = 80
 	wrapWidth       = 50
@@ -37,6 +37,7 @@ type ImageConfig struct {
 	AccentColor string
 	BgColor     string
 	TextColor   string
+	Face        font.Face
 }
 
 // GenerateOGImage creates a 1200x630 branded PNG for Open Graph.
@@ -72,11 +73,14 @@ func generateImage(cfg ImageConfig, outPath string, width, height int) error {
 		draw.Src,
 	)
 
-	face := basicfont.Face7x13
+	face := cfg.Face
+	if face == nil {
+		face = basicfont.Face7x13
+	}
 
 	// Title — wrap long text
 	titleLines := wrapText(cfg.Title, wrapWidth)
-	lineHeight := 20
+	lineHeight := 42
 	for i, line := range titleLines {
 		// Draw each character twice offset for a faux-bold effect
 		drawLabel(img, face, padding, titleY+i*lineHeight, line, text)

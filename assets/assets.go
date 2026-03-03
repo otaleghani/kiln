@@ -38,6 +38,14 @@ import "embed"
 //go:embed NotoSerif-Bold.woff2
 //go:embed Roboto-Regular.woff2
 //go:embed Roboto-Bold.woff2
+//go:embed Inter-Regular.ttf
+//go:embed Lato-Regular.ttf
+//go:embed Merriweather-Regular.ttf
+//go:embed Lora-Regular.ttf
+//go:embed LibreBaskerville-Regular.ttf
+//go:embed NotoSerif-Regular.ttf
+//go:embed IBMPlexSans-Regular.ttf
+//go:embed Roboto-Regular.ttf
 //go:embed default_style.css
 //go:embed default_app.js
 //go:embed simple_style.css
