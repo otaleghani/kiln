@@ -1,182 +1,188 @@
 -- DwightAuto decomposition output
--- Request: The new search script works, but the display is not good: it hovers over the navbar and is illegible. We should rework it and make it like a hover panel. Maybe add a simple button for the search featu
--- Timestamp: Tue 03 Mar 2026 02:56:47 PM CET
+-- Request: ### Automatic Open Graph and Twitter Card image generation
+Generate `og:image` (1200x630px) and `twitter:card` / `twitter:image` (1200x600px) meta tags automatically for every page. Pull `title` and `
+-- Timestamp: Tue 03 Mar 2026 03:57:14 PM CET
 
-Now I have the full picture. Let me formulate the decomposition.
+Now I have all the context I need. Here's my decomposition:
 
 <tasks>
-<task order="1" title="Rework search.js to modal overlay pattern">
-Rewrite `assets/search.js` to display search results in a centered modal overlay instead of a dropdown that hovers over the navbar.
+<task order="1" title="Create OG image generator package">
+Create a new `internal/ogimage` package that generates branded PNG images (1200x630 for OG, 1200x600 for Twitter) at build time using `golang.org/x/image`.
 
-**Current problem:** The search JS creates a `#search-results` dropdown positioned absolutely inside the sidebar search input's parent, which causes it to overlap the navbar and be illegible.
+**Files to create:**
+- `internal/ogimage/ogimage.go` — Add `// @feature:ogimage Build-time Open Graph and Twitter Card image generator.` on line 1
+- `internal/ogimage/ogimage_test.go` — Add `// @feature:ogimage Tests for OG image generation.` on line 1
 
-**Changes to `assets/search.js`:**
-1. Remove the `getOrCreateDropdown(input)` function that creates an absolutely-positioned dropdown inside the input's parent.
-2. Replace it with a modal-based approach. The search UI should be a fixed overlay (`#search-overlay`) centered on the page with a backdrop, similar to how the graph expand works in the existing codebase (see `.expanded` pattern in `assets/default_style_input.css`).
-3. The overlay modal should contain:
-   - A search input at the top (separate from the sidebar input)
-   - A scrollable results list below it
-   - Close on Escape key or clicking the backdrop
-4. Replace `showResults(input, results, query)` to render results inside the modal panel instead of the old dropdown.
-5. Replace `hideDropdown()` with a function that hides the modal overlay.
-6. The `window.initFullSearch` function should:
-   - Still fetch and build the inverted index on init
-   - Create the modal overlay DOM structure once (a fixed backdrop + centered panel with an input + results container)
-   - Listen for input events on the modal's own search input
-   - Keep keyboard navigation (ArrowUp/ArrowDown/Enter/Escape) working
-   - Remove the old `#navbar-search` input listener for full-text results (the sidebar input should only do sidebar filtering, handled by `initNavbarSearch` in `default_app.js`)
-7. Export a `window.openSearchModal()` function that shows the overlay and focuses the modal input. This will be called from a sidebar button (added in next task).
-8. Keep the `@feature:search` pragma on line 1.
-9. Keep the `BASE_URL` template variable `"{{.BaseURL}}"` on line 3.
-10. Keep `searchEntries()`, `snippet()`, `buildInvertedIndex()`, `fetchIndex()` functions unchanged.
+**Tests to write FIRST** in `internal/ogimage/ogimage_test.go`:
+1. `TestGenerateOGImage` — Verify a 1200x630 PNG is produced with the correct dimensions when given a title and description
+2. `TestGenerateTwitterImage` — Verify a 1200x600 PNG is produced with the correct dimensions
+3. `TestGenerateOGImage_LongTitle` — Verify the generator handles long titles (>80 chars) without error by truncating/wrapping
+4. `TestGenerateOGImage_EmptyTitle` — Verify a fallback title (e.g. "Untitled") is used when title is empty
+5. `TestGenerateOGImage_WritesToFile` — Verify images are written to the correct output path
 
-**Also update `assets/shared.css`:**
-Replace the existing search CSS block (lines 825-851, the `.search-results-dropdown` section and `.search-result-*` classes) with new styles for:
-- `#search-overlay`: fixed inset-0, z-index 9999, flex centered, backdrop with `background: rgba(0,0,0,0.6)` and `backdrop-filter: blur(2px)`
-- `#search-modal`: background `var(--bg-color)`, max-width 600px, width 90vw, max-height 70vh, border-radius 0.5rem, border `2px solid var(--accent-color)`, box-shadow, flex column, overflow hidden
-- `#search-modal-input`: full-width input styled like the existing sidebar input (padding 0.75rem 1rem, font-size 1rem, border-bottom only, background transparent, color `var(--text-color)`)
-- `#search-modal-results`: flex-1, overflow-y auto (scrollable results container)
-- `.search-result-item`: display block, padding 0.75rem 1rem, text-decoration none, color `var(--text-color)`, border-bottom `1px solid var(--sidebar-border)`, cursor pointer
-- `.search-result-item:hover`, `.search-result-item.highlighted`: background `var(--hover-color)`
-- `.search-result-title`: font-weight 600
-- `.search-result-folder`: color `var(--accent-color)`, font-size 0.75rem
-- `.search-result-snippet`: color `var(--color-comment, #888)`, font-size 0.75rem, margin-top 0.125rem
-- `#search-overlay.hidden`: display none
+**Implementation** in `internal/ogimage/ogimage.go`:
 
-Verify: `go build ./...` should pass (this only touches JS/CSS assets, not Go code). Manually check the JS has no syntax errors by reviewing the file.
+```go
+package ogimage
+
+type ImageConfig struct {
+    Title       string
+    Description string
+    SiteName    string
+    AccentColor string // hex color from theme
+    BgColor     string // hex color from theme
+    TextColor   string // hex color from theme
+    Width       int
+    Height      int
+}
+```
+
+Functions to implement:
+- `func GenerateOGImage(cfg ImageConfig, outPath string) error` — Generates a 1200x630 branded PNG with title and description rendered as text. Uses `golang.org/x/image/font/basicfont` for text rendering (same pattern as `cmd/kiln-palette/main.go` which already uses `golang.org/x/image/font` and `golang.org/x/image/math/fixed`). Draw a colored background using theme's BgColor, an accent bar at the top, render title in large text and description below in smaller text, plus site name at the bottom.
+- `func GenerateTwitterImage(cfg ImageConfig, outPath string) error` — Same as above but 1200x600
+- `func parseHex(s string) color.RGBA` — Hex to color helper (same logic as in `cmd/kiln-palette/main.go`)
+- `func wrapText(text string, maxWidth int) []string` — Simple word-wrap helper for long titles
+
+**Dependencies:** `golang.org/x/image` is already in `go.sum` (used by `cmd/kiln-palette`). Run `go get golang.org/x/image` to add it to `go.mod`.
+
+**Verify:** `go test ./internal/ogimage/...`
 </task>
 
-<task order="2" title="Add search button to default layout sidebar" depends_on="1">
-Add a search button to the left sidebar in the default layout template that opens the search modal created in task 1.
+<task order="2" title="Extend Head component with full OG and Twitter meta tags">
+Edit the `Head` templ component in `internal/templates/shared.templ` to emit the full set of Open Graph and Twitter Card meta tags. Also add a helper function `ogImagePath` to `internal/templates/helpers.go`.
 
-**Edit `internal/templates/layout_default.templ`:**
-1. In the left sidebar's `<div class="p-6 flex-1 overflow-y-auto flex flex-col gap-2">` section (around line 64), replace the existing search input block:
-```
-<div class="relative">
-    <input type="text" id="navbar-search" placeholder="Search notes..." class="w-full p-2 rounded border border-sidebar-border text-sm"/>
-</div>
-```
-with a search button that calls `window.openSearchModal()`:
-```
-<button
-    id="search-button"
-    onclick="if(window.openSearchModal)window.openSearchModal()"
-    class="w-full p-2 rounded border border-sidebar-border text-sm text-left cursor-pointer bg-transparent hover:bg-hover transition-colors flex items-center gap-2"
->
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 opacity-60"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-    <span class="opacity-60">Search notes...</span>
-</button>
-```
+**Tests to write FIRST** — Edit `internal/templates/helpers_test.go` (which currently has `TestToStr` and `TestHead_NilFrontmatterValues`):
+1. `TestHead_OGMetaTags` — Render `Head()` with a PageData that has a File with WebPath="/blog/my-post", Frontmatter with title="My Title" and description="My Desc", Site with BaseURL="https://example.com" and SiteName="My Site". Assert the output HTML contains:
+   - `<meta property="og:title" content="My Title"/>`
+   - `<meta property="og:description" content="My Desc"/>`
+   - `<meta property="og:image" content="https://example.com/blog/my-post/og.png"/>`
+   - `<meta property="og:url" content="https://example.com/blog/my-post"/>`
+   - `<meta property="og:type" content="article"/>`
+   - `<meta name="twitter:card" content="summary_large_image"/>`
+   - `<meta name="twitter:title" content="My Title"/>`
+   - `<meta name="twitter:description" content="My Desc"/>`
+   - `<meta name="twitter:image" content="https://example.com/blog/my-post/twitter.png"/>`
+2. `TestHead_OGMetaTags_Folder` — Verify folders get og:type="website" and use folder.RelPath as title
+3. `TestHead_OGMetaTags_Tag` — Verify tags get og:type="website" and use tag.Name as title
+4. `TestHead_OGMetaTags_NoDescription` — Verify fallback description is used when none in frontmatter
 
-2. Keep the `@feature:layouts` pragma on line 1.
+**Implementation:**
 
-**Edit `assets/default_app.js`:**
-In the `window.initAll` function (around line 343), the current logic is:
-```javascript
-if (window.initFullSearch) {
-    window.initFullSearch();
-} else {
-    window.initNavbarSearch();
+Edit `internal/templates/helpers.go` — Add helper function:
+```go
+func ogImageURL(baseURL, webPath, filename string) string {
+    return baseURL + webPath + "/" + filename
 }
 ```
-Change this to just:
-```javascript
-if (window.initFullSearch) {
-    window.initFullSearch();
-}
-```
-Since the sidebar no longer has a `#navbar-search` input in the default layout, the fallback to `initNavbarSearch` is not needed for the default layout. Keep the `initNavbarSearch` function itself in the file (it may be used by simple layout or as fallback).
 
-3. Also add a global keyboard shortcut in `default_app.js` — inside `window.initAll`, add:
-```javascript
-document.addEventListener("keydown", function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        if (window.openSearchModal) window.openSearchModal();
+Edit `internal/templates/shared.templ` — Replace the existing `Head` templ component (lines 194-223). The new version should:
+- Keep the existing `<title>` logic exactly as-is
+- Keep the existing `<meta name="description">` logic exactly as-is
+- **Replace** the single `<meta property="og:title">` with the full set of OG + Twitter meta tags
+
+For the **file/note case** (when `!data.IsFolder && !data.IsTag && data.File != nil`):
+```
+og:title      → frontmatter["title"] or data.File.Name
+og:description → frontmatter["description"] or "Notes on " + data.File.Name
+og:image      → data.Site.BaseURL + data.File.WebPath + "/og.png"
+og:url        → data.Site.BaseURL + data.File.WebPath
+og:type       → "article"
+twitter:card  → "summary_large_image"
+twitter:title → same as og:title
+twitter:description → same as og:description
+twitter:image → data.Site.BaseURL + data.File.WebPath + "/twitter.png"
+```
+
+For the **folder case** (when `data.IsFolder && data.Folder != nil`):
+```
+og:title      → data.Folder.RelPath
+og:description → data.Folder.RelPath
+og:image      → data.Site.BaseURL + data.Folder.WebPath + "/og.png"
+og:url        → data.Site.BaseURL + data.Folder.WebPath
+og:type       → "website"
+twitter:card  → "summary_large_image"
+twitter:title → data.Folder.RelPath
+twitter:description → data.Folder.RelPath
+twitter:image → data.Site.BaseURL + data.Folder.WebPath + "/twitter.png"
+```
+
+For the **tag case** (when `data.IsTag && data.Tag != nil`):
+```
+og:title      → data.Tag.Name
+og:description → data.Tag.Name
+og:image      → data.Site.BaseURL + data.Tag.WebPath + "/og.png"
+og:url        → data.Site.BaseURL + data.Tag.WebPath
+og:type       → "website"
+twitter:card  → "summary_large_image"
+twitter:title → data.Tag.Name
+twitter:description → data.Tag.Name
+twitter:image → data.Site.BaseURL + data.Tag.WebPath + "/twitter.png"
+```
+
+After editing the `.templ` file, regenerate the Go code by running: `go run github.com/a-h/templ/cmd/templ@v0.3.1001 generate`
+
+**Verify:** `go test ./internal/templates/...`
+</task>
+
+<task order="3" title="Wire OG image generation into the build pipeline" depends_on="1,2">
+Integrate the `internal/ogimage` package into `internal/builder/builder_default.go` so that OG and Twitter images are generated alongside each rendered page.
+
+**Context about existing file `internal/builder/builder_default.go`:**
+This file already contains these functions/types:
+- `buildDefault(log *slog.Logger)` — main build orchestrator
+- `DefaultSite` struct with fields: BaseURL, SiteName, Theme, Layout, NavbarRoot, Markdown, Minifier, DisableLocalGraph, DisableTOC, FlatURLs, log, Obsidian
+- `DefaultSitePageData` struct
+- `BaseData`, `CanvasData`, `CanvasNode` structs
+- `RenderNote`, `RenderFolder`, `RenderTag`, `RenderBase`, `RenderCanvas`, `RenderGraph`, `Render404` methods
+- `ParseBaseFile` function
+
+**Tests to write FIRST** in `internal/builder/builder_default_test.go` (which currently has `TestParseBaseFile_*` and `TestEmptyViewsDoNotPanic`):
+1. `TestGeneratePageOGImages` — Create a test that calls a new `GeneratePageOGImages` function with title="Test", description="Desc", siteName="Site", theme colors, and a temp output directory. Verify that both `og.png` and `twitter.png` are created in the output directory and are valid PNG files (by decoding them).
+
+**Implementation:**
+
+Add a new method to `DefaultSite` in `internal/builder/builder_default.go`:
+```go
+func (s *DefaultSite) GeneratePageOGImages(title, description, outDir string) {
+    cfg := ogimage.ImageConfig{
+        Title:       title,
+        Description: description,
+        SiteName:    s.SiteName,
+        AccentColor: s.Theme.Dark.Accent,
+        BgColor:     s.Theme.Dark.Bg,
+        TextColor:   s.Theme.Dark.Text,
     }
-});
-```
-This allows Ctrl+K / Cmd+K to open search, which is a common convention.
 
-Verify: Run `cd /home/oliviero/Workspace/kiln && go generate ./internal/templates/... && go build ./...` to regenerate templ files and verify build passes.
-</task>
+    ogCfg := cfg
+    ogCfg.Width = 1200
+    ogCfg.Height = 630
+    if err := ogimage.GenerateOGImage(ogCfg, filepath.Join(outDir, "og.png")); err != nil {
+        s.log.Warn("Couldn't generate OG image", "error", err)
+    }
 
-<task order="3" title="Add search button and modal to simple layout" depends_on="2">
-Add search support to the simple layout, which currently has no search at all.
-
-**Edit `internal/templates/layout_simple.templ`:**
-1. Add the search.js script tag in the `<head>` section, after the app.js line (line 30). Add:
-```
-<script defer src={ data.Site.BaseURL + "/search.js" }></script>
-```
-This matches how the default layout loads it (line 31 in `layout_default.templ`).
-
-2. In the header `<div class="flex gap-2 items-center">` section (around line 41), add a search button BEFORE the `@ThemeToggler()` call. Add a new templ component call `@SimpleSearchButton()`.
-
-**Edit `internal/templates/content.templ`:**
-Add a new `SimpleSearchButton` templ component (add it near the other Simple* button components like `SimpleMenuButton`, `SimpleTOCButton`, `SimpleLocalGraphButton`):
-```
-templ SimpleSearchButton() {
-	<div>
-		<button
-			id="search-button"
-			aria-label="Search notes"
-			title="Search"
-			onclick="if(window.openSearchModal)window.openSearchModal()"
-			class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="24"
-				height="24"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="h-5 w-5 text-foreground"
-				id="search-icon"
-			>
-				<circle cx="11" cy="11" r="8"></circle>
-				<path d="m21 21-4.3-4.3"></path>
-			</svg>
-		</button>
-	</div>
+    twCfg := cfg
+    twCfg.Width = 1200
+    twCfg.Height = 600
+    if err := ogimage.GenerateTwitterImage(twCfg, filepath.Join(outDir, "twitter.png")); err != nil {
+        s.log.Warn("Couldn't generate Twitter image", "error", err)
+    }
 }
 ```
 
-**Edit `assets/simple_app.js`:**
-1. In the `window.initToggles` function or at the end of the file, add search initialization similar to what default_app.js does. After the existing `window.initToggles();` call area, add a call to `window.initFullSearch()` if available. Look at how `simple_app.js` initializes — it uses `document.addEventListener("DOMContentLoaded", ...)`. In that handler (or create one), add:
-```javascript
-if (window.initFullSearch) {
-    window.initFullSearch();
-}
-```
-2. Also add the Ctrl+K / Cmd+K keyboard shortcut, same as in default_app.js.
+Then call `GeneratePageOGImages` from within each render method. The key integration points are:
 
-Keep all existing `@feature:` pragmas on the files.
+1. **In `RenderNote`** (after rendering the HTML, before return): Extract title from `obsidianData.Frontmatter["title"]` or fallback to `f.Name`. Extract description from `obsidianData.Frontmatter["description"]` or fallback to `"Notes on " + f.Name`. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(title, description, outDir)`.
 
-Verify: Run `cd /home/oliviero/Workspace/kiln && go generate ./internal/templates/... && go build ./...` to regenerate templ files and verify build passes.
-</task>
+2. **In `RenderFolder`**: Use `f.RelPath` as both title and description. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(f.RelPath, f.RelPath, outDir)`.
 
-<task order="4" title="Add Ctrl+K hint and polish search modal UX" depends_on="3">
-Polish the search modal with a keyboard shortcut hint and empty state.
+3. **In `RenderTag`**: Use `t.Name` as both title and description. Compute `outDir` as `filepath.Dir(t.OutPath)`. Call `s.GeneratePageOGImages(t.Name, t.Name, outDir)`.
 
-**Edit `assets/search.js`:**
-1. In the modal DOM structure created by `initFullSearch`, add a subtle hint below the search input showing "Ctrl+K" (or "Cmd+K" on Mac) as the keyboard shortcut. This can be a small `<div>` with class `search-hint` showing the shortcut text.
-2. Add an empty state message in the results container: when there are no results and the query is >= 2 chars, show "No results found" text.
-3. Add an initial state message when the modal opens and the input is empty: show "Start typing to search..." as placeholder text in the results area.
-4. Ensure that when the modal is opened via `openSearchModal()`, the input is cleared and focused, and any previous results are cleared.
-5. Ensure clicking a search result link navigates and closes the modal.
+4. **In `RenderBase`**: Use `b.File.Name` as title. Compute `outDir` as `filepath.Dir(b.File.OutPath)`. Call `s.GeneratePageOGImages(b.File.Name, b.File.Name, outDir)`.
 
-**Edit `assets/shared.css`:**
-Add styles for:
-- `.search-hint`: text-align right, padding 0.25rem 1rem, font-size 0.7rem, color `var(--color-comment, #888)`, border-bottom `1px solid var(--sidebar-border)`
-- `.search-empty`: padding 2rem, text-align center, color `var(--color-comment, #888)`, font-size 0.875rem
+5. **In `RenderCanvas`**: Use `f.Name` as title. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(f.Name, f.Name, outDir)`.
 
-Keep all `@feature:` pragmas.
+Add `"github.com/otaleghani/kiln/internal/ogimage"` to the imports.
 
-Verify: `go build ./...` should pass. Review the JS for syntax correctness.
+**Verify:** `go test ./internal/builder/... && go test ./internal/ogimage/...`
 </task>
 </tasks>
