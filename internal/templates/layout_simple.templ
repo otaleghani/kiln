@@ -28,6 +28,7 @@ templ SimpleLayout(data *PageData) {
 			<link rel="stylesheet" href={ data.Site.BaseURL + "/shared.css" }/>
 			@ThemeStyle(data.Site.Theme)
 			<script src={ data.Site.BaseURL + "/app.js" } defer></script>
+			<script defer src={ data.Site.BaseURL + "/search.js" }></script>
 			<script src={ data.Site.BaseURL + "/graph.js" } defer></script>
 			<script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js" defer></script>
 		</head>
@@ -39,6 +40,7 @@ templ SimpleLayout(data *PageData) {
 					@SimpleBreadcrumbs(data.Breadcrumbs, data.Site.SiteName)
 				</div>
 				<div class="flex gap-2 items-center">
+					@SimpleSearchButton()
 					@ThemeToggler()
 					if !data.Site.DisableTOC && data.TOC != "" {
 						@SimpleTOCButton()

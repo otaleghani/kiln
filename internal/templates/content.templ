@@ -349,6 +349,36 @@ templ TOCPanel(data *PageData) {
 	}
 }
 
+// SimpleSearchButton renders the search icon button for the simple layout header.
+templ SimpleSearchButton() {
+	<div>
+		<button
+			id="search-button"
+			aria-label="Search notes"
+			title="Search"
+			onclick="if(window.openSearchModal)window.openSearchModal()"
+			class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="h-5 w-5 text-foreground"
+				id="search-icon"
+			>
+				<circle cx="11" cy="11" r="8"></circle>
+				<path d="m21 21-4.3-4.3"></path>
+			</svg>
+		</button>
+	</div>
+}
+
 // SimpleTOCButton renders the TOC icon button for the simple layout header.
 templ SimpleTOCButton() {
 	<div>

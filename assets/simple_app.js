@@ -262,7 +262,16 @@ window.initCanvasMode = function (canvasData) {
 window.initAll = function () {
   window.initThemeToggle();
   window.initToggles();
+  if (window.initFullSearch) {
+    window.initFullSearch();
+  }
   window.addCopyButtons();
+  document.addEventListener("keydown", function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      e.preventDefault();
+      if (window.openSearchModal) window.openSearchModal();
+    }
+  });
   Promise.all([window.initMathJax(), window.initMermaid()]);
 };
 
