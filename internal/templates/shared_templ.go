@@ -552,11 +552,11 @@ func Head(data *PageData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if title, ok := data.Frontmatter["title"]; ok {
+			if title, ok := data.Frontmatter["title"]; ok && toStr(title) != "" {
 				var templ_7745c5c3_Var25 string
-				templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(title.(string))
+				templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(toStr(title))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/shared.templ`, Line: 198, Col: 20}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/shared.templ`, Line: 198, Col: 18}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 				if templ_7745c5c3_Err != nil {
@@ -594,15 +594,15 @@ func Head(data *PageData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if desc, ok := data.Frontmatter["description"]; ok {
+			if desc, ok := data.Frontmatter["description"]; ok && toStr(desc) != "" {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<meta name=\"description\" content=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var28 string
-				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(desc.(string))
+				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(toStr(desc))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/shared.templ`, Line: 205, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/templates/shared.templ`, Line: 205, Col: 49}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {

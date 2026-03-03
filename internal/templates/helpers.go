@@ -12,6 +12,19 @@ func FormatDate(t time.Time) string {
 	return t.Format("Jan 02, 2006")
 }
 
+// toStr safely converts an interface value to a string.
+// Returns "" for nil values instead of panicking.
+func toStr(v any) string {
+	if v == nil {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return fmt.Sprintf("%v", v)
+	}
+	return s
+}
+
 // buildThemeCSS builds the inline <style> block with CSS custom properties
 // for light/dark themes and @font-face declarations.
 func buildThemeCSS(theme *ThemeData) string {
@@ -27,8 +40,13 @@ func buildThemeCSS(theme *ThemeData) string {
 	b.WriteString("/* Variable definitions */\n:root {\n")
 	b.WriteString("/* --- LIGHT THEME (Default) --- */\n")
 	writeColorVars(&b, theme.Light)
-	b.WriteString(fmt.Sprintf("--sidebar-width: 280px;\n"))
-	b.WriteString(fmt.Sprintf("--font-main: %s, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;\n", theme.FontFamily))
+	b.WriteString("--sidebar-width: 280px;\n")
+	b.WriteString(
+		fmt.Sprintf(
+			"--font-main: %s, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;\n",
+			theme.FontFamily,
+		),
+	)
 	b.WriteString("}\n\n")
 
 	// Dark theme (data attribute)

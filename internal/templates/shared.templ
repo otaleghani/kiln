@@ -194,15 +194,15 @@ templ Canonical(data *PageData) {
 templ Head(data *PageData) {
 	if !data.IsFolder && !data.IsTag && data.File != nil {
 		<title>
-			if title, ok := data.Frontmatter["title"]; ok {
-				{ title.(string) }
+			if title, ok := data.Frontmatter["title"]; ok && toStr(title) != "" {
+				{ toStr(title) }
 			} else {
 				{ data.File.Name }
 			}
 			{ " • " + data.Site.SiteName }
 		</title>
-		if desc, ok := data.Frontmatter["description"]; ok {
-			<meta name="description" content={ desc.(string) }/>
+		if desc, ok := data.Frontmatter["description"]; ok && toStr(desc) != "" {
+			<meta name="description" content={ toStr(desc) }/>
 		} else if data.File != nil {
 			<meta name="description" content={ "Notes on " + data.File.Name }/>
 		}
