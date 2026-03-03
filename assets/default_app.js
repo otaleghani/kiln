@@ -230,38 +230,6 @@ window.closeSidebar = function (id) {
   }
 };
 
-// Navbar search
-window.initNavbarSearch = function () {
-  const searchInput = document.getElementById("navbar-search");
-  if (!searchInput) return;
-
-  // Remove old listeners by cloning (optional but safer in SPAs)
-  const newInput = searchInput.cloneNode(true);
-  searchInput.parentNode.replaceChild(newInput, searchInput);
-
-  newInput.addEventListener("input", (e) => {
-    const term = e.target.value.toLowerCase().trim();
-    const items = document.querySelectorAll("#left-sidebar li");
-
-    items.forEach((item) => {
-      const text = item.textContent.toLowerCase();
-      const matches = text.includes(term);
-      item.style.display = matches ? "" : "none";
-      if (matches && term) {
-        const details = item.querySelector("details");
-        if (details) details.open = true;
-        let parent = item.parentElement;
-        while (parent && parent.closest(".sidebar")) {
-          if (parent.tagName === "DETAILS") parent.open = true;
-          parent = parent.parentElement;
-        }
-      }
-    });
-  });
-  // Restore focus if needed after swap
-  if (document.activeElement !== newInput) newInput.focus();
-};
-
 // Called from HTML to init canvas with Go data
 window.initCanvasMode = function (canvasData) {
   if (window.renderer) window.renderer.cleanup();

@@ -3,7 +3,6 @@
   var BASE_URL = "{{.BaseURL}}";
   var MAX_RESULTS = 15;
   var SNIPPET_LEN = 120;
-  var MIN_QUERY_LEN = 2;
 
   var invertedIndex = null;
   var indexEntries = null;
@@ -36,11 +35,16 @@
   }
 
   function searchEntries(query) {
-    if (!invertedIndex || !indexEntries) return [];
+    if (!indexEntries) return [];
+    if (!query || query.trim().length === 0) {
+      return indexEntries.slice(0, MAX_RESULTS);
+    }
+
+    if (!invertedIndex) return [];
     var tokens = query.toLowerCase().split(/\s+/).filter(function (t) {
       return t.replace(/[^a-z0-9]/g, "").length > 0;
     });
-    if (tokens.length === 0) return [];
+    if (tokens.length === 0) return indexEntries.slice(0, MAX_RESULTS);
 
     var resultSet = null;
     var indexKeys = Object.keys(invertedIndex);
@@ -74,12 +78,22 @@
 
   function snippet(content, query) {
     if (!content) return "";
+    if (!query || query.trim().length === 0) {
+      var s = content.substring(0, SNIPPET_LEN);
+      if (SNIPPET_LEN < content.length) s = s + "...";
+      return s;
+    }
     var lower = content.toLowerCase();
     var tokens = query.toLowerCase().split(/\s+/);
     var pos = -1;
     for (var i = 0; i < tokens.length; i++) {
       pos = lower.indexOf(tokens[i]);
       if (pos >= 0) break;
+    }
+    if (pos < 0) {
+      var s = content.substring(0, SNIPPET_LEN);
+      if (SNIPPET_LEN < content.length) s = s + "...";
+      return s;
     }
     var start = Math.max(0, pos - 30);
     var s = content.substring(start, start + SNIPPET_LEN);
@@ -126,14 +140,6 @@
     return document.getElementById("search-overlay") || createOverlay();
   }
 
-  function showEmptyMessage(container, text) {
-    container.innerHTML = "";
-    var msg = document.createElement("div");
-    msg.className = "search-empty";
-    msg.textContent = text;
-    container.appendChild(msg);
-  }
-
   function showOverlay() {
     var overlay = getOverlay();
     overlay.classList.remove("hidden");
@@ -142,8 +148,7 @@
       input.value = "";
       input.focus();
     }
-    var results = document.getElementById("search-modal-results");
-    if (results) showEmptyMessage(results, "Start typing to search...");
+    showResults(searchEntries(""), "");
   }
 
   function hideOverlay() {
@@ -156,7 +161,10 @@
     if (!container) return;
     container.innerHTML = "";
     if (results.length === 0) {
-      showEmptyMessage(container, "No results found");
+      var msg = document.createElement("div");
+      msg.className = "search-empty";
+      msg.textContent = "No results found";
+      container.appendChild(msg);
       return;
     }
 
@@ -222,10 +230,6 @@
 
     modalInput.addEventListener("input", function (e) {
       var term = e.target.value.trim();
-      if (term.length < MIN_QUERY_LEN) {
-        showEmptyMessage(resultsContainer, "Start typing to search...");
-        return;
-      }
       var results = searchEntries(term);
       showResults(results, term);
     });
