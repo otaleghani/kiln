@@ -1,19 +1,24 @@
 ---
-title: Doctor Command
-description: The doctor command scans your vault for integrity issues, such as broken Wikilinks, ensuring your site is error-free before deployment.
+title: "Doctor Command — Find Broken Links in Your Vault"
+description: "Run kiln doctor to scan your Obsidian vault for broken wikilinks before deploying. Catches missing references, renamed notes, and dead links."
 ---
 
 # Doctor Command
 
-The `doctor` command serves as a diagnostic tool for your vault. It scans your content to identify structural issues that could lead to a poor user experience, such as broken links or missing references.
+The `doctor` command scans your Obsidian vault for broken [wikilinks](../Features/Navigation/Wikilinks.md) and missing references. Run it before deploying your site to catch dead links that would result in 404 errors for your readers.
 
-It is best practice to run this command before deploying your site or after a major refactor of your notes.
+It is best practice to run `doctor` after renaming or deleting notes, or before any production build with the [generate command](./generate.md).
 
-## Functionality
+## What It Checks
 
-Currently, the Doctor performs the following check:
+The doctor performs a full scan of every `.md` file in your vault and validates each wikilink against an index of all known files. It catches:
 
-* **Broken Link Detection:** It scans every WikiLink (`[[Note Name]]`) in your vault and verifies that the target file actually exists. If you renamed a file but forgot to update the links pointing to it, the Doctor will flag it.
+- **Broken wikilinks** — links like `[[Note Name]]` where the target file no longer exists.
+- **Renamed notes** — if you renamed a file but forgot to update links pointing to it, the doctor flags each one.
+- **Missing image references** — wikilinks to `.png`, `.jpg`, or `.jpeg` files that cannot be found.
+- **Missing canvas files** — references to `.canvas` files that have been moved or deleted.
+
+The doctor also handles common wikilink variations correctly. Aliased links like `[[Note Name|Custom Text]]` and anchor links like `[[Note Name#Section]]` are both resolved to the target note before validation.
 
 ## Usage
 
@@ -21,15 +26,43 @@ Currently, the Doctor performs the following check:
 ./kiln doctor
 ```
 
-**Example Output:**
+When all links are valid, you will see:
+
 ```
 kiln: 2025/12/20 11:11:16 Diagnosing vault...
 kiln: 2025/12/20 11:11:16 No broken links found
 ```
 
+When broken links are found, the doctor reports each one with the file path and the unresolved link target:
+
+```
+kiln: WRN Found broken link path=notes/index.md link="Old Note Name"
+kiln: ERR Found broken links number=1
+```
+
+Use the `debug` log level to get more detailed output during the scan:
+
+```bash
+./kiln doctor --log debug
+```
+
 ## Flags
 
-| Flag      | Short version | Default value | Description                                                   |
-| --------- | ------------- | ------------- | ------------------------------------------------------------- |
-| `--input` | `-i`          | `"vault"`     | Name of the directory containing your vault.                  |
-| `--log`   | `-l`          | `info`        | Sets the log level. You can choose between `info` or `debug`. |
+| Flag      | Short | Default   | Description                                                   |
+| --------- | ----- | --------- | ------------------------------------------------------------- |
+| `--input` | `-i`  | `./vault` | Path to the directory containing your vault.                  |
+| `--log`   | `-l`  | `info`    | Sets the log level. Choose between `info` or `debug`.         |
+
+## Recommended Workflow
+
+Run `doctor` as part of your build process to prevent broken links from reaching production. A typical workflow looks like this:
+
+```bash
+# Check for broken links first
+./kiln doctor --input ./vault
+
+# If no issues, build the site
+./kiln generate --name "My Notes" --url "https://notes.example.com"
+```
+
+You can also run it after a large reorganization of your vault to verify that all internal references still resolve. If you need to start fresh after fixing issues, the [clean command](./clean.md) removes old build output before regenerating.

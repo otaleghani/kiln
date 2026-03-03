@@ -1,43 +1,102 @@
 ---
-title: Bases
-description: Explore Kiln's experimental Bases feature. Transform your Obsidian data views into interactive HTML tables, cards, and lists with filtering, sorting, and grouping capabilities.
+title: "Bases — Obsidian Database Views as HTML Tables, Cards & Lists"
+description: "Render Obsidian Bases as interactive HTML tables, cards, and lists with filtering, sorting, and grouping on your static site."
 ---
 
-> [!attention] **Beta** 
+> [!attention] **Beta**
 > The Bases feature is currently in active development. While functional, you may encounter edge cases or visual inconsistencies as we refine the rendering engine.
 
-# Bases
+# Bases — Database Views on Your Static Site
 
-[**Bases**](https://help.obsidian.md/bases) bring the power of databases to your static site. Kiln automatically detects and reproduces the "Base" views you have configured in Obsidian, transforming static lists into interactive, data-rich dashboards.
+[**Bases**](https://help.obsidian.md/bases) bring the power of Obsidian's database views to your static site. Kiln automatically detects `.base` files in your vault and renders the **first configured view** as a high-fidelity HTML reproduction — complete with filtering, sorting, and grouping. Your site visitors can browse your data just as you see it in Obsidian, without any manual configuration.
 
-When Kiln encounters a Base definition, it mimics the **first view** configured in Obsidian and generates a high-fidelity HTML reproduction. This allows your site visitors to interact with your data just as you do inside your vault.
+If you're setting up a new site, see the [Installation](../../Installation.md) guide. For rendering other Obsidian-specific content, check out [Obsidian Markdown](./Obsidian Markdown.md) and [Callouts](./Callouts.md).
 
-## Supported views
-Kiln currently supports the following visualization layouts:
+## Supported View Types
+
+Kiln renders three view layouts from your Base definitions:
 
 ### Table View
-A classic spreadsheet-like view perfect for dense data and comparing properties.
+
+A spreadsheet-like view for dense data. Columns map to your note properties, making it easy to compare values across many files at once.
+
 ![[bases_view_table.png]]
 
 ### Cards View
-A Kanban-style or gallery view that emphasizes visual content and summaries.
+
+A Kanban-style or gallery layout that emphasizes visual content and summaries. Each card represents one note with its key properties displayed.
+
 ![[bases_view_cards.png]]
 
 ### List View
-A clean, vertical list for simple collections.
+
+A clean vertical list for simple collections where a full table isn't needed.
+
 ![[bases_view_lists.png]]
 
-## Supported functions
-Bases are a complex obsidian feature that allow you to manipulate the view by filtering, grouping and sorting your notes and files. Kiln right now supports the following functions:
+## Filtering, Sorting, and Grouping
 
-- **Global Filters**: Filters applied to all views of a base.
-- **View-specific Filters**: Filters applied only to one specific view.
-- **Group by**: Cluster items based on shared values.
-- **Sorting**: Sort data based on a specific field. This is partially supported at the moment.
+Bases let you control which notes appear and how they're organized. Kiln supports the following data manipulation functions:
 
-## Quirks
+- **Global Filters** — Applied to all views in a Base. Notes that don't match are excluded from every view.
+- **View-specific Filters** — Applied only to one particular view, leaving other views unaffected.
+- **Group by** — Cluster items based on shared property values (e.g., group by folder, tag, or a custom frontmatter field).
+- **Sorting** — Order results by a specific field. Sorting is partially supported at the moment.
 
-- The filter `file, links to` uses a simple contain filter and not relative paths like Obsidian. This means that if you have multiple notes with the same name they will all be picked up. This poses no problems if you have unique names.
-- Links filters use case-insensitive equality. This is something that regular notes support but not bases.
-- `file.links`, `file.embeds`, `file.backlinks` have some filters that I'm still trying to figure out, like `is exactly`, `is not exactly`
-- Checkout the [[Quirks#Same filename, multiple extensions]] for more information about files overrides. 
+### Supported Filter Operators
+
+Kiln's filter engine supports a wide range of comparison and containment operators:
+
+| Operator | Example |
+|---|---|
+| `is` / `==` | `status is "done"` |
+| `is not` / `!=` | `status is not "draft"` |
+| `>`, `>=`, `<`, `<=` | `file.size > 1000` |
+| `contains` | `file.name contains "project"` |
+| `does not contain` | `tags does not contain "archive"` |
+| `contains any of` | `tags contains any of ["book", "article"]` |
+| `contains all of` | `tags contains all of ["review", "done"]` |
+| `starts with` / `ends with` | `file.name starts with "2024"` |
+| `is empty` / `is not empty` | `status is not empty` |
+| `on` / `not on` | `file.ctime on "2024-01-15"` |
+
+Conditions can be combined with `and`, `or`, and `not` logic.
+
+### Available File Fields
+
+These built-in fields can be used in filters, sorting, and grouping:
+
+| Field | Description |
+|---|---|
+| `file.name` | Note filename |
+| `file.folder` | Parent folder path |
+| `file.path` | Full file path |
+| `file.ext` | File extension |
+| `file.size` | File size in bytes |
+| `file.ctime` / `file.mtime` | Creation / modification date |
+| `file.tags` | All tags in the note |
+| `file.links` | Outgoing wikilinks |
+| `file.embeds` | Embedded files |
+
+Any [frontmatter](./Obsidian Markdown.md) property (like `status`, `rating`, or `category`) can also be used as a field.
+
+### Filter Methods
+
+You can call methods directly on fields using dot notation:
+
+- `file.hasTag("book")` — Check if a note has a specific tag
+- `file.hasLink("My Note.md")` — Check if a note links to another note
+- `file.inFolder("projects")` — Check if a note lives in a folder
+- `file.hasProperty("date")` — Check if a frontmatter property exists
+- `file.name.contains("draft")` — Substring check on a string field
+- `file.name.startsWith("2024")` / `file.name.endsWith(".md")`
+- `file.tags.isEmpty()` — Check if a collection field is empty
+
+## Known Quirks
+
+- The `file, links to` filter uses simple string containment rather than resolved paths. If multiple notes share the same name, all of them will match. This is not an issue if your note names are unique.
+- Link-based filters use case-insensitive matching. Regular [Obsidian Markdown](./Obsidian Markdown.md) notes support this, but Bases in Obsidian itself are case-sensitive.
+- Some filters on `file.links`, `file.embeds`, and `file.backlinks` (like `is exactly` and `is not exactly`) are not yet implemented.
+- See [[Quirks#Same filename, multiple extensions]] for details on how Kiln handles files that share a name but differ in extension.
+
+For other rendering features, explore [Mermaid Graphs](./Mermaid Graphs.md), [Math & LaTeX](./Math.md), and [Syntax Highlighting](./Syntax Highlighting.md).

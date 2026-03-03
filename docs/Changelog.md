@@ -1,17 +1,19 @@
 ---
-title: Changelog
-description: A list of all the addition to kiln.
+title: "Kiln Changelog — Release Notes and Version History"
+description: "Complete changelog for Kiln, the Obsidian vault to static site generator. Track new features, bug fixes, and improvements across every release."
 ---
-# Changelog
+# Kiln Changelog
+
+Every release of Kiln is listed below with new features, bug fixes, and improvements. Check the [[Roadmap]] for upcoming plans, or visit [[Installation]] to get the latest version.
 
 ## v0.3.13
 - FIX: mobile sidebar was by default open on mobile
 
 ## v0.3.12
-- FIX: sitemap not generating
+- FIX: [[Sitemap.xml|sitemap]] not generating
 
 ## v0.3.11
-- FIX: folder pages overrides
+- FIX: [[Folders|folder]] pages overrides
 
 ## v0.3.10
 - FIX: giscus theme was inverted (again...)
@@ -23,7 +25,7 @@ description: A list of all the addition to kiln.
 - FIX: giscus change theme not being loaded when giscus loads
 
 ## v0.3.7
-- ADD: Comments support 
+- ADD: [[Comments]] support
 - FIX: Links to javascript redirects
 
 ## v0.3.6
@@ -31,12 +33,12 @@ description: A list of all the addition to kiln.
 
 ## v0.3.5
 - ADD: Handle for `_redirects` file (for [[Cloudflare Pages]])
-- FIX: Canonical tags in `flat-urls` mode
+- FIX: [[Canonical tag|Canonical tags]] in `flat-urls` mode
 - FIX: `![new]` callout had no style
-- FIX: Canvas notes not being displayed
+- FIX: [[Canvas|Canvas]] notes not being displayed
 
 ## v0.3.4
-- ADD: Canonical tags
+- ADD: [[Canonical tag|Canonical tags]]
 
 ## v0.3.3
 - FIX: Navbar was displaying notes with the same name
@@ -70,7 +72,7 @@ description: A list of all the addition to kiln.
 - FIX: `deploy.sh` and flat-urls flag
 
 ## v0.2.4
-- FIX: Wikilinks labels where not displaying
+- FIX: [[Wikilinks & Embeds|Wikilinks]] labels where not displaying
 
 ## v0.2.3
 - FIX: Anchor links where not slugified
@@ -88,7 +90,7 @@ description: A list of all the addition to kiln.
 - ADD: [[What is Custom Mode|Custom mode]]
 
 ## v0.1.5
-- FIX: Graph not showing links
+- FIX: [[Global Graph|Graph]] not showing links
 - FIX: Default output directory not being set
 
 ## v0.1.4
@@ -97,15 +99,15 @@ description: A list of all the addition to kiln.
 
 ## v0.1.3
 - FIX: Missing site name in configuration
-- FIX: [[Doctor]] command not working properly
-- FIX: Local graph links not working
+- FIX: [[Doctor Command|Doctor]] command not working properly
+- FIX: [[Local Graph|Local graph]] links not working
 - FIX: URL generation
 - FIX: UI mobile experience
 
 ## v0.1.2
 - ADD: CNAME file handling
 - FIX: Layout footer
-- FIX: UI 
+- FIX: UI
 
 ## v0.1.1
 - FIX: Deployment crash

@@ -1,52 +1,116 @@
 ---
-title: Generate Command
-description: The generate command is the core of Kiln. Learn how to build your static site and customize it using flags for themes, fonts, and SEO settings.
+title: "Generate Command — Build Your Obsidian Vault into a Static Site"
+description: "Use kiln generate to convert your Obsidian vault into a fast static website. Customize themes, fonts, layouts, SEO settings, and URL structure with CLI flags."
 ---
+
 # Generate Command
 
-The `generate` command is the primary workhorse of Kiln. It reads your Markdown files from the source directory and compiles them into a fully functional, static HTML website ready for deployment.
+The `generate` command converts your Obsidian vault into a complete static HTML website. It processes every Markdown note, resolves [wikilinks](../Features/Navigation/Wikilinks.md), renders [Obsidian-flavored Markdown](../Features/Rendering/Obsidian Markdown.md), generates navigation and graph data, and outputs a ready-to-deploy site.
 
-You will run this command every time you want to update your site with new content.
+Run this command every time you add or update content in your vault.
 
 ## Usage
 
 ```bash
-./kiln generate [flags]
+kiln generate [flags]
 ```
 
-## Flags
-There are some flags that you can use to customize the output:
+A minimal build with default settings:
 
-| **Flag**                | **Short** | **Default** | **Description**                                                                                                                  |
-| ----------------------- | --------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `--theme`               | `-t`      | `default`   | Sets the visual color scheme. See [[Themes]] for options.                                                                        |
-| `--font`                | `-f`      | `inter`     | Sets the typography family. See [[Fonts]] for options.                                                                           |
-| `--url`                 | `-u`      | `""`        | The final public URL of your site (e.g., `https://example.com`). Required for generating the [[Sitemap xml]] and [[Robots txt]]. |
-| `--name`                | `-n`      | `My Notes`  | The global name of your site. This appears in the browser tab and [[Meta Tags]].                                                 |
-| `--input`               | `-i`      | `vault`     | The path to your source folder containing the Markdown notes.                                                                    |
-| `--output`              | `-o`      | `public`    | The path where the generated HTML files will be saved.                                                                           |
-| `--flat-urls`           |           | `false`     | Generate flat HTML files (`note.html`) instead of pretty directories (`note/index.html`)                                         |
-| `--log`                 | `-l`      | `info`      | Sets the log level. You can choose between `info` or `debug`.                                                                    |
-| `--disable-toc`         |           | `false`     | Disables the Table of contents on the right sidebar. If the local graph is disabled too, hides the right sidebar.                |
-| `--disable-local-graph` |           | `false`     | Disables the Local graph. If the table of contents is disabled too, hides the right sidebar.                                     |
-| `layout`                | `-L`      | `default`   | Layout to use. Choose between 'default' and the others. Find out more about which layout is available at [[Layouts]].            |
+```bash
+kiln generate
+```
+
+This reads from `./vault`, writes to `./public`, and applies the default theme, font, and layout.
+
+## Flags
+
+| Flag                    | Short | Default   | Description                                                                                                                              |
+| ----------------------- | ----- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `--theme`               | `-t`  | `default` | Sets the color scheme. See [Themes & Visuals](../Features/User Interface/Themes.md) for available options.                               |
+| `--font`                | `-f`  | `inter`   | Sets the font family. See [Fonts & Typography](../Features/User Interface/Fonts.md) for available options.                               |
+| `--url`                 | `-u`  | `""`      | The public URL of your site (e.g., `https://example.com`). Required for [Sitemap.xml](../Features/SEO/Sitemap xml.md) and [Robots.txt](../Features/SEO/Robots txt.md) generation. |
+| `--name`                | `-n`  | `My Notes` | The site name displayed in the browser tab and [Meta Tags & SEO](../Features/SEO/Meta Tags.md).                                        |
+| `--input`               | `-i`  | `./vault` | Path to the source directory containing your Markdown notes.                                                                             |
+| `--output`              | `-o`  | `./public`| Path where the generated HTML files are saved.                                                                                           |
+| `--mode`                | `-m`  | `default` | Build mode. Use `default` for standard vault rendering or `custom` for [Custom Mode](../Features/Custom Mode/What is Custom Mode.md) with collection configs and templates. |
+| `--layout`              | `-L`  | `default` | Page layout to use. See [Layouts](../Features/User Interface/Layouts.md) for available options.                                          |
+| `--flat-urls`           |       | `false`   | Generate flat files (`note.html`) instead of directories (`note/index.html`).                                                            |
+| `--disable-toc`         |       | `false`   | Hides the [Table of Contents](../Features/User Interface/Table of Contents.md) from the right sidebar.                                   |
+| `--disable-local-graph` |       | `false`   | Hides the [Local Graph](../Features/User Interface/Local Graph.md) from the right sidebar. Disabling both TOC and local graph removes the right sidebar entirely. |
+| `--log`                 | `-l`  | `info`    | Log verbosity. Choose `info` or `debug`.                                                                                                 |
+
+## What Gets Generated
+
+The build produces a complete static site including:
+
+- **HTML pages** for every Markdown note, folder index, tag page, and [Canvas](../Features/Rendering/Obsidian Canvas.md) file in your vault.
+- **CSS and JavaScript** — theme styles, font files, sidebar navigation, [search](../Features/Navigation/Search.md), and the interactive [Global Graph](../Features/User Interface/Global Graph.md).
+- **SEO files** — [sitemap.xml](../Features/SEO/Sitemap xml.md) and [robots.txt](../Features/SEO/Robots txt.md) when you provide `--url`.
+- **Static assets** — images, PDFs, and attachments are copied to the output directory.
+- **Special files** — `CNAME`, `favicon.ico`, and `_redirects` are carried over if present in your vault.
+
+The output directory is cleaned automatically before each build, so there are no stale files from previous runs.
 
 ## Examples
 
-### Basic Test
-
-For a quick local test, you can run the command without arguments (uses default settings):
-```bash
-./kiln generate
-```
-
 ### Production Build
 
-When deploying your site to the web, you should always include the `url` and `name` flags to ensure SEO features work correctly.
+When deploying to the web, always include `--url` and `--name` so that SEO features, sitemaps, and meta tags work correctly:
+
 ```bash
-./kiln generate \
+kiln generate \
   --name "My Digital Garden" \
   --url "https://notes.mysite.com" \
   --theme "nord" \
   --font "inter"
 ```
+
+### Custom Layout and Subdirectory Deployment
+
+Build with a specific layout and a base path for hosting under a subdirectory:
+
+```bash
+kiln generate \
+  --name "Documentation" \
+  --url "https://example.com/docs" \
+  --layout "simple"
+```
+
+The [Serve Command](./serve.md) respects this base path when previewing locally.
+
+### Minimal Sidebar
+
+Remove the table of contents and local graph to create a cleaner reading experience:
+
+```bash
+kiln generate --disable-toc --disable-local-graph
+```
+
+### Custom Mode
+
+Use [Custom Mode](../Features/Custom Mode/What is Custom Mode.md) to build a site with collection configs and custom templates instead of the default vault layout:
+
+```bash
+kiln generate --mode custom --input ./my-project
+```
+
+## Full Workflow
+
+A typical workflow from a fresh project to a live local preview:
+
+```bash
+# 1. Scaffold a new vault
+kiln init
+
+# 2. Check for broken links
+kiln doctor --input ./vault
+
+# 3. Build the site
+kiln generate --name "My Notes" --url "https://notes.example.com" --theme dracula
+
+# 4. Preview locally
+kiln serve
+```
+
+See the [Init Command](./init.md), [Doctor Command](./doctor.md), and [Serve Command](./serve.md) for details on each step. After verifying the output, deploy to [GitHub Pages](../Deployment/GitHub Pages.md), [Netlify](../Deployment/Netlify.md), [Vercel](../Deployment/Vercel.md), [Cloudflare Pages](../Deployment/Cloudflare Pages.md), or any [static web server](../Deployment/Web Servers.md).
