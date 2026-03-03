@@ -13,85 +13,65 @@ window.loadScript = function (src, id) {
   });
 };
 
+// Panel definitions: each maps a button ID to its wrapper and icon IDs.
+window._panels = [
+  { btn: "menu-button", wrapper: "menu-wrapper", icon: "menu-icon" },
+  {
+    btn: "local-graph-button",
+    wrapper: "local-graph-wrapper",
+    icon: "local-graph-icon",
+  },
+  { btn: "toc-button", wrapper: "toc-wrapper", icon: "toc-icon" },
+];
+
+// Close a single panel by looking up its current DOM elements.
+window._closePanel = function (panel) {
+  const wrapper = document.getElementById(panel.wrapper);
+  const icon = document.getElementById(panel.icon);
+  if (wrapper) wrapper.classList.add("hidden");
+  if (icon) {
+    icon.classList.remove("text-accent");
+    icon.classList.add("text-foreground");
+  }
+};
+
+// Toggle a panel: close all others, then toggle the target.
+window._togglePanel = function (panel) {
+  window._panels.forEach((p) => {
+    if (p.wrapper !== panel.wrapper) window._closePanel(p);
+  });
+  const wrapper = document.getElementById(panel.wrapper);
+  const icon = document.getElementById(panel.icon);
+  if (!wrapper) return;
+  const opening = wrapper.classList.contains("hidden");
+  wrapper.classList.toggle("hidden");
+  if (icon) {
+    icon.classList.toggle("text-accent", opening);
+    icon.classList.toggle("text-foreground", !opening);
+  }
+};
+
+// Named toggle functions referenced by inline scripts (e.g. TOC link clicks).
+window.toggleMenu = () =>
+  window._togglePanel(window._panels[0]);
+window.toggleLocalGraph = () =>
+  window._togglePanel(window._panels[1]);
+window.toggleTOC = () =>
+  window._togglePanel(window._panels[2]);
+
+// Event delegation: one listener that survives htmx swaps.
 window.initToggles = function () {
-  const menuBtn = document.getElementById("menu-button");
-  const menuIcon = document.getElementById("menu-icon");
-  const menu = document.getElementById("menu-wrapper");
+  if (window._togglesDelegationBound) return;
+  window._togglesDelegationBound = true;
 
-  window.toggleMenu = () => {
-    window.closeAllExcept("menu");
-    if (menu.classList.contains("hidden")) {
-      menu.classList.remove("hidden");
-      menuIcon.classList.add("text-accent");
-      menuIcon.classList.remove("text-foreground");
-    } else {
-      menu.classList.add("hidden");
-      menuIcon.classList.remove("text-accent");
-      menuIcon.classList.add("text-foreground");
+  document.body.addEventListener("click", (e) => {
+    for (const panel of window._panels) {
+      if (e.target.closest("#" + panel.btn)) {
+        window._togglePanel(panel);
+        return;
+      }
     }
-  };
-
-  const localGraphBtn = document.getElementById("local-graph-button");
-  const localGraphWrapper = document.getElementById("local-graph-wrapper");
-  const localGraphIcon = document.getElementById("local-graph-icon");
-  window.toggleLocalGraph = () => {
-    window.closeAllExcept("local-graph");
-    if (localGraphWrapper.classList.contains("hidden")) {
-      localGraphWrapper.classList.remove("hidden");
-      localGraphIcon.classList.add("text-accent");
-      localGraphIcon.classList.remove("text-foreground");
-    } else {
-      localGraphWrapper.classList.add("hidden");
-      localGraphIcon.classList.remove("text-accent");
-      localGraphIcon.classList.add("text-foreground");
-    }
-  };
-
-  const tocBtn = document.getElementById("toc-button");
-  const tocWrapper = document.getElementById("toc-wrapper");
-  const tocIcon = document.getElementById("toc-icon");
-  window.toggleTOC = () => {
-    window.closeAllExcept("toc");
-    if (tocWrapper.classList.contains("hidden")) {
-      tocWrapper.classList.remove("hidden");
-      tocIcon.classList.add("text-accent");
-      tocIcon.classList.remove("text-foreground");
-    } else {
-      tocWrapper.classList.add("hidden");
-      tocIcon.classList.remove("text-accent");
-      tocIcon.classList.add("text-foreground");
-    }
-  };
-
-  window.closeAllExcept = (item) => {
-    if (item !== "menu" && menu && menuIcon) {
-      menu.classList.add("hidden");
-      menuIcon.classList.remove("text-accent");
-      menuIcon.classList.add("text-foreground");
-    }
-
-    if (item !== "local-graph" && localGraphWrapper && localGraphIcon) {
-      localGraphWrapper.classList.add("hidden");
-      localGraphIcon.classList.remove("text-accent");
-      localGraphIcon.classList.add("text-foreground");
-    }
-
-    if (item !== "toc" && tocWrapper && tocIcon) {
-      tocWrapper.classList.add("hidden");
-      tocIcon.classList.remove("text-accent");
-      tocIcon.classList.add("text-foreground");
-    }
-  };
-
-  if (localGraphBtn) {
-    localGraphBtn.addEventListener("click", window.toggleLocalGraph);
-  }
-  if (menuBtn) {
-    menuBtn.addEventListener("click", window.toggleMenu);
-  }
-  if (tocBtn) {
-    tocBtn.addEventListener("click", window.toggleTOC);
-  }
+  });
 };
 
 // Lazyload MathJax
@@ -287,12 +267,12 @@ window.initAll = function () {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  localStorage.setItem("menu", "close");
   window.initAll();
 });
 
 document.addEventListener("htmx:afterSwap", () => {
-  localStorage.setItem("menu", "close");
+  // Close all panels on navigation
+  window._panels.forEach((p) => window._closePanel(p));
   window.initAll();
 });
 

@@ -169,73 +169,65 @@ window.initThemeToggle = function () {
   });
 };
 
-// Left sidebar logic
-window.setupLeftSidebarInteraction = function () {
-  const toggleBtns = document.querySelectorAll(".sidebar-toggle.left-toggle");
-  const sidebar = document.getElementById("left-sidebar");
-  if (!toggleBtns.length || !sidebar) return;
+// Sidebar toggle via event delegation (survives htmx swaps without re-binding)
+window.setupSidebarDelegation = function () {
+  if (window._sidebarDelegationBound) return;
+  window._sidebarDelegationBound = true;
 
-  toggleBtns.forEach((btn) => {
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-    newBtn.addEventListener("click", () => {
-      sidebar.classList.toggle("collapsed");
-      if (window.innerWidth >= 1280) {
-        localStorage.setItem(
-          "left-sidebar",
-          sidebar.classList.contains("collapsed"),
-        );
-      }
-    });
-  });
-};
-
-// Right sidebar logic
-window.setupRightSidebarInteraction = function () {
-  const toggleBtns = document.querySelectorAll(".sidebar-toggle.right-toggle");
-  const sidebar = document.getElementById("right-sidebar");
-  if (!toggleBtns.length || !sidebar) return;
-
-  toggleBtns.forEach((btn) => {
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-    newBtn.addEventListener("click", () => {
-      sidebar.classList.toggle("collapsed");
-      if (window.innerWidth >= 1280) {
-        localStorage.setItem(
-          "right-sidebar",
-          sidebar.classList.contains("collapsed"),
-        );
-      }
-    });
-  });
-};
-
-// Sidebars autoclose on mobile logic
-window.setupMobileAutoClose = function () {
   document.body.addEventListener("click", (e) => {
-    if (window.innerWidth > 1280) return;
+    const leftBtn = e.target.closest(".sidebar-toggle.left-toggle");
+    const rightBtn = e.target.closest(".sidebar-toggle.right-toggle");
 
+    if (leftBtn) {
+      e.stopPropagation();
+      window.toggleSidebar("left-sidebar", "right-sidebar");
+      return;
+    }
+    if (rightBtn) {
+      e.stopPropagation();
+      window.toggleSidebar("right-sidebar", "left-sidebar");
+      return;
+    }
+
+    // Mobile auto-close: close open sidebars when clicking a link or graph node
+    if (window.innerWidth >= 1280) return;
     const link = e.target.closest("a");
     const isGraphNode =
       ["circle", "text"].includes(e.target.tagName.toLowerCase()) &&
       (e.target.closest("#global-graph-container") ||
         e.target.closest("#local-graph-container"));
-
     if (!link && !isGraphNode) return;
 
-    // Close sidebars on mobile by removing the collapsed class
-    // (on mobile, "collapsed" class = visible, default = hidden)
-    ["left-sidebar", "right-sidebar"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el && el.classList.contains("collapsed")) {
-        el.classList.remove("collapsed");
-        localStorage.removeItem(
-          id === "left-sidebar" ? "left-sidebar" : "right-sidebar",
-        );
-      }
-    });
+    window.closeSidebar("left-sidebar");
+    window.closeSidebar("right-sidebar");
   });
+};
+
+window.toggleSidebar = function (id, otherId) {
+  const sidebar = document.getElementById(id);
+  if (!sidebar) return;
+
+  // On mobile, close the other sidebar first
+  if (window.innerWidth < 1280) {
+    window.closeSidebar(otherId);
+  }
+
+  sidebar.classList.toggle("collapsed");
+
+  if (window.innerWidth >= 1280) {
+    localStorage.setItem(id, sidebar.classList.contains("collapsed"));
+  }
+};
+
+window.closeSidebar = function (id) {
+  const sidebar = document.getElementById(id);
+  if (!sidebar) return;
+  // On mobile, "collapsed" = visible, so removing it hides the sidebar.
+  // On desktop, "collapsed" = hidden, so removing it shows the sidebar.
+  // We only auto-close on mobile, where removing "collapsed" is correct.
+  if (sidebar.classList.contains("collapsed")) {
+    sidebar.classList.remove("collapsed");
+  }
 };
 
 // Navbar search
@@ -351,8 +343,7 @@ window.addCopyButtons = function () {
 window.initAll = function () {
   window.initThemeToggle();
   window.initNavbarSearch();
-  window.setupRightSidebarInteraction();
-  window.setupLeftSidebarInteraction();
+  window.setupSidebarDelegation();
   window.highlightSidebarLink();
   window.addCopyButtons();
 
@@ -361,7 +352,6 @@ window.initAll = function () {
 
 document.addEventListener("DOMContentLoaded", () => {
   window.initAll();
-  window.setupMobileAutoClose();
 });
 
 document.addEventListener("htmx:afterSwap", () => {
