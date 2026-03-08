@@ -28,6 +28,9 @@ func init() {
 
 // runDoctor executes the linting logic.
 func runDoctor(cmd *cobra.Command, args []string) {
+	// Load config file if present; values act as defaults that CLI flags override.
+	applyConfig(cmd)
+
 	log.Println("Diagnosing vault...")
 
 	// Override the default input directory if the flag is set.

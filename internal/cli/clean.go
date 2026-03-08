@@ -26,7 +26,9 @@ func init() {
 
 // runClean executes the cleanup logic.
 func runClean(cmd *cobra.Command, args []string) {
-	// Apply overrides
+	// Load config file if present; values act as defaults that CLI flags override.
+	applyConfig(cmd)
+
 	// If a custom output directory was provided via flags, update the builder configuration.
 	builder.OutputDir = outputDir
 

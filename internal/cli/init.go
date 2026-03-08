@@ -25,6 +25,9 @@ func init() {
 
 // runInit executes the initialization logic.
 func runInit(cmd *cobra.Command, args []string) {
+	// Load config file if present; values act as defaults that CLI flags override.
+	applyConfig(cmd)
+
 	// If a custom input directory is provided via flags, update the global builder configuration.
 	if inputDir != "" {
 		builder.InputDir = inputDir

@@ -30,6 +30,9 @@ func init() {
 
 // runServe executes the server logic.
 func runServe(cmd *cobra.Command, args []string) {
+	// Load config file if present; values act as defaults that CLI flags override.
+	applyConfig(cmd)
+
 	// If the user specified a custom output directory via flags, update the builder config.
 	builder.OutputDir = outputDir
 
