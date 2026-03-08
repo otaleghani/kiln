@@ -37,6 +37,7 @@ func TestWriteImage_WithVariants(t *testing.T) {
 		`<source type="image/webp"`,
 		"srcset=",
 		`loading="lazy"`,
+		`sizes="min(65ch, 100vw)"`,
 	}
 	for _, want := range checks {
 		if !strings.Contains(out, want) {
@@ -77,6 +78,9 @@ func TestWriteImage_NoVariants(t *testing.T) {
 	if strings.Contains(out, "<picture>") {
 		t.Errorf("should not contain <picture>, got: %s", out)
 	}
+	if strings.Contains(out, `sizes=`) {
+		t.Errorf("plain <img> without srcset should not have sizes attribute, got: %s", out)
+	}
 }
 
 func TestWriteImage_WithAVIFAndWebP(t *testing.T) {
@@ -108,6 +112,7 @@ func TestWriteImage_WithAVIFAndWebP(t *testing.T) {
 		`<source type="image/avif"`,
 		`<source type="image/webp"`,
 		`loading="lazy"`,
+		`sizes="min(65ch, 100vw)"`,
 	}
 	for _, want := range checks {
 		if !strings.Contains(out, want) {

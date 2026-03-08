@@ -374,7 +374,7 @@ func (r *IndexResolver) writePicture(w util.BufWriter, src string, alt []byte, t
 		w.WriteString(mime)
 		w.WriteString("\" srcset=\"")
 		w.WriteString(strings.Join(entries, ", "))
-		w.WriteString("\">")
+		w.WriteString("\" sizes=\"min(65ch, 100vw)\">")
 	}
 
 	// Fallback <img>
@@ -388,7 +388,7 @@ func (r *IndexResolver) writePicture(w util.BufWriter, src string, alt []byte, t
 		w.Write(title)
 		w.WriteString("\"")
 	}
-	w.WriteString(" loading=\"lazy\">")
+	w.WriteString(" sizes=\"min(65ch, 100vw)\" loading=\"lazy\">")
 	w.WriteString("</picture>")
 }
 
