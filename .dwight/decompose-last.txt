@@ -1,188 +1,63 @@
 -- DwightAuto decomposition output
--- Request: ### Automatic Open Graph and Twitter Card image generation
-Generate `og:image` (1200x630px) and `twitter:card` / `twitter:image` (1200x600px) meta tags automatically for every page. Pull `title` and `
--- Timestamp: Tue 03 Mar 2026 03:57:14 PM CET
+-- Request: ### Image Optimization Pipeline
+Resize and convert images to WebP/AVIF at build time. Could use `golang.org/x/image` (already a dependency) for resizing and shell out to `cwebp`/`avifenc` if available
+-- Timestamp: Sun 08 Mar 2026 02:42:54 PM CET
 
-Now I have all the context I need. Here's my decomposition:
+Here is the complete decomposition, condensed:
 
 <tasks>
-<task order="1" title="Create OG image generator package">
-Create a new `internal/ogimage` package that generates branded PNG images (1200x630 for OG, 1200x600 for Twitter) at build time using `golang.org/x/image`.
+<task order="1" title="Core image processing package">
+Create `internal/imgopt` package with pure-Go image resizing and optional WebP/AVIF encoding via shell.
 
 **Files to create:**
-- `internal/ogimage/ogimage.go` — Add `// @feature:ogimage Build-time Open Graph and Twitter Card image generator.` on line 1
-- `internal/ogimage/ogimage_test.go` — Add `// @feature:ogimage Tests for OG image generation.` on line 1
+- `internal/imgopt/imgopt.go` — line 1: `// @feature:imgopt Image optimization: resize and convert images to WebP/AVIF at build time.`
+- `internal/imgopt/imgopt_test.go` — line 1: `// @feature:imgopt`
 
-**Tests to write FIRST** in `internal/ogimage/ogimage_test.go`:
-1. `TestGenerateOGImage` — Verify a 1200x630 PNG is produced with the correct dimensions when given a title and description
-2. `TestGenerateTwitterImage` — Verify a 1200x600 PNG is produced with the correct dimensions
-3. `TestGenerateOGImage_LongTitle` — Verify the generator handles long titles (>80 chars) without error by truncating/wrapping
-4. `TestGenerateOGImage_EmptyTitle` — Verify a fallback title (e.g. "Untitled") is used when title is empty
-5. `TestGenerateOGImage_WritesToFile` — Verify images are written to the correct output path
+**Types:** `Variant{Width int, Suffix string, Format string, OutPath string, WebPath string}`, `Result{Original string, Variants []Variant}`, `var ErrNoEncoder = errors.New("imgopt: encoder not available")`
 
-**Implementation** in `internal/ogimage/ogimage.go`:
+**Functions:**
+- `Resize(src image.Image, maxWidth int) image.Image` — `golang.org/x/image/draw` with `CatmullRom`. No-op if src width <= maxWidth.
+- `EncodeWebP(w io.Writer, img image.Image, quality int) error` — Shell to `cwebp` via temp files. Return `ErrNoEncoder` if not on PATH.
+- `EncodeAVIF(w io.Writer, img image.Image, quality int) error` — Shell to `avifenc`. Return `ErrNoEncoder` if unavailable.
+- `DecodeImage(path string) (image.Image, string, error)` — `image.Decode` with `_ "image/jpeg"` and `_ "image/png"` registered.
+- `ProcessImage(srcPath, outDir, webDir, baseName string, breakpoints []int) (*Result, error)` — Decodes, resizes at each breakpoint < original width, encodes WebP (if available) + original format, writes to outDir, returns Result with WebPaths.
+- `IsOptimizable(ext string) bool` — true for `.png`, `.jpg`, `.jpeg` only.
+- `DefaultBreakpoints() []int` — returns `[]int{1200, 800, 400}`.
 
-```go
-package ogimage
+**Tests (write FIRST):** `TestResize` (1600x900→800=800x450), `TestResize_SmallerThanTarget` (400x300→800=400x300), `TestDecodeImage` (round-trip PNG), `TestProcessImage` (1600x900 PNG, breakpoints [800,400], assert variants exist), `TestIsOptimizable` (table-driven).
 
-type ImageConfig struct {
-    Title       string
-    Description string
-    SiteName    string
-    AccentColor string // hex color from theme
-    BgColor     string // hex color from theme
-    TextColor   string // hex color from theme
-    Width       int
-    Height      int
-}
-```
-
-Functions to implement:
-- `func GenerateOGImage(cfg ImageConfig, outPath string) error` — Generates a 1200x630 branded PNG with title and description rendered as text. Uses `golang.org/x/image/font/basicfont` for text rendering (same pattern as `cmd/kiln-palette/main.go` which already uses `golang.org/x/image/font` and `golang.org/x/image/math/fixed`). Draw a colored background using theme's BgColor, an accent bar at the top, render title in large text and description below in smaller text, plus site name at the bottom.
-- `func GenerateTwitterImage(cfg ImageConfig, outPath string) error` — Same as above but 1200x600
-- `func parseHex(s string) color.RGBA` — Hex to color helper (same logic as in `cmd/kiln-palette/main.go`)
-- `func wrapText(text string, maxWidth int) []string` — Simple word-wrap helper for long titles
-
-**Dependencies:** `golang.org/x/image` is already in `go.sum` (used by `cmd/kiln-palette`). Run `go get golang.org/x/image` to add it to `go.mod`.
-
-**Verify:** `go test ./internal/ogimage/...`
+**Verify:** `go test ./internal/imgopt/...`
 </task>
 
-<task order="2" title="Extend Head component with full OG and Twitter meta tags">
-Edit the `Head` templ component in `internal/templates/shared.templ` to emit the full set of Open Graph and Twitter Card meta tags. Also add a helper function `ogImagePath` to `internal/templates/helpers.go`.
+<task order="2" title="Wire optimization into both build modes">
+Integrate `imgopt` into both default and custom build pipelines.
 
-**Tests to write FIRST** — Edit `internal/templates/helpers_test.go` (which currently has `TestToStr` and `TestHead_NilFrontmatterValues`):
-1. `TestHead_OGMetaTags` — Render `Head()` with a PageData that has a File with WebPath="/blog/my-post", Frontmatter with title="My Title" and description="My Desc", Site with BaseURL="https://example.com" and SiteName="My Site". Assert the output HTML contains:
-   - `<meta property="og:title" content="My Title"/>`
-   - `<meta property="og:description" content="My Desc"/>`
-   - `<meta property="og:image" content="https://example.com/blog/my-post/og.png"/>`
-   - `<meta property="og:url" content="https://example.com/blog/my-post"/>`
-   - `<meta property="og:type" content="article"/>`
-   - `<meta name="twitter:card" content="summary_large_image"/>`
-   - `<meta name="twitter:title" content="My Title"/>`
-   - `<meta name="twitter:description" content="My Desc"/>`
-   - `<meta name="twitter:image" content="https://example.com/blog/my-post/twitter.png"/>`
-2. `TestHead_OGMetaTags_Folder` — Verify folders get og:type="website" and use folder.RelPath as title
-3. `TestHead_OGMetaTags_Tag` — Verify tags get og:type="website" and use tag.Name as title
-4. `TestHead_OGMetaTags_NoDescription` — Verify fallback description is used when none in frontmatter
+**Files to edit:**
+- `internal/builder/builder_default.go` — Add `ImageResults map[string]*imgopt.Result` to `DefaultSite` struct (line ~839). Initialize in constructor (line ~65). Replace static copy loop (lines 137-144): check `imgopt.IsOptimizable(file.Ext)`, call `imgopt.ProcessImage`, store in `site.ImageResults[file.WebPath]`; fallback to `obsidian.CopyFile` on error or non-optimizable files. Add `os.MkdirAll` before processing.
+- `internal/builder/builder_custom.go` — Read fully to find `CustomSite` struct. Add `ImageResults map[string]*imgopt.Result`. Initialize where `&CustomSite{}` is constructed. In `parseStaticFiles()` (line 256), wrap `obsidian.CopyFile` (line 275) with same `imgopt.IsOptimizable` check and `ProcessImage` call.
+- Both files: add import `"github.com/otaleghani/kiln/internal/imgopt"`.
 
-**Implementation:**
-
-Edit `internal/templates/helpers.go` — Add helper function:
-```go
-func ogImageURL(baseURL, webPath, filename string) string {
-    return baseURL + webPath + "/" + filename
-}
-```
-
-Edit `internal/templates/shared.templ` — Replace the existing `Head` templ component (lines 194-223). The new version should:
-- Keep the existing `<title>` logic exactly as-is
-- Keep the existing `<meta name="description">` logic exactly as-is
-- **Replace** the single `<meta property="og:title">` with the full set of OG + Twitter meta tags
-
-For the **file/note case** (when `!data.IsFolder && !data.IsTag && data.File != nil`):
-```
-og:title      → frontmatter["title"] or data.File.Name
-og:description → frontmatter["description"] or "Notes on " + data.File.Name
-og:image      → data.Site.BaseURL + data.File.WebPath + "/og.png"
-og:url        → data.Site.BaseURL + data.File.WebPath
-og:type       → "article"
-twitter:card  → "summary_large_image"
-twitter:title → same as og:title
-twitter:description → same as og:description
-twitter:image → data.Site.BaseURL + data.File.WebPath + "/twitter.png"
-```
-
-For the **folder case** (when `data.IsFolder && data.Folder != nil`):
-```
-og:title      → data.Folder.RelPath
-og:description → data.Folder.RelPath
-og:image      → data.Site.BaseURL + data.Folder.WebPath + "/og.png"
-og:url        → data.Site.BaseURL + data.Folder.WebPath
-og:type       → "website"
-twitter:card  → "summary_large_image"
-twitter:title → data.Folder.RelPath
-twitter:description → data.Folder.RelPath
-twitter:image → data.Site.BaseURL + data.Folder.WebPath + "/twitter.png"
-```
-
-For the **tag case** (when `data.IsTag && data.Tag != nil`):
-```
-og:title      → data.Tag.Name
-og:description → data.Tag.Name
-og:image      → data.Site.BaseURL + data.Tag.WebPath + "/og.png"
-og:url        → data.Site.BaseURL + data.Tag.WebPath
-og:type       → "website"
-twitter:card  → "summary_large_image"
-twitter:title → data.Tag.Name
-twitter:description → data.Tag.Name
-twitter:image → data.Site.BaseURL + data.Tag.WebPath + "/twitter.png"
-```
-
-After editing the `.templ` file, regenerate the Go code by running: `go run github.com/a-h/templ/cmd/templ@v0.3.1001 generate`
-
-**Verify:** `go test ./internal/templates/...`
+**Verify:** `go test ./internal/builder/...`
 </task>
 
-<task order="3" title="Wire OG image generation into the build pipeline" depends_on="1,2">
-Integrate the `internal/ogimage` package into `internal/builder/builder_default.go` so that OG and Twitter images are generated alongside each rendered page.
+<task order="3" title="Picture element rendering and full wiring">
+Update markdown renderer to emit `<picture>` elements and wire `ImageResults` from builder through to renderer.
 
-**Context about existing file `internal/builder/builder_default.go`:**
-This file already contains these functions/types:
-- `buildDefault(log *slog.Logger)` — main build orchestrator
-- `DefaultSite` struct with fields: BaseURL, SiteName, Theme, Layout, NavbarRoot, Markdown, Minifier, DisableLocalGraph, DisableTOC, FlatURLs, log, Obsidian
-- `DefaultSitePageData` struct
-- `BaseData`, `CanvasData`, `CanvasNode` structs
-- `RenderNote`, `RenderFolder`, `RenderTag`, `RenderBase`, `RenderCanvas`, `RenderGraph`, `Render404` methods
-- `ParseBaseFile` function
+**Files to edit:**
+- `internal/obsidian/markdown/wikilinks.go` — Add `ImageResults map[string]*imgopt.Result` field to `IndexResolver` (line 517). Modify `writeImage` (line 330): if `ImageResults` has entry for `src`, call new `writePicture` method; otherwise emit plain `<img loading="lazy">`. New method `writePicture` emits `<picture>` with `<source type="image/webp" srcset="...">` for webp variants, `<source srcset="...">` for original-format variants, and `<img src="..." loading="lazy">` fallback. Add `.avif` to `isImageFile` (line 480). Add import for `"fmt"` and `"github.com/otaleghani/kiln/internal/imgopt"`.
+- `internal/obsidian/markdown/markdown.go` — Read fully. Add `ImageResults map[string]*imgopt.Result` to `ObsidianMarkdown`. Pass it to `IndexResolver` when constructing it in the `Render` method.
+- `internal/builder/builder_default.go` — After image processing loop, before note rendering, set `site.Markdown.ImageResults = site.ImageResults`.
+- `internal/builder/builder_custom.go` — After `parseStaticFiles()`, set markdown renderer's `ImageResults`.
+- `internal/builder/utils.go` — Add `.avif` to `isImageExt` and `isAllowedExt`.
 
-**Tests to write FIRST** in `internal/builder/builder_default_test.go` (which currently has `TestParseBaseFile_*` and `TestEmptyViewsDoNotPanic`):
-1. `TestGeneratePageOGImages` — Create a test that calls a new `GeneratePageOGImages` function with title="Test", description="Desc", siteName="Site", theme colors, and a temp output directory. Verify that both `og.png` and `twitter.png` are created in the output directory and are valid PNG files (by decoding them).
+**Files to create:**
+- `internal/obsidian/markdown/picture_test.go` — line 1: `// @feature:wikilinks`
 
-**Implementation:**
+**Tests (write FIRST):**
+- `TestWriteImage_WithVariants` — `IndexResolver` with `ImageResults` for `/img/photo`, variants with webp 800w/400w + png 800w/400w. Assert output contains `<picture>`, `<source type="image/webp"`, `srcset=`, `loading="lazy"`, `</picture>`.
+- `TestWriteImage_NoVariants` — src not in ImageResults. Assert plain `<img loading="lazy">`.
+- `TestWriteImage_NilResults` — `ImageResults` is nil. Assert plain `<img loading="lazy">`.
 
-Add a new method to `DefaultSite` in `internal/builder/builder_default.go`:
-```go
-func (s *DefaultSite) GeneratePageOGImages(title, description, outDir string) {
-    cfg := ogimage.ImageConfig{
-        Title:       title,
-        Description: description,
-        SiteName:    s.SiteName,
-        AccentColor: s.Theme.Dark.Accent,
-        BgColor:     s.Theme.Dark.Bg,
-        TextColor:   s.Theme.Dark.Text,
-    }
-
-    ogCfg := cfg
-    ogCfg.Width = 1200
-    ogCfg.Height = 630
-    if err := ogimage.GenerateOGImage(ogCfg, filepath.Join(outDir, "og.png")); err != nil {
-        s.log.Warn("Couldn't generate OG image", "error", err)
-    }
-
-    twCfg := cfg
-    twCfg.Width = 1200
-    twCfg.Height = 600
-    if err := ogimage.GenerateTwitterImage(twCfg, filepath.Join(outDir, "twitter.png")); err != nil {
-        s.log.Warn("Couldn't generate Twitter image", "error", err)
-    }
-}
-```
-
-Then call `GeneratePageOGImages` from within each render method. The key integration points are:
-
-1. **In `RenderNote`** (after rendering the HTML, before return): Extract title from `obsidianData.Frontmatter["title"]` or fallback to `f.Name`. Extract description from `obsidianData.Frontmatter["description"]` or fallback to `"Notes on " + f.Name`. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(title, description, outDir)`.
-
-2. **In `RenderFolder`**: Use `f.RelPath` as both title and description. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(f.RelPath, f.RelPath, outDir)`.
-
-3. **In `RenderTag`**: Use `t.Name` as both title and description. Compute `outDir` as `filepath.Dir(t.OutPath)`. Call `s.GeneratePageOGImages(t.Name, t.Name, outDir)`.
-
-4. **In `RenderBase`**: Use `b.File.Name` as title. Compute `outDir` as `filepath.Dir(b.File.OutPath)`. Call `s.GeneratePageOGImages(b.File.Name, b.File.Name, outDir)`.
-
-5. **In `RenderCanvas`**: Use `f.Name` as title. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(f.Name, f.Name, outDir)`.
-
-Add `"github.com/otaleghani/kiln/internal/ogimage"` to the imports.
-
-**Verify:** `go test ./internal/builder/... && go test ./internal/ogimage/...`
+**Verify:** `go test ./internal/obsidian/markdown/... && go test ./internal/builder/... && go test ./internal/imgopt/...`
 </task>
 </tasks>

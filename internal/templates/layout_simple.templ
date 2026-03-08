@@ -5,6 +5,7 @@ templ SimpleLayout(data *PageData) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
+			<meta charset="UTF-8"/>
 			@Canonical(data)
 			<script>
 				(function () {
@@ -21,7 +22,6 @@ templ SimpleLayout(data *PageData) {
 					}
 				})();
 			</script>
-			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			@Head(data)
 			<link rel="stylesheet" href={ data.Site.BaseURL + "/style.css" }/>
