@@ -78,7 +78,12 @@ func buildDefault(log *slog.Logger) {
 		log:               log,
 		Obsidian:          obs,
 	}
-	site.Minifier.AddFunc("text/html", html.Minify)
+	// site.Minifier.AddFunc("text/html", html.Minify)
+	site.Minifier.Add("text/html", &html.Minifier{
+		KeepDocumentTags: true,
+		KeepQuotes:       true,
+		KeepEndTags:      true,
+	})
 
 	// Divide the different files and call "RenderType" directly, instaed of calling Render
 	notePages := []*obsidian.File{}

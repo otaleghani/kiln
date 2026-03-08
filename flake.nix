@@ -64,11 +64,11 @@
 
         shellHook = ''
           export PATH="$PWD/node_modules/.bin:$PATH"
-          if [ -z "$TMUX" ]; then
-            tmux set-option -g default-command "nix develop --command zsh"
-            tmux new-session -s kiln -d 'nvim' \; new-window
-            tmux attach-session -t kiln
-          fi
+          # if [ -z "$TMUX" ]; then
+          #   tmux set-option -g default-command "nix develop --command zsh"
+          #   tmux new-session -s kiln -d 'nvim' \; new-window
+          #   tmux attach-session -t kiln
+          # fi
         '';
       };
     };
