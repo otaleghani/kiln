@@ -543,6 +543,8 @@ func buildCustom(log *slog.Logger) {
 		os.Exit(1)
 	}
 
+	site.Markdown.ImageResults = site.ImageResults
+
 	err = site.parseNotes()
 	if err != nil {
 		log.Error("Error parsing note", "error", err)

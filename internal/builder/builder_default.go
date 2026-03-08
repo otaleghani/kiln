@@ -161,6 +161,8 @@ func buildDefault(log *slog.Logger) {
 		}
 	}
 
+	site.Markdown.ImageResults = site.ImageResults
+
 	log.Info("Rendering folder pages...")
 	for _, folder := range site.Obsidian.Vault.Folders {
 		l := log.With("folder", folder.RelPath)
