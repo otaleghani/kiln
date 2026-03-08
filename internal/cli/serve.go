@@ -30,20 +30,14 @@ func init() {
 
 // runServe executes the server logic.
 func runServe(cmd *cobra.Command, args []string) {
-	// Load config file if present; values act as defaults that CLI flags override.
-	applyConfig(cmd)
+	cfg := loadConfig(cmd)
+	applyStringFlag(cmd, FlagPort, &port, cfg, DefaultPort)
+	applyStringFlag(cmd, FlagOutputDir, &outputDir, cfg, DefaultOutputDir)
+	applyStringFlag(cmd, FlagLog, &logger, cfg, DefaultLog)
 
-	// If the user specified a custom output directory via flags, update the builder config.
 	builder.OutputDir = outputDir
-
-	// Construct the local base URL (e.g., http://localhost:8080).
-	// This helps ensure absolute links or assets resolve correctly during local preview.
 	localBaseURL := "http://localhost:" + port
 
-	// builder.BaseURL = localBaseURL
-
 	log := getLogger()
-
-	// Start the static file server.
 	server.Serve(port, builder.OutputDir, localBaseURL, log)
 }

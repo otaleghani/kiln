@@ -28,19 +28,16 @@ func init() {
 
 // runDoctor executes the linting logic.
 func runDoctor(cmd *cobra.Command, args []string) {
-	// Load config file if present; values act as defaults that CLI flags override.
-	applyConfig(cmd)
+	cfg := loadConfig(cmd)
+	applyStringFlag(cmd, FlagInputDir, &inputDir, cfg, DefaultInputDir)
+	applyStringFlag(cmd, FlagLog, &logger, cfg, DefaultLog)
 
 	log.Println("Diagnosing vault...")
 
-	// Override the default input directory if the flag is set.
 	builder.InputDir = inputDir
 
-	log := getLogger()
+	slogger := getLogger()
 
-	// Collect all valid note paths to build a reference index.
 	notes := linter.CollectNotes(builder.InputDir)
-
-	// Scan content for links that point to non-existent notes.
-	linter.BrokenLinks(builder.InputDir, notes, log)
+	linter.BrokenLinks(builder.InputDir, notes, slogger)
 }

@@ -25,16 +25,12 @@ func init() {
 
 // runInit executes the initialization logic.
 func runInit(cmd *cobra.Command, args []string) {
-	// Load config file if present; values act as defaults that CLI flags override.
-	applyConfig(cmd)
+	cfg := loadConfig(cmd)
+	applyStringFlag(cmd, FlagInputDir, &inputDir, cfg, DefaultInputDir)
+	applyStringFlag(cmd, FlagLog, &logger, cfg, DefaultLog)
 
-	// If a custom input directory is provided via flags, update the global builder configuration.
-	if inputDir != "" {
-		builder.InputDir = inputDir
-	}
+	builder.InputDir = inputDir
 
 	log := getLogger()
-
-	// Trigger the creation of the vault directory and default files.
 	builder.Init(log)
 }

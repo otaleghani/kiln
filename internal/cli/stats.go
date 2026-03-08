@@ -25,14 +25,12 @@ func init() {
 
 // runStats executes the statistics calculation logic.
 func runStats(cmd *cobra.Command, args []string) {
-	// Load config file if present; values act as defaults that CLI flags override.
-	applyConfig(cmd)
+	cfg := loadConfig(cmd)
+	applyStringFlag(cmd, FlagInputDir, &inputDir, cfg, DefaultInputDir)
+	applyStringFlag(cmd, FlagLog, &logger, cfg, DefaultLog)
 
-	// If a custom input directory is provided via flags, update the builder configuration.
 	builder.InputDir = inputDir
 
 	log := getLogger()
-
-	// Trigger the stats analysis and print the results to the console.
 	builder.Stats(log)
 }

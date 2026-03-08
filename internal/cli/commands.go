@@ -9,8 +9,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-
 	"github.com/spf13/cobra"
+
+	"github.com/otaleghani/kiln/internal/config"
 )
 
 // Default configuration constants for the build process.
@@ -95,6 +96,46 @@ It supports wikilinks, callouts, mermaid diagrams, and graph visualization.`,
 	rootCmd.AddCommand(cmdVersion)  // Version of the program
 
 	return rootCmd
+}
+
+// loadConfig discovers and loads kiln.yaml from the current directory.
+// Returns a non-nil Config (possibly zero-valued) that is safe to call methods on.
+// Logs a message when a config file is found and loaded.
+func loadConfig(cmd *cobra.Command) *config.Config {
+	path, err := config.FindFile(".")
+	if err != nil {
+		slog.Warn("Error searching for config file", "error", err)
+		return &config.Config{}
+	}
+	if path == "" {
+		return &config.Config{}
+	}
+
+	cfg, err := config.Load(path)
+	if err != nil {
+		slog.Warn("Failed to parse config file", "file", path, "error", err)
+		return &config.Config{}
+	}
+	if cfg == nil {
+		return &config.Config{}
+	}
+
+	slog.Info("Loaded configuration", "file", path)
+	return cfg
+}
+
+// applyStringFlag sets the target variable to the config value if the CLI flag was not explicitly set.
+func applyStringFlag(cmd *cobra.Command, flagName string, target *string, cfg *config.Config, defaultVal string) {
+	if !cmd.Flags().Changed(flagName) {
+		*target = cfg.ValueOr(flagName, defaultVal)
+	}
+}
+
+// applyBoolFlag sets the target variable to the config value if the CLI flag was not explicitly set.
+func applyBoolFlag(cmd *cobra.Command, flagName string, target *bool, cfg *config.Config, defaultVal bool) {
+	if !cmd.Flags().Changed(flagName) {
+		*target = cfg.BoolOr(flagName, defaultVal)
+	}
 }
 
 // getLogger creates a new default logger with the level based on the given log flag

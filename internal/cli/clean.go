@@ -26,14 +26,12 @@ func init() {
 
 // runClean executes the cleanup logic.
 func runClean(cmd *cobra.Command, args []string) {
-	// Load config file if present; values act as defaults that CLI flags override.
-	applyConfig(cmd)
+	cfg := loadConfig(cmd)
+	applyStringFlag(cmd, FlagOutputDir, &outputDir, cfg, DefaultOutputDir)
+	applyStringFlag(cmd, FlagLog, &logger, cfg, DefaultLog)
 
-	// If a custom output directory was provided via flags, update the builder configuration.
 	builder.OutputDir = outputDir
 
 	log := getLogger()
-
-	// Delegate the actual deletion logic to the builder package.
 	builder.CleanOutputDir(log)
 }
