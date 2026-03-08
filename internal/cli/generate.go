@@ -2,7 +2,10 @@
 package cli
 
 import (
+	"log/slog"
+
 	"github.com/otaleghani/kiln/internal/builder"
+	"github.com/otaleghani/kiln/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -45,8 +48,10 @@ func init() {
 
 // runGenerate executes the build logic.
 func runGenerate(cmd *cobra.Command, args []string) {
+	// Load config file if present; values act as defaults that CLI flags override.
+	applyConfig(cmd)
+
 	// Apply overrides
-	// If the user specified custom directories via flags, update the builder configuration.
 	builder.OutputDir = outputDir
 	builder.InputDir = inputDir
 	builder.FlatUrls = flatUrls
@@ -63,4 +68,65 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	// Trigger the build
 	builder.Build(log)
+}
+
+// applyConfig discovers and loads kiln.yaml, applying its values as defaults
+// for any flags the user did not explicitly set on the command line.
+func applyConfig(cmd *cobra.Command) {
+	path, err := config.FindFile(".")
+	if err != nil {
+		slog.Warn("Error searching for config file", "error", err)
+		return
+	}
+	if path == "" {
+		return
+	}
+
+	cfg, err := config.Load(path)
+	if err != nil {
+		slog.Warn("Failed to parse config file", "file", path, "error", err)
+		return
+	}
+	if cfg == nil {
+		return
+	}
+
+	slog.Info("Loaded configuration", "file", path)
+
+	if !cmd.Flags().Changed(FlagTheme) {
+		themeName = cfg.ValueOr("theme", DefaultThemeName)
+	}
+	if !cmd.Flags().Changed(FlagFont) {
+		fontName = cfg.ValueOr("font", DefaultFontName)
+	}
+	if !cmd.Flags().Changed(FlagUrl) {
+		baseURL = cfg.ValueOr("url", DefaultBaseURL)
+	}
+	if !cmd.Flags().Changed(FlagSiteName) {
+		siteName = cfg.ValueOr("name", DefaultSiteName)
+	}
+	if !cmd.Flags().Changed(FlagInputDir) {
+		inputDir = cfg.ValueOr("input", DefaultInputDir)
+	}
+	if !cmd.Flags().Changed(FlagOutputDir) {
+		outputDir = cfg.ValueOr("output", DefaultOutputDir)
+	}
+	if !cmd.Flags().Changed(FlagMode) {
+		mode = cfg.ValueOr("mode", DefaultMode)
+	}
+	if !cmd.Flags().Changed(FlagLayout) {
+		layout = cfg.ValueOr("layout", DefaultLayout)
+	}
+	if !cmd.Flags().Changed(FlagLog) {
+		logger = cfg.ValueOr("log", DefaultLog)
+	}
+	if !cmd.Flags().Changed(FlagFlatURLS) {
+		flatUrls = cfg.BoolOr("flat-urls", DefaultFlatURLS)
+	}
+	if !cmd.Flags().Changed(FlagDisableTOC) {
+		disableTOC = cfg.BoolOr("disable-toc", DefaultDisableTOC)
+	}
+	if !cmd.Flags().Changed(FlagDisableLocalGraph) {
+		disableLocalGraph = cfg.BoolOr("disable-local-graph", DefaultDisableLocalGraph)
+	}
 }
