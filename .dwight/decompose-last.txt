@@ -1,55 +1,297 @@
 -- DwightAuto decomposition output
--- Request: There are a couple of things to change regarding the image optimization feature. First thing first the order of the `<source>` tag should be avif->webp->png. If we put png on top every browser is goin
--- Timestamp: Sun 08 Mar 2026 05:15:39 PM CET
+-- Request: We need to add the `sizes` attribute to the new image optimization feature. The max width of the notes is always 65ch. I would also love to have the ability to view the image full screen. So add a but
+-- Timestamp: Sun 08 Mar 2026 05:25:34 PM CET
 
-Now I have the complete picture. The fix is straightforward — there are two approaches:
-
-1. **Fix in `ProcessImage()`**: Reorder variant appends so AVIF comes first, then WebP, then original format
-2. **Fix in `writePicture()`**: Use an explicit format order instead of relying on first-seen order from variants
-
-The cleanest fix is approach 1 (reorder in `ProcessImage`) since the `writePicture` function already respects the order from the variants slice, and existing tests already check that AVIF appears before WebP. We just need to also ensure PNG comes last.
-
-This is actually a small, focused change — only 2 files need editing. Let me decompose it:
+Now I have a complete picture. Let me produce the decomposition.
 
 <tasks>
-<task order="1" title="Fix source tag order: avif → webp → png">
-The `<picture>` element currently emits `<source>` tags in the wrong order. The original format (PNG/JPEG) appears first because `ProcessImage()` in `internal/imgopt/imgopt.go` appends the original-format variant before AVIF and WebP for each breakpoint. Since `writePicture()` in `internal/obsidian/markdown/wikilinks.go` emits `<source>` tags in first-seen format order, browsers pick PNG first.
+<task order="1" title="Add sizes attribute to picture and img elements">
+Modify the `writePicture` and `writeImage` functions in `internal/obsidian/markdown/wikilinks.go` to emit a `sizes` attribute on both `<source>` elements and the fallback `<img>` element. The notes content area has `max-width: 65ch`, so the sizes attribute should be `sizes="min(65ch, 100vw)"`.
 
-**What to change:**
+**Test first** — edit `internal/obsidian/markdown/picture_test.go`:
+1. In `TestWriteImage_WithVariants`, add a check that the output contains `sizes="min(65ch, 100vw)"`.
+2. In `TestWriteImage_WithAVIFAndWebP`, add a check that the output contains `sizes="min(65ch, 100vw)"`.
+3. In `TestWriteImage_NoVariants` (plain `<img>` fallback), verify the plain `<img>` does NOT get a `sizes` attribute (sizes only makes sense with srcset).
 
-1. **Edit `internal/imgopt/imgopt.go`** — In the `ProcessImage()` function (lines 172-234), reorder the variant appends inside the `for _, bp := range breakpoints` loop so that AVIF is tried first, then WebP, then the original format. Currently the order is:
-   - Original format (line 198-204)  
-   - AVIF (lines 206-217)
-   - WebP (lines 219-230)
+Run `go test ./internal/obsidian/markdown/...` — tests should FAIL because `sizes` is not emitted yet.
 
-   Change to:
-   - AVIF first (try encoding, append variant if successful)
-   - WebP second (try encoding, append variant if successful)
-   - Original format last (always appended)
+**Then implement** — edit `internal/obsidian/markdown/wikilinks.go`:
 
-   This ensures the `Result.Variants` slice has formats in avif→webp→png order, which `writePicture()` will respect when building `formatOrder`.
-
-2. **Edit `internal/imgopt/imgopt_test.go`** — In `TestProcessImage()` (lines 134-151), the existing test checks that "AVIF must appear before WebP" when both encoders are available. Add an additional check: when all three formats are present, PNG must appear **after** both AVIF and WebP. Specifically, after the existing AVIF-before-WebP check (line 147-149), add a check that `firstPNG` index is greater than both `firstAVIF` and `firstWebP`. Track `firstPNG` alongside the existing `firstAVIF` and `firstWebP` variables.
-
-3. **Edit `internal/obsidian/markdown/picture_test.go`** — In `TestWriteImage_WithAVIFAndWebP()` (lines 72-117), add assertions that:
-   - WebP source appears before PNG source  
-   - PNG source appears last (after both AVIF and WebP)
-   
-   Currently it only checks AVIF before WebP (lines 108-116). Add:
-   ```go
-   pngIdx := strings.Index(out, `<source type="image/png"`)
-   if pngIdx < 0 {
-       t.Fatalf("expected png source in output:\n%s", out)
-   }
-   if pngIdx <= webpIdx {
-       t.Errorf("PNG source (at %d) must appear after WebP source (at %d)\ngot: %s", pngIdx, webpIdx, out)
-   }
+1. In `writePicture` (line ~357), after writing each `<source>` tag's `srcset`, also write ` sizes="min(65ch, 100vw)"` before the closing `>`. Specifically, change the `<source>` output from:
+   ```
+   <source type="..." srcset="...">
+   ```
+   to:
+   ```
+   <source type="..." srcset="..." sizes="min(65ch, 100vw)">
    ```
 
-   Also in `TestWriteImage_WithVariants()` (lines 13-46), add a PNG source check: the test has variants with webp then png formats. Add an assertion that the webp `<source>` appears before the png `<source>` in the output.
+2. In the fallback `<img>` inside `writePicture`, also add `sizes="min(65ch, 100vw)"` before `loading="lazy"`.
 
-**Verify command:** `go test ./internal/imgopt/... ./internal/obsidian/markdown/...`
+The `writeImage` plain `<img>` fallback (no variants case) should NOT get a sizes attribute since it has no srcset.
+
+Run `go test ./internal/obsidian/markdown/...` — all tests should PASS.
+
+Verify: `go test ./internal/obsidian/markdown/...`
+</task>
+
+<task order="2" title="Wrap images in figure with expand button">
+Modify the image rendering in `internal/obsidian/markdown/wikilinks.go` to wrap every image (both `<picture>` and plain `<img>`) in a `<figure class="img-figure">` container that includes an expand button.
+
+**Test first** — edit `internal/obsidian/markdown/picture_test.go`. The file already contains these test functions from the original code and task 1:
+- `TestWriteImage_WithVariants`
+- `TestWriteImage_NoVariants`
+- `TestWriteImage_WithAVIFAndWebP`
+- `TestWriteImage_NilResults`
+
+Update the existing tests:
+1. In `TestWriteImage_WithVariants`, add checks for `<figure class="img-figure">`, `</figure>`, and `<button class="img-expand-btn"`.
+2. In `TestWriteImage_NoVariants`, add checks for `<figure class="img-figure">` and `<button class="img-expand-btn"` (the plain `<img>` fallback should also be wrapped).
+3. In `TestWriteImage_NilResults`, add checks for `<figure class="img-figure">` and `<button class="img-expand-btn"`.
+
+Run `go test ./internal/obsidian/markdown/...` — tests should FAIL.
+
+**Then implement** — edit `internal/obsidian/markdown/wikilinks.go`:
+
+1. Modify `writeImage` (line ~334) to wrap ALL output in a `<figure class="img-figure">...</figure>`. After the image (`<picture>` or plain `<img>`), add an expand button:
+   ```html
+   <figure class="img-figure">
+     [existing <picture> or <img> output]
+     <button class="img-expand-btn" aria-label="View full size" type="button">
+       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+     </button>
+   </figure>
+   ```
+
+The approach: `writeImage` opens `<figure>`, delegates to either `writePicture` or plain `<img>` rendering, writes the expand button, then closes `</figure>`.
+
+Run `go test ./internal/obsidian/markdown/...` — all tests should PASS.
+
+Verify: `go test ./internal/obsidian/markdown/...`
+</task>
+
+<task order="3" title="Add lightbox overlay CSS to shared.css">
+Add CSS for the image lightbox overlay and expand button to `assets/shared.css`. This file already has image styles at line ~465 (`.content img`) and a search overlay pattern starting at line ~825 that we can follow for the lightbox overlay.
+
+**No Go tests needed for CSS** — this is purely a styling task.
+
+Edit `assets/shared.css` and add the following styles at the end of the MARKDOWN section (after line ~468, the `.content img` block):
+
+```css
+/* Image figure wrapper */
+.img-figure {
+  position: relative;
+  margin: 0;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.img-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.img-figure:hover .img-expand-btn {
+  opacity: 1;
+}
+
+/* Image lightbox overlay */
+#img-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.9);
+  cursor: zoom-out;
+}
+
+#img-lightbox.hidden {
+  display: none;
+}
+
+#img-lightbox img {
+  max-width: 95vw;
+  max-height: 95vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+#img-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  z-index: 10001;
+  transition: background 0.2s;
+}
+
+#img-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+```
+
+Verify: `go test ./...` (ensures no build breakage)
+</task>
+
+<task order="4" title="Add lightbox JavaScript to both app.js files">
+Add the lightbox JavaScript initialization function and wire it into both layout JS files. The lightbox will:
+1. Create the overlay DOM element on first call
+2. Listen for clicks on `.img-expand-btn` buttons
+3. Show the clicked image at full resolution in the overlay
+4. Close on overlay click, close button click, or Escape key
+
+**Edit `assets/default_app.js`** — add a new function `window.initLightbox` before the `window.initAll` function (before line ~311). Then add `window.initLightbox();` call inside `window.initAll` (line ~311).
+
+**Edit `assets/simple_app.js`** — add the same `window.initLightbox` function before `window.initAll` (before line ~262). Then add `window.initLightbox();` call inside `window.initAll` (line ~262).
+
+The `initLightbox` function:
+
+```javascript
+window.initLightbox = function () {
+  // Create overlay once
+  if (!document.getElementById('img-lightbox')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'img-lightbox';
+    overlay.className = 'hidden';
+    overlay.innerHTML = '<button id="img-lightbox-close" type="button" aria-label="Close">&times;</button><img src="" alt="">';
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.classList.add('hidden');
+    overlay.addEventListener('click', (e) => {
+      if (e.target !== overlay.querySelector('img')) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !overlay.classList.contains('hidden')) close();
+    });
+  }
+
+  // Bind expand buttons (idempotent via data attribute)
+  document.querySelectorAll('.img-expand-btn').forEach((btn) => {
+    if (btn.dataset.lightboxBound) return;
+    btn.dataset.lightboxBound = '1';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const figure = btn.closest('.img-figure');
+      const img = figure.querySelector('img');
+      if (!img) return;
+      const overlay = document.getElementById('img-lightbox');
+      // Use original src (highest resolution available)
+      overlay.querySelector('img').src = img.src;
+      overlay.querySelector('img').alt = img.alt;
+      overlay.classList.remove('hidden');
+    });
+  });
+};
+```
+
+The lightbox uses the original `<img src="...">` which is the full-resolution original image (the `<picture>` fallback). This gives users the high-res view they want.
+
+Verify: `go test ./...`
+</task>
+
+<task order="5" title="Verify full pipeline with integration test">
+Add an integration-style test in `internal/obsidian/markdown/picture_test.go` that verifies the complete rendered output for a `<picture>` element includes all three new features working together: `sizes` attribute, `<figure>` wrapper, and expand button.
+
+**Edit `internal/obsidian/markdown/picture_test.go`**. The file already has these functions from prior tasks:
+- `TestWriteImage_WithVariants` (checks sizes, figure, button)
+- `TestWriteImage_NoVariants` (checks figure, button)
+- `TestWriteImage_WithAVIFAndWebP` (checks sizes, format ordering)
+- `TestWriteImage_NilResults` (checks figure, button)
+
+Add a new test `TestWriteImage_FullOutputStructure` that verifies the complete HTML structure of the output:
+
+```go
+func TestWriteImage_FullOutputStructure(t *testing.T) {
+    r := &IndexResolver{
+        ImageResults: map[string]*imgopt.Result{
+            "/img/hero.png": {
+                Original: "/img/hero.png",
+                Variants: []imgopt.Variant{
+                    {Width: 1200, Format: "avif", WebPath: "/img/hero-1200w.avif"},
+                    {Width: 800, Format: "avif", WebPath: "/img/hero-800w.avif"},
+                    {Width: 1200, Format: "webp", WebPath: "/img/hero-1200w.webp"},
+                    {Width: 800, Format: "webp", WebPath: "/img/hero-800w.webp"},
+                    {Width: 1200, Format: "png", WebPath: "/img/hero-1200w.png"},
+                    {Width: 800, Format: "png", WebPath: "/img/hero-800w.png"},
+                },
+            },
+        },
+    }
+
+    var buf bytes.Buffer
+    w := bufio.NewWriter(&buf)
+    r.writeImage(w, "/img/hero.png", []byte("Hero image"), nil)
+    w.Flush()
+    out := buf.String()
+
+    // Verify structural order: figure > picture > sources > img > button > /figure
+    checks := []struct{ name, substr string }{
+        {"figure open", `<figure class="img-figure">`},
+        {"picture open", `<picture>`},
+        {"avif source with sizes", `<source type="image/avif" srcset="` },
+        {"sizes on source", `sizes="min(65ch, 100vw)"`},
+        {"webp source", `<source type="image/webp"`},
+        {"png source", `<source type="image/png"`},
+        {"fallback img", `<img src="/img/hero.png"`},
+        {"picture close", `</picture>`},
+        {"expand button", `<button class="img-expand-btn"`},
+        {"figure close", `</figure>`},
+    }
+
+    for _, c := range checks {
+        if !strings.Contains(out, c.substr) {
+            t.Errorf("%s: missing %q\ngot: %s", c.name, c.substr, out)
+        }
+    }
+
+    // Verify ordering: figure before picture before button before /figure
+    figureIdx := strings.Index(out, `<figure`)
+    pictureIdx := strings.Index(out, `<picture>`)
+    buttonIdx := strings.Index(out, `<button class="img-expand-btn"`)
+    closeFigureIdx := strings.Index(out, `</figure>`)
+
+    if figureIdx >= pictureIdx {
+        t.Error("figure must come before picture")
+    }
+    if pictureIdx >= buttonIdx {
+        t.Error("picture must come before button")
+    }
+    if buttonIdx >= closeFigureIdx {
+        t.Error("button must come before closing figure")
+    }
+}
+```
+
+Run `go test ./internal/obsidian/markdown/...` — all tests should PASS (implementation was done in tasks 1-2).
+
+Then run the full test suite: `go test ./...`
+
+Verify: `go test ./...`
 </task>
 </tasks>
-
-This is a single-task decomposition because the change is small and focused — it's just reordering variant appends in one function and updating the corresponding tests. No new files, no new types, no architectural changes needed.
