@@ -2,11 +2,13 @@
 package markdown
 
 import (
+	"fmt"
 	"strings"
 
 	"errors"
 	"path/filepath"
 
+	"github.com/otaleghani/kiln/internal/imgopt"
 	"github.com/otaleghani/kiln/internal/obsidian"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/renderer"
@@ -327,7 +329,20 @@ func (r *IndexResolver) renderImage(
 
 // writeImage is a helper to ensure consistent image rendering for both
 // standard markdown images and Obsidian wikilink images.
+// If ImageResults contains variants for src, it emits a <picture> element;
+// otherwise it emits a plain <img loading="lazy">.
 func (r *IndexResolver) writeImage(w util.BufWriter, src string, alt []byte, title []byte) {
+	w.WriteString(`<figure class="img-figure">`)
+
+	if r.ImageResults != nil {
+		if result, ok := r.ImageResults[src]; ok && len(result.Variants) > 0 {
+			r.writePicture(w, src, alt, title, result)
+			r.writeExpandButton(w)
+			w.WriteString("</figure>")
+			return
+		}
+	}
+
 	w.WriteString("<img src=\"")
 	w.WriteString(src)
 	w.WriteString("\" alt=\"")
@@ -338,7 +353,60 @@ func (r *IndexResolver) writeImage(w util.BufWriter, src string, alt []byte, tit
 		w.Write(title)
 		w.WriteString("\"")
 	}
-	w.WriteString(">")
+	w.WriteString(" loading=\"lazy\">")
+	r.writeExpandButton(w)
+	w.WriteString("</figure>")
+}
+
+func (r *IndexResolver) writeExpandButton(w util.BufWriter) {
+	w.WriteString(`<button class="img-expand-btn" aria-label="View full size" type="button">`)
+	w.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`)
+	w.WriteString(`<path d="M15 3h6v6"/>`)
+	w.WriteString(`<path d="M9 21H3v-6"/>`)
+	w.WriteString(`<path d="M21 3l-7 7"/>`)
+	w.WriteString(`<path d="M3 21l7-7"/>`)
+	w.WriteString(`</svg>`)
+	w.WriteString(`</button>`)
+}
+
+// writePicture emits a <picture> element with <source> entries for each format
+// and a fallback <img>.
+func (r *IndexResolver) writePicture(w util.BufWriter, src string, alt []byte, title []byte, result *imgopt.Result) {
+	w.WriteString("<picture>")
+
+	// Group variants by format and build srcset strings.
+	formatOrder := []string{}
+	srcsets := map[string][]string{}
+	for _, v := range result.Variants {
+		if _, seen := srcsets[v.Format]; !seen {
+			formatOrder = append(formatOrder, v.Format)
+		}
+		srcsets[v.Format] = append(srcsets[v.Format], fmt.Sprintf("%s %dw", v.WebPath, v.Width))
+	}
+
+	for _, format := range formatOrder {
+		entries := srcsets[format]
+		mime := "image/" + format
+		w.WriteString("<source type=\"")
+		w.WriteString(mime)
+		w.WriteString("\" srcset=\"")
+		w.WriteString(strings.Join(entries, ", "))
+		w.WriteString("\" sizes=\"min(65ch, 100vw)\">")
+	}
+
+	// Fallback <img>
+	w.WriteString("<img src=\"")
+	w.WriteString(src)
+	w.WriteString("\" alt=\"")
+	w.Write(alt)
+	w.WriteString("\"")
+	if len(title) > 0 {
+		w.WriteString(" title=\"")
+		w.Write(title)
+		w.WriteString("\"")
+	}
+	w.WriteString(" sizes=\"min(65ch, 100vw)\" loading=\"lazy\">")
+	w.WriteString("</picture>")
 }
 
 // renderWikilink renders a wikilink and handles text embedding
@@ -479,7 +547,7 @@ func (r *IndexResolver) renderWikilink(
 // isImageFile returns true if the given extension is an image extension
 func isImageFile(ext string) bool {
 	return ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
-		ext == ".gif" || ext == ".svg" || ext == ".webp"
+		ext == ".gif" || ext == ".svg" || ext == ".webp" || ext == ".avif"
 }
 
 // SplitExt returns the base name and the extension of the given path
@@ -522,4 +590,5 @@ type IndexResolver struct {
 	BasePath      string                            // The basepath // TODO: Delete this, you
 	Engine        goldmark.Markdown                 // Needed for recursion
 	ReadFile      func(path string) ([]byte, error) // Needed for loading files
+	ImageResults  map[string]*imgopt.Result         // Optimized image variants keyed by src path
 }

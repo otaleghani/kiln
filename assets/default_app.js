@@ -307,6 +307,43 @@ window.addCopyButtons = function () {
   });
 };
 
+window.initLightbox = function () {
+  // Create overlay once
+  if (!document.getElementById('img-lightbox')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'img-lightbox';
+    overlay.className = 'hidden';
+    overlay.innerHTML = '<button id="img-lightbox-close" type="button" aria-label="Close">&times;</button><img src="" alt="">';
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.classList.add('hidden');
+    overlay.addEventListener('click', (e) => {
+      if (e.target !== overlay.querySelector('img')) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !overlay.classList.contains('hidden')) close();
+    });
+  }
+
+  // Bind expand buttons (idempotent via data attribute)
+  document.querySelectorAll('.img-expand-btn').forEach((btn) => {
+    if (btn.dataset.lightboxBound) return;
+    btn.dataset.lightboxBound = '1';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const figure = btn.closest('.img-figure');
+      const img = figure.querySelector('img');
+      if (!img) return;
+      const overlay = document.getElementById('img-lightbox');
+      // Use original src (highest resolution available)
+      overlay.querySelector('img').src = img.src;
+      overlay.querySelector('img').alt = img.alt;
+      overlay.classList.remove('hidden');
+    });
+  });
+};
+
 // Calls every init function
 window.initAll = function () {
   window.initThemeToggle();
@@ -316,6 +353,7 @@ window.initAll = function () {
   window.setupSidebarDelegation();
   window.highlightSidebarLink();
   window.addCopyButtons();
+  window.initLightbox();
   document.addEventListener("keydown", function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === "k") {
       e.preventDefault();

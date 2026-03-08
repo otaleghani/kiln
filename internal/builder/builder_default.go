@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/otaleghani/kiln/assets"
+	"github.com/otaleghani/kiln/internal/imgopt"
 	"github.com/otaleghani/kiln/internal/obsidian"
 	"github.com/otaleghani/kiln/internal/obsidian/bases"
 	"github.com/otaleghani/kiln/internal/obsidian/markdown"
@@ -77,6 +78,7 @@ func buildDefault(log *slog.Logger) {
 		OGFontFace:        ogFace,
 		log:               log,
 		Obsidian:          obs,
+		ImageResults:      make(map[string]*imgopt.Result),
 	}
 	// site.Minifier.AddFunc("text/html", html.Minify)
 	site.Minifier.Add("text/html", &html.Minifier{
@@ -137,11 +139,29 @@ func buildDefault(log *slog.Logger) {
 	log.Info("Copying static assets...")
 	for _, file := range staticFiles {
 		l := log.With("file", file.Path)
-		err := obsidian.CopyFile(file.Path, file.OutPath)
-		if err != nil {
-			l.Error("Couldn't copy file", "error", err)
+		if err := os.MkdirAll(filepath.Dir(file.OutPath), 0755); err != nil {
+			l.Error("Couldn't create output directory", "error", err)
+			continue
+		}
+		if imgopt.IsOptimizable(file.Ext) {
+			outDir := filepath.Dir(file.OutPath)
+			webDir := filepath.Dir(file.WebPath)
+			result, err := imgopt.ProcessImage(file.Path, outDir, webDir, file.Name, imgopt.DefaultBreakpoints())
+			if err != nil {
+				l.Warn("Image optimization failed, falling back to copy", "error", err)
+				if copyErr := obsidian.CopyFile(file.Path, file.OutPath); copyErr != nil {
+					l.Error("Couldn't copy file", "error", copyErr)
+				}
+				continue
+			}
+			site.ImageResults[file.WebPath] = result
+		}
+		if copyErr := obsidian.CopyFile(file.Path, file.OutPath); copyErr != nil {
+			l.Error("Couldn't copy file", "error", copyErr)
 		}
 	}
+
+	site.Markdown.ImageResults = site.ImageResults
 
 	log.Info("Rendering folder pages...")
 	for _, folder := range site.Obsidian.Vault.Folders {
@@ -837,6 +857,7 @@ type DefaultSite struct {
 	OGFontFace        font.Face                  // Font face for OG image text rendering
 	log               *slog.Logger
 	Obsidian          *obsidian.Obsidian
+	ImageResults      map[string]*imgopt.Result // Optimized image variants keyed by WebPath
 }
 
 // DefaultSitePage represents a page to be generated

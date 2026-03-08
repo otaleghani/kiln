@@ -50,6 +50,8 @@
           templ
           air
           overmind
+          libavif
+          libwebp
 
           nodejs_22
           vscode-langservers-extracted

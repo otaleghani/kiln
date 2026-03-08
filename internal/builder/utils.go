@@ -56,7 +56,7 @@ func CleanOutputDir(log *slog.Logger) {
 // isImageExt checks if the given file extension corresponds to a supported image format.
 func isImageExt(ext string) bool {
 	switch strings.ToLower(ext) {
-	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg":
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif":
 		return true
 	default:
 		return false
@@ -66,7 +66,7 @@ func isImageExt(ext string) bool {
 // isAllowedExt checks if the given extension corresponds to an allowed format into default mode generation
 func isAllowedExt(ext string) bool {
 	switch strings.ToLower(ext) {
-	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".pdf", ".ico":
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif", ".pdf", ".ico":
 		return true
 	default:
 		return false

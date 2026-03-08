@@ -31,7 +31,7 @@ func DefaultLayout(data *PageData) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -39,7 +39,7 @@ func DefaultLayout(data *PageData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<script>\n\t\t\t\t(function () {\n\t\t\t\t\tconst savedTheme = localStorage.getItem(\"theme\");\n\t\t\t\t\tconst sysDark = window.matchMedia(\n\t\t\t\t\t\t\"(prefers-color-scheme: dark)\",\n\t\t\t\t\t).matches;\n\t\t\t\t\tif (savedTheme === \"dark\" || (!savedTheme && sysDark)) {\n\t\t\t\t\t\tdocument.documentElement.classList.add(\"dark\");\n\t\t\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", \"dark\");\n\t\t\t\t\t} else {\n\t\t\t\t\t\tdocument.documentElement.classList.remove(\"dark\");\n\t\t\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", \"light\");\n\t\t\t\t\t}\n\t\t\t\t})();\n\t\t\t</script><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<script>\n\t\t\t\t(function () {\n\t\t\t\t\tconst savedTheme = localStorage.getItem(\"theme\");\n\t\t\t\t\tconst sysDark = window.matchMedia(\n\t\t\t\t\t\t\"(prefers-color-scheme: dark)\",\n\t\t\t\t\t).matches;\n\t\t\t\t\tif (savedTheme === \"dark\" || (!savedTheme && sysDark)) {\n\t\t\t\t\t\tdocument.documentElement.classList.add(\"dark\");\n\t\t\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", \"dark\");\n\t\t\t\t\t} else {\n\t\t\t\t\t\tdocument.documentElement.classList.remove(\"dark\");\n\t\t\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", \"light\");\n\t\t\t\t\t}\n\t\t\t\t})();\n\t\t\t</script><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

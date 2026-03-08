@@ -1,188 +1,297 @@
 -- DwightAuto decomposition output
--- Request: ### Automatic Open Graph and Twitter Card image generation
-Generate `og:image` (1200x630px) and `twitter:card` / `twitter:image` (1200x600px) meta tags automatically for every page. Pull `title` and `
--- Timestamp: Tue 03 Mar 2026 03:57:14 PM CET
+-- Request: We need to add the `sizes` attribute to the new image optimization feature. The max width of the notes is always 65ch. I would also love to have the ability to view the image full screen. So add a but
+-- Timestamp: Sun 08 Mar 2026 05:25:34 PM CET
 
-Now I have all the context I need. Here's my decomposition:
+Now I have a complete picture. Let me produce the decomposition.
 
 <tasks>
-<task order="1" title="Create OG image generator package">
-Create a new `internal/ogimage` package that generates branded PNG images (1200x630 for OG, 1200x600 for Twitter) at build time using `golang.org/x/image`.
+<task order="1" title="Add sizes attribute to picture and img elements">
+Modify the `writePicture` and `writeImage` functions in `internal/obsidian/markdown/wikilinks.go` to emit a `sizes` attribute on both `<source>` elements and the fallback `<img>` element. The notes content area has `max-width: 65ch`, so the sizes attribute should be `sizes="min(65ch, 100vw)"`.
 
-**Files to create:**
-- `internal/ogimage/ogimage.go` — Add `// @feature:ogimage Build-time Open Graph and Twitter Card image generator.` on line 1
-- `internal/ogimage/ogimage_test.go` — Add `// @feature:ogimage Tests for OG image generation.` on line 1
+**Test first** — edit `internal/obsidian/markdown/picture_test.go`:
+1. In `TestWriteImage_WithVariants`, add a check that the output contains `sizes="min(65ch, 100vw)"`.
+2. In `TestWriteImage_WithAVIFAndWebP`, add a check that the output contains `sizes="min(65ch, 100vw)"`.
+3. In `TestWriteImage_NoVariants` (plain `<img>` fallback), verify the plain `<img>` does NOT get a `sizes` attribute (sizes only makes sense with srcset).
 
-**Tests to write FIRST** in `internal/ogimage/ogimage_test.go`:
-1. `TestGenerateOGImage` — Verify a 1200x630 PNG is produced with the correct dimensions when given a title and description
-2. `TestGenerateTwitterImage` — Verify a 1200x600 PNG is produced with the correct dimensions
-3. `TestGenerateOGImage_LongTitle` — Verify the generator handles long titles (>80 chars) without error by truncating/wrapping
-4. `TestGenerateOGImage_EmptyTitle` — Verify a fallback title (e.g. "Untitled") is used when title is empty
-5. `TestGenerateOGImage_WritesToFile` — Verify images are written to the correct output path
+Run `go test ./internal/obsidian/markdown/...` — tests should FAIL because `sizes` is not emitted yet.
 
-**Implementation** in `internal/ogimage/ogimage.go`:
+**Then implement** — edit `internal/obsidian/markdown/wikilinks.go`:
 
-```go
-package ogimage
+1. In `writePicture` (line ~357), after writing each `<source>` tag's `srcset`, also write ` sizes="min(65ch, 100vw)"` before the closing `>`. Specifically, change the `<source>` output from:
+   ```
+   <source type="..." srcset="...">
+   ```
+   to:
+   ```
+   <source type="..." srcset="..." sizes="min(65ch, 100vw)">
+   ```
 
-type ImageConfig struct {
-    Title       string
-    Description string
-    SiteName    string
-    AccentColor string // hex color from theme
-    BgColor     string // hex color from theme
-    TextColor   string // hex color from theme
-    Width       int
-    Height      int
-}
-```
+2. In the fallback `<img>` inside `writePicture`, also add `sizes="min(65ch, 100vw)"` before `loading="lazy"`.
 
-Functions to implement:
-- `func GenerateOGImage(cfg ImageConfig, outPath string) error` — Generates a 1200x630 branded PNG with title and description rendered as text. Uses `golang.org/x/image/font/basicfont` for text rendering (same pattern as `cmd/kiln-palette/main.go` which already uses `golang.org/x/image/font` and `golang.org/x/image/math/fixed`). Draw a colored background using theme's BgColor, an accent bar at the top, render title in large text and description below in smaller text, plus site name at the bottom.
-- `func GenerateTwitterImage(cfg ImageConfig, outPath string) error` — Same as above but 1200x600
-- `func parseHex(s string) color.RGBA` — Hex to color helper (same logic as in `cmd/kiln-palette/main.go`)
-- `func wrapText(text string, maxWidth int) []string` — Simple word-wrap helper for long titles
+The `writeImage` plain `<img>` fallback (no variants case) should NOT get a sizes attribute since it has no srcset.
 
-**Dependencies:** `golang.org/x/image` is already in `go.sum` (used by `cmd/kiln-palette`). Run `go get golang.org/x/image` to add it to `go.mod`.
+Run `go test ./internal/obsidian/markdown/...` — all tests should PASS.
 
-**Verify:** `go test ./internal/ogimage/...`
+Verify: `go test ./internal/obsidian/markdown/...`
 </task>
 
-<task order="2" title="Extend Head component with full OG and Twitter meta tags">
-Edit the `Head` templ component in `internal/templates/shared.templ` to emit the full set of Open Graph and Twitter Card meta tags. Also add a helper function `ogImagePath` to `internal/templates/helpers.go`.
+<task order="2" title="Wrap images in figure with expand button">
+Modify the image rendering in `internal/obsidian/markdown/wikilinks.go` to wrap every image (both `<picture>` and plain `<img>`) in a `<figure class="img-figure">` container that includes an expand button.
 
-**Tests to write FIRST** — Edit `internal/templates/helpers_test.go` (which currently has `TestToStr` and `TestHead_NilFrontmatterValues`):
-1. `TestHead_OGMetaTags` — Render `Head()` with a PageData that has a File with WebPath="/blog/my-post", Frontmatter with title="My Title" and description="My Desc", Site with BaseURL="https://example.com" and SiteName="My Site". Assert the output HTML contains:
-   - `<meta property="og:title" content="My Title"/>`
-   - `<meta property="og:description" content="My Desc"/>`
-   - `<meta property="og:image" content="https://example.com/blog/my-post/og.png"/>`
-   - `<meta property="og:url" content="https://example.com/blog/my-post"/>`
-   - `<meta property="og:type" content="article"/>`
-   - `<meta name="twitter:card" content="summary_large_image"/>`
-   - `<meta name="twitter:title" content="My Title"/>`
-   - `<meta name="twitter:description" content="My Desc"/>`
-   - `<meta name="twitter:image" content="https://example.com/blog/my-post/twitter.png"/>`
-2. `TestHead_OGMetaTags_Folder` — Verify folders get og:type="website" and use folder.RelPath as title
-3. `TestHead_OGMetaTags_Tag` — Verify tags get og:type="website" and use tag.Name as title
-4. `TestHead_OGMetaTags_NoDescription` — Verify fallback description is used when none in frontmatter
+**Test first** — edit `internal/obsidian/markdown/picture_test.go`. The file already contains these test functions from the original code and task 1:
+- `TestWriteImage_WithVariants`
+- `TestWriteImage_NoVariants`
+- `TestWriteImage_WithAVIFAndWebP`
+- `TestWriteImage_NilResults`
 
-**Implementation:**
+Update the existing tests:
+1. In `TestWriteImage_WithVariants`, add checks for `<figure class="img-figure">`, `</figure>`, and `<button class="img-expand-btn"`.
+2. In `TestWriteImage_NoVariants`, add checks for `<figure class="img-figure">` and `<button class="img-expand-btn"` (the plain `<img>` fallback should also be wrapped).
+3. In `TestWriteImage_NilResults`, add checks for `<figure class="img-figure">` and `<button class="img-expand-btn"`.
 
-Edit `internal/templates/helpers.go` — Add helper function:
-```go
-func ogImageURL(baseURL, webPath, filename string) string {
-    return baseURL + webPath + "/" + filename
-}
-```
+Run `go test ./internal/obsidian/markdown/...` — tests should FAIL.
 
-Edit `internal/templates/shared.templ` — Replace the existing `Head` templ component (lines 194-223). The new version should:
-- Keep the existing `<title>` logic exactly as-is
-- Keep the existing `<meta name="description">` logic exactly as-is
-- **Replace** the single `<meta property="og:title">` with the full set of OG + Twitter meta tags
+**Then implement** — edit `internal/obsidian/markdown/wikilinks.go`:
 
-For the **file/note case** (when `!data.IsFolder && !data.IsTag && data.File != nil`):
-```
-og:title      → frontmatter["title"] or data.File.Name
-og:description → frontmatter["description"] or "Notes on " + data.File.Name
-og:image      → data.Site.BaseURL + data.File.WebPath + "/og.png"
-og:url        → data.Site.BaseURL + data.File.WebPath
-og:type       → "article"
-twitter:card  → "summary_large_image"
-twitter:title → same as og:title
-twitter:description → same as og:description
-twitter:image → data.Site.BaseURL + data.File.WebPath + "/twitter.png"
-```
+1. Modify `writeImage` (line ~334) to wrap ALL output in a `<figure class="img-figure">...</figure>`. After the image (`<picture>` or plain `<img>`), add an expand button:
+   ```html
+   <figure class="img-figure">
+     [existing <picture> or <img> output]
+     <button class="img-expand-btn" aria-label="View full size" type="button">
+       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+     </button>
+   </figure>
+   ```
 
-For the **folder case** (when `data.IsFolder && data.Folder != nil`):
-```
-og:title      → data.Folder.RelPath
-og:description → data.Folder.RelPath
-og:image      → data.Site.BaseURL + data.Folder.WebPath + "/og.png"
-og:url        → data.Site.BaseURL + data.Folder.WebPath
-og:type       → "website"
-twitter:card  → "summary_large_image"
-twitter:title → data.Folder.RelPath
-twitter:description → data.Folder.RelPath
-twitter:image → data.Site.BaseURL + data.Folder.WebPath + "/twitter.png"
-```
+The approach: `writeImage` opens `<figure>`, delegates to either `writePicture` or plain `<img>` rendering, writes the expand button, then closes `</figure>`.
 
-For the **tag case** (when `data.IsTag && data.Tag != nil`):
-```
-og:title      → data.Tag.Name
-og:description → data.Tag.Name
-og:image      → data.Site.BaseURL + data.Tag.WebPath + "/og.png"
-og:url        → data.Site.BaseURL + data.Tag.WebPath
-og:type       → "website"
-twitter:card  → "summary_large_image"
-twitter:title → data.Tag.Name
-twitter:description → data.Tag.Name
-twitter:image → data.Site.BaseURL + data.Tag.WebPath + "/twitter.png"
-```
+Run `go test ./internal/obsidian/markdown/...` — all tests should PASS.
 
-After editing the `.templ` file, regenerate the Go code by running: `go run github.com/a-h/templ/cmd/templ@v0.3.1001 generate`
-
-**Verify:** `go test ./internal/templates/...`
+Verify: `go test ./internal/obsidian/markdown/...`
 </task>
 
-<task order="3" title="Wire OG image generation into the build pipeline" depends_on="1,2">
-Integrate the `internal/ogimage` package into `internal/builder/builder_default.go` so that OG and Twitter images are generated alongside each rendered page.
+<task order="3" title="Add lightbox overlay CSS to shared.css">
+Add CSS for the image lightbox overlay and expand button to `assets/shared.css`. This file already has image styles at line ~465 (`.content img`) and a search overlay pattern starting at line ~825 that we can follow for the lightbox overlay.
 
-**Context about existing file `internal/builder/builder_default.go`:**
-This file already contains these functions/types:
-- `buildDefault(log *slog.Logger)` — main build orchestrator
-- `DefaultSite` struct with fields: BaseURL, SiteName, Theme, Layout, NavbarRoot, Markdown, Minifier, DisableLocalGraph, DisableTOC, FlatURLs, log, Obsidian
-- `DefaultSitePageData` struct
-- `BaseData`, `CanvasData`, `CanvasNode` structs
-- `RenderNote`, `RenderFolder`, `RenderTag`, `RenderBase`, `RenderCanvas`, `RenderGraph`, `Render404` methods
-- `ParseBaseFile` function
+**No Go tests needed for CSS** — this is purely a styling task.
 
-**Tests to write FIRST** in `internal/builder/builder_default_test.go` (which currently has `TestParseBaseFile_*` and `TestEmptyViewsDoNotPanic`):
-1. `TestGeneratePageOGImages` — Create a test that calls a new `GeneratePageOGImages` function with title="Test", description="Desc", siteName="Site", theme colors, and a temp output directory. Verify that both `og.png` and `twitter.png` are created in the output directory and are valid PNG files (by decoding them).
+Edit `assets/shared.css` and add the following styles at the end of the MARKDOWN section (after line ~468, the `.content img` block):
 
-**Implementation:**
+```css
+/* Image figure wrapper */
+.img-figure {
+  position: relative;
+  margin: 0;
+  display: inline-block;
+  max-width: 100%;
+}
 
-Add a new method to `DefaultSite` in `internal/builder/builder_default.go`:
+.img-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.img-figure:hover .img-expand-btn {
+  opacity: 1;
+}
+
+/* Image lightbox overlay */
+#img-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.9);
+  cursor: zoom-out;
+}
+
+#img-lightbox.hidden {
+  display: none;
+}
+
+#img-lightbox img {
+  max-width: 95vw;
+  max-height: 95vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+#img-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  z-index: 10001;
+  transition: background 0.2s;
+}
+
+#img-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+```
+
+Verify: `go test ./...` (ensures no build breakage)
+</task>
+
+<task order="4" title="Add lightbox JavaScript to both app.js files">
+Add the lightbox JavaScript initialization function and wire it into both layout JS files. The lightbox will:
+1. Create the overlay DOM element on first call
+2. Listen for clicks on `.img-expand-btn` buttons
+3. Show the clicked image at full resolution in the overlay
+4. Close on overlay click, close button click, or Escape key
+
+**Edit `assets/default_app.js`** — add a new function `window.initLightbox` before the `window.initAll` function (before line ~311). Then add `window.initLightbox();` call inside `window.initAll` (line ~311).
+
+**Edit `assets/simple_app.js`** — add the same `window.initLightbox` function before `window.initAll` (before line ~262). Then add `window.initLightbox();` call inside `window.initAll` (line ~262).
+
+The `initLightbox` function:
+
+```javascript
+window.initLightbox = function () {
+  // Create overlay once
+  if (!document.getElementById('img-lightbox')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'img-lightbox';
+    overlay.className = 'hidden';
+    overlay.innerHTML = '<button id="img-lightbox-close" type="button" aria-label="Close">&times;</button><img src="" alt="">';
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.classList.add('hidden');
+    overlay.addEventListener('click', (e) => {
+      if (e.target !== overlay.querySelector('img')) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !overlay.classList.contains('hidden')) close();
+    });
+  }
+
+  // Bind expand buttons (idempotent via data attribute)
+  document.querySelectorAll('.img-expand-btn').forEach((btn) => {
+    if (btn.dataset.lightboxBound) return;
+    btn.dataset.lightboxBound = '1';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const figure = btn.closest('.img-figure');
+      const img = figure.querySelector('img');
+      if (!img) return;
+      const overlay = document.getElementById('img-lightbox');
+      // Use original src (highest resolution available)
+      overlay.querySelector('img').src = img.src;
+      overlay.querySelector('img').alt = img.alt;
+      overlay.classList.remove('hidden');
+    });
+  });
+};
+```
+
+The lightbox uses the original `<img src="...">` which is the full-resolution original image (the `<picture>` fallback). This gives users the high-res view they want.
+
+Verify: `go test ./...`
+</task>
+
+<task order="5" title="Verify full pipeline with integration test">
+Add an integration-style test in `internal/obsidian/markdown/picture_test.go` that verifies the complete rendered output for a `<picture>` element includes all three new features working together: `sizes` attribute, `<figure>` wrapper, and expand button.
+
+**Edit `internal/obsidian/markdown/picture_test.go`**. The file already has these functions from prior tasks:
+- `TestWriteImage_WithVariants` (checks sizes, figure, button)
+- `TestWriteImage_NoVariants` (checks figure, button)
+- `TestWriteImage_WithAVIFAndWebP` (checks sizes, format ordering)
+- `TestWriteImage_NilResults` (checks figure, button)
+
+Add a new test `TestWriteImage_FullOutputStructure` that verifies the complete HTML structure of the output:
+
 ```go
-func (s *DefaultSite) GeneratePageOGImages(title, description, outDir string) {
-    cfg := ogimage.ImageConfig{
-        Title:       title,
-        Description: description,
-        SiteName:    s.SiteName,
-        AccentColor: s.Theme.Dark.Accent,
-        BgColor:     s.Theme.Dark.Bg,
-        TextColor:   s.Theme.Dark.Text,
+func TestWriteImage_FullOutputStructure(t *testing.T) {
+    r := &IndexResolver{
+        ImageResults: map[string]*imgopt.Result{
+            "/img/hero.png": {
+                Original: "/img/hero.png",
+                Variants: []imgopt.Variant{
+                    {Width: 1200, Format: "avif", WebPath: "/img/hero-1200w.avif"},
+                    {Width: 800, Format: "avif", WebPath: "/img/hero-800w.avif"},
+                    {Width: 1200, Format: "webp", WebPath: "/img/hero-1200w.webp"},
+                    {Width: 800, Format: "webp", WebPath: "/img/hero-800w.webp"},
+                    {Width: 1200, Format: "png", WebPath: "/img/hero-1200w.png"},
+                    {Width: 800, Format: "png", WebPath: "/img/hero-800w.png"},
+                },
+            },
+        },
     }
 
-    ogCfg := cfg
-    ogCfg.Width = 1200
-    ogCfg.Height = 630
-    if err := ogimage.GenerateOGImage(ogCfg, filepath.Join(outDir, "og.png")); err != nil {
-        s.log.Warn("Couldn't generate OG image", "error", err)
+    var buf bytes.Buffer
+    w := bufio.NewWriter(&buf)
+    r.writeImage(w, "/img/hero.png", []byte("Hero image"), nil)
+    w.Flush()
+    out := buf.String()
+
+    // Verify structural order: figure > picture > sources > img > button > /figure
+    checks := []struct{ name, substr string }{
+        {"figure open", `<figure class="img-figure">`},
+        {"picture open", `<picture>`},
+        {"avif source with sizes", `<source type="image/avif" srcset="` },
+        {"sizes on source", `sizes="min(65ch, 100vw)"`},
+        {"webp source", `<source type="image/webp"`},
+        {"png source", `<source type="image/png"`},
+        {"fallback img", `<img src="/img/hero.png"`},
+        {"picture close", `</picture>`},
+        {"expand button", `<button class="img-expand-btn"`},
+        {"figure close", `</figure>`},
     }
 
-    twCfg := cfg
-    twCfg.Width = 1200
-    twCfg.Height = 600
-    if err := ogimage.GenerateTwitterImage(twCfg, filepath.Join(outDir, "twitter.png")); err != nil {
-        s.log.Warn("Couldn't generate Twitter image", "error", err)
+    for _, c := range checks {
+        if !strings.Contains(out, c.substr) {
+            t.Errorf("%s: missing %q\ngot: %s", c.name, c.substr, out)
+        }
+    }
+
+    // Verify ordering: figure before picture before button before /figure
+    figureIdx := strings.Index(out, `<figure`)
+    pictureIdx := strings.Index(out, `<picture>`)
+    buttonIdx := strings.Index(out, `<button class="img-expand-btn"`)
+    closeFigureIdx := strings.Index(out, `</figure>`)
+
+    if figureIdx >= pictureIdx {
+        t.Error("figure must come before picture")
+    }
+    if pictureIdx >= buttonIdx {
+        t.Error("picture must come before button")
+    }
+    if buttonIdx >= closeFigureIdx {
+        t.Error("button must come before closing figure")
     }
 }
 ```
 
-Then call `GeneratePageOGImages` from within each render method. The key integration points are:
+Run `go test ./internal/obsidian/markdown/...` — all tests should PASS (implementation was done in tasks 1-2).
 
-1. **In `RenderNote`** (after rendering the HTML, before return): Extract title from `obsidianData.Frontmatter["title"]` or fallback to `f.Name`. Extract description from `obsidianData.Frontmatter["description"]` or fallback to `"Notes on " + f.Name`. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(title, description, outDir)`.
+Then run the full test suite: `go test ./...`
 
-2. **In `RenderFolder`**: Use `f.RelPath` as both title and description. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(f.RelPath, f.RelPath, outDir)`.
-
-3. **In `RenderTag`**: Use `t.Name` as both title and description. Compute `outDir` as `filepath.Dir(t.OutPath)`. Call `s.GeneratePageOGImages(t.Name, t.Name, outDir)`.
-
-4. **In `RenderBase`**: Use `b.File.Name` as title. Compute `outDir` as `filepath.Dir(b.File.OutPath)`. Call `s.GeneratePageOGImages(b.File.Name, b.File.Name, outDir)`.
-
-5. **In `RenderCanvas`**: Use `f.Name` as title. Compute `outDir` as `filepath.Dir(f.OutPath)`. Call `s.GeneratePageOGImages(f.Name, f.Name, outDir)`.
-
-Add `"github.com/otaleghani/kiln/internal/ogimage"` to the imports.
-
-**Verify:** `go test ./internal/builder/... && go test ./internal/ogimage/...`
+Verify: `go test ./...`
 </task>
 </tasks>

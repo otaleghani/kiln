@@ -27,7 +27,7 @@ func TestGeneratePageOGImages(t *testing.T) {
 		log: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn})),
 	}
 
-	site.GeneratePageOGImages("Test", "Desc", outDir)
+	site.GeneratePageOGImages("Test", "Desc", "", outDir)
 
 	// Verify og.png exists and is a valid PNG
 	ogPath := filepath.Join(outDir, "og.png")

@@ -8,6 +8,7 @@ import (
 
 	chromaHTML "github.com/alecthomas/chroma/v2/formatters/html"
 	mathjax "github.com/litao91/goldmark-mathjax"
+	"github.com/otaleghani/kiln/internal/imgopt"
 	"github.com/otaleghani/kiln/internal/obsidian"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -77,6 +78,7 @@ func New(
 func (o *ObsidianMarkdown) Render(file obsidian.File) (NoteData, error) {
 	// Sets the current source
 	o.Resolver.CurrentSource = file.WebPath
+	o.Resolver.ImageResults = o.ImageResults
 
 	// Read the file source
 	source, err := os.ReadFile(file.Path)
@@ -121,8 +123,9 @@ func (o *ObsidianMarkdown) RenderNote(content []byte) (string, error) {
 
 // ObsidianMarkdown is the main entrypoint
 type ObsidianMarkdown struct {
-	markdown goldmark.Markdown
-	Resolver *IndexResolver
+	markdown     goldmark.Markdown
+	Resolver     *IndexResolver
+	ImageResults map[string]*imgopt.Result // Optimized image variants keyed by WebPath
 }
 
 // NoteData holds the data of the rendered note, like the body HTML and the table of contents

@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otaleghani/kiln/internal/imgopt"
 	"github.com/otaleghani/kiln/internal/obsidian"
 	"github.com/otaleghani/kiln/internal/obsidian/markdown"
 	"gopkg.in/yaml.v3"
@@ -272,6 +273,17 @@ func (s *CustomSite) parseStaticFiles() error {
 			return err
 		}
 
+		if imgopt.IsOptimizable(file.Ext) {
+			outDir := filepath.Dir(asset.OutputPath)
+			webDir := filepath.Dir(asset.RelPermalink)
+			result, err := imgopt.ProcessImage(asset.Path, outDir, webDir, file.Name, imgopt.DefaultBreakpoints())
+			if err != nil {
+				s.log.Warn("Image optimization failed, falling back to copy", "file", asset.RelPath, "error", err)
+			} else {
+				s.ImageResults[asset.RelPermalink] = result
+			}
+		}
+
 		err := obsidian.CopyFile(asset.Path, asset.OutputPath)
 		if err != nil {
 			return err
@@ -477,6 +489,7 @@ func buildCustom(log *slog.Logger) {
 		Template:      template.New("base"),
 		Obsidian:      obs,
 		log:           log,
+		ImageResults:  make(map[string]*imgopt.Result),
 		// Scan:          vaultScan,
 	}
 	site.Template.Funcs(site.getFuncMap())
@@ -529,6 +542,8 @@ func buildCustom(log *slog.Logger) {
 		log.Error("Error handling static file", "error", err)
 		os.Exit(1)
 	}
+
+	site.Markdown.ImageResults = site.ImageResults
 
 	err = site.parseNotes()
 	if err != nil {
@@ -1169,8 +1184,9 @@ type CustomSite struct {
 	Template         *template.Template         // Base template with all components loaded
 	Files            Files                      // All the paths to files to process
 	// Scan             *VaultScan                 // The result of scanVault
-	Obsidian *obsidian.Obsidian
-	log      *slog.Logger
+	Obsidian     *obsidian.Obsidian
+	ImageResults map[string]*imgopt.Result // Optimized image variants keyed by WebPath
+	log          *slog.Logger
 }
 
 type Asset struct {
