@@ -9,6 +9,7 @@
   var cache = new Map();
   var hoverTimer = null;
   var leaveTimer = null;
+  var activeAnchor = null;
   var initialized = false;
 
   function getTooltip() {
@@ -17,7 +18,8 @@
 
     el = document.createElement("div");
     el.id = "link-preview-tooltip";
-    el.style.position = "absolute";
+    el.style.position = "fixed";
+    el.classList.add("content");
     el.style.maxWidth = TOOLTIP_MAX_WIDTH + "px";
     el.style.maxHeight = TOOLTIP_MAX_HEIGHT + "px";
     el.style.overflowY = "auto";
@@ -38,27 +40,25 @@
   function hideTooltip() {
     var el = document.getElementById("link-preview-tooltip");
     if (el) el.style.display = "none";
+    activeAnchor = null;
   }
 
   function positionTooltip(tooltip, anchor) {
     var rect = anchor.getBoundingClientRect();
-    var scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-    var scrollY = window.pageYOffset || document.documentElement.scrollTop;
-    var spaceBelow = window.innerHeight - rect.bottom;
     var top;
 
-    if (spaceBelow >= TOOLTIP_MAX_HEIGHT + 8) {
-      top = rect.bottom + scrollY + 8;
+    if (window.innerHeight - rect.bottom >= TOOLTIP_MAX_HEIGHT + 8) {
+      top = rect.bottom + 8;
     } else {
-      top = rect.top + scrollY - TOOLTIP_MAX_HEIGHT - 8;
+      top = rect.top - TOOLTIP_MAX_HEIGHT - 8;
     }
 
-    var left = rect.left + scrollX;
-    if (left + TOOLTIP_MAX_WIDTH > window.innerWidth + scrollX) {
-      left = window.innerWidth + scrollX - TOOLTIP_MAX_WIDTH - 8;
+    var left = rect.left;
+    if (left > window.innerWidth - TOOLTIP_MAX_WIDTH - 8) {
+      left = window.innerWidth - TOOLTIP_MAX_WIDTH - 8;
     }
-    if (left < scrollX) {
-      left = scrollX + 8;
+    if (left < 8) {
+      left = 8;
     }
 
     tooltip.style.top = top + "px";
@@ -120,6 +120,7 @@
         tooltip.innerHTML = content;
         positionTooltip(tooltip, link);
         tooltip.style.display = "block";
+        activeAnchor = link;
       });
     }, HOVER_DELAY);
   }
@@ -142,7 +143,15 @@
   }
 
   function onScroll() {
-    hideTooltip();
+    if (!activeAnchor) return;
+    var tooltip = document.getElementById("link-preview-tooltip");
+    if (!tooltip || tooltip.style.display === "none") return;
+    var rect = activeAnchor.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > window.innerHeight) {
+      hideTooltip();
+      return;
+    }
+    positionTooltip(tooltip, activeAnchor);
   }
 
   function onKeydown(e) {
