@@ -1,348 +1,112 @@
 -- DwightAuto decomposition output
--- Request: Create animations for the different templates. I would love to have small animations for small interactions like opening and closing a collapsable and page transitions. Make them really lightweight, d
--- Timestamp: Mon 09 Mar 2026 02:49:51 PM CET
+-- Request: Is it possible to not animate on page change the `header` inside of the `<main>` tag. Also the link preview is fired everytime I change page in mobile. Link preview should be disabled in mobile and ev
+-- Timestamp: Mon 09 Mar 2026 04:31:10 PM CET
 
-Now I have the complete picture. Here's the decomposition:
+The simple layout doesn't use `hx-select` or `hx-target`, so it swaps the whole body — meaning the header is outside `<main>` and also gets re-rendered. But the main concern from the user is the default layout where `#kiln-main` includes the header.
+
+Now I have everything needed for the decomposition.
 
 <tasks>
-<task order="1" title="Add CSS keyframes and page-content fade">
-Add lightweight CSS animation keyframes to `assets/shared.css` and a page-content fade for htmx swaps. This is the foundation all other tasks build on.
+<task order="1" title="Exclude header from fade animation on page change">
+**Goal**: Prevent the `<header>` inside `<main id="kiln-main">` from animating with the `kiln-fade-in` on htmx page changes, while keeping the content below it animated.
 
-**File to edit:** `assets/shared.css` — append at the end of the file (after the last rule, currently around line 1055)
+**Context**: In `assets/shared.css` (lines 1088-1091), the rule `#kiln-main { animation: kiln-fade-in 200ms ease-out; }` applies a fade-in to the entire `#kiln-main` element on every htmx swap. Since `#kiln-main` contains both the `<header>` (breadcrumbs/toggles bar) and the page content, the header fades in on every navigation. The user wants only the content to animate, not the header.
 
-**What to add:**
+**Files to edit**:
 
-```css
-/* === ANIMATIONS === */
-@keyframes kiln-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes kiln-fade-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-@keyframes kiln-scale-in {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
-}
+1. **`assets/shared.css`** — Change the animation target from `#kiln-main` to `#kiln-main > :not(header)` (or use a wrapper). The cleanest approach: remove the animation from `#kiln-main` itself and instead apply it to all direct children of `#kiln-main` except `header`:
+   - Remove or replace the existing rule at lines 1088-1091:
+     ```css
+     /* Page content fade on htmx swap */
+     #kiln-main {
+       animation: kiln-fade-in 200ms ease-out;
+     }
+     ```
+   - Replace with:
+     ```css
+     /* Page content fade on htmx swap — skip header */
+     #kiln-main > *:not(header) {
+       animation: kiln-fade-in 200ms ease-out;
+     }
+     ```
 
-/* Page content fade on htmx swap */
-#kiln-main {
-  animation: kiln-fade-in 200ms ease-out;
-}
-```
+This selector targets all direct children of `#kiln-main` except the `<header>`, so `@ContentCanvas`, `@ContentNote`, `@ContentGraph`, etc. will still fade in but the header (breadcrumbs bar) will not animate on page change.
 
-The `#kiln-main` rule works because htmx replaces the element via `hx-swap="outerHTML"`, and each new element triggers its CSS animation on insertion.
-
-**Do NOT touch any JS files.** Only CSS.
-**Verify:** `go test ./...`
+**Verify**: Build the project with `go build ./...` to confirm no build errors. The CSS change is purely client-side so there are no Go tests to run, but the build should succeed.
 </task>
 
-<task order="2" title="Animate search modal open/close">
-Add fade+scale animation to the search modal overlay. Task 1 added `kiln-fade-in`, `kiln-fade-out`, and `kiln-scale-in` keyframes to `assets/shared.css`.
+<task order="2" title="Disable link preview on mobile and hide on page change" depends_on="1">
+**Goal**: 
+1. Link preview should be completely disabled on mobile devices (viewport width < 1024px or no hover capability).
+2. Any active link preview tooltip should be hidden whenever the user navigates to a new page (htmx swap).
 
-**Files to edit:**
-- `assets/shared.css` — update `#search-overlay` and `#search-modal` rules (around lines 897-921)
-- `assets/search.js` — update `showOverlay()` and `hideOverlay()` functions
+**Context**: In `assets/link_preview.js`, the `initLinkPreview` function (line 170) checks for mobile only on the first invocation (when `initialized` is false). On subsequent htmx navigations, `initAll()` calls `initLinkPreview()` which sees `initialized = true` and skips the guard, calling `bindLinks()` directly. This means on mobile, after the first page load (where it correctly skips), subsequent htmx swaps will still bind link listeners because `initialized` remains `false` and the guard prevents initialization — but new links won't get bound either, so the real problem is that the tooltip may remain visible across navigations. Additionally, the user reports link preview fires on mobile during page changes.
 
-**CSS changes in `assets/shared.css`:**
+**Files to edit**:
 
-Find the existing `#search-overlay` rule block (line ~897). Add animation:
-```css
-#search-overlay {
-  /* existing properties stay */
-  animation: kiln-fade-in 150ms ease-out;
-}
-```
-Add a new rule:
-```css
-#search-overlay.closing {
-  animation: kiln-fade-out 120ms ease-in forwards;
-}
-```
+1. **`assets/link_preview.js`** — Make two changes:
 
-Find `#search-modal` (line ~910). Add:
-```css
-#search-modal {
-  /* existing properties stay */
-  animation: kiln-scale-in 150ms ease-out;
-}
-```
+   **Change A — Always check for mobile/touch before binding links**:
+   Move the mobile/touch guard so it runs on every call, not just the first. Change the `initLinkPreview` function (starting at line 170) from:
+   ```js
+   window.initLinkPreview = function () {
+     if (initialized) {
+       bindLinks();
+       return;
+     }
 
-**JS changes in `assets/search.js`:**
+     if (window.innerWidth < 1024) return;
+     if (!window.matchMedia("(hover: hover)").matches) return;
 
-1. `showOverlay()` (line ~143): After `overlay.classList.remove("hidden")`, also remove `"closing"`:
-```js
-overlay.classList.remove("hidden", "closing");
-```
+     initialized = true;
 
-2. `hideOverlay()` (line ~154): Replace the instant hide with animated close:
-```js
-function hideOverlay() {
-  var overlay = document.getElementById("search-overlay");
-  if (!overlay || overlay.classList.contains("hidden")) return;
-  overlay.classList.add("closing");
-  overlay.addEventListener("animationend", function handler() {
-    overlay.removeEventListener("animationend", handler);
-    overlay.classList.add("hidden");
-    overlay.classList.remove("closing");
-  }, { once: true });
-}
-```
+     getTooltip();
+     bindLinks();
 
-**Verify:** `go test ./...`
-</task>
+     window.addEventListener("scroll", onScroll, true);
+     document.addEventListener("keydown", onKeydown);
+     document.addEventListener("click", onClickOutside);
+   };
+   ```
+   
+   To:
+   ```js
+   window.initLinkPreview = function () {
+     if (window.innerWidth < 1024 || !window.matchMedia("(hover: hover)").matches) {
+       hideTooltip();
+       return;
+     }
 
-<task order="3" title="Animate lightbox and link preview tooltip">
-Add fade animations to the image lightbox and link preview tooltip.
+     if (initialized) {
+       bindLinks();
+       return;
+     }
 
-**Files to edit:**
-- `assets/shared.css` — update `#img-lightbox` (line ~499) and `#link-preview-tooltip` (line ~976) rules
-- `assets/default_app.js` — update `initLightbox()` close logic (line ~310)
-- `assets/link_preview.js` — switch from display toggle to opacity transition
+     initialized = true;
 
-**CSS changes in `assets/shared.css`:**
+     getTooltip();
+     bindLinks();
 
-1. **Lightbox:** Add to existing `#img-lightbox` rule: `animation: kiln-fade-in 150ms ease-out;`
-   Add new rule: `#img-lightbox.closing { animation: kiln-fade-out 120ms ease-in forwards; }`
+     window.addEventListener("scroll", onScroll, true);
+     document.addEventListener("keydown", onKeydown);
+     document.addEventListener("click", onClickOutside);
+   };
+   ```
 
-2. **Link preview tooltip:** The existing `#link-preview-tooltip` (line ~976) has inline `display:none` set by JS. Change the CSS approach:
-   Add: `#link-preview-tooltip { opacity: 0; pointer-events: none; transition: opacity 150ms ease-out; }`
-   Add: `#link-preview-tooltip.visible { opacity: 1; pointer-events: auto; }`
+   This ensures that on every htmx navigation, if the viewport is mobile-sized (or there's no hover capability), the function exits early AND hides any visible tooltip. On desktop, it proceeds as before.
 
-**JS changes in `assets/default_app.js`:**
+   **Change B — Hide tooltip on htmx beforeSwap**:
+   Add an event listener at the bottom of the IIFE (before the closing `})();`) to hide the tooltip whenever htmx is about to swap content:
+   ```js
+   document.addEventListener("htmx:beforeSwap", function () {
+     hideTooltip();
+     clearTimeout(hoverTimer);
+     clearTimeout(leaveTimer);
+   });
+   ```
 
-In `initLightbox()` (line ~310), the close function currently does `overlay.classList.add('hidden')`. Change to animated close:
-```js
-const close = () => {
-  overlay.classList.add('closing');
-  overlay.addEventListener('animationend', function handler() {
-    overlay.removeEventListener('animationend', handler);
-    overlay.classList.add('hidden');
-    overlay.classList.remove('closing');
-  }, { once: true });
-};
-```
-In the opening click handler (line ~332), also remove `"closing"`: `overlay.classList.remove("hidden", "closing");`
+   This ensures that any visible link preview tooltip is immediately hidden when the user clicks a link to navigate, preventing it from persisting across page transitions.
 
-**JS changes in `assets/link_preview.js`:**
-
-1. `getTooltip()` (line ~15): Remove `el.style.display = "none"`. The CSS now handles visibility via opacity.
-
-2. `hideTooltip()` (line ~40): Replace `el.style.display = "none"` with `el.classList.remove("visible")`.
-
-3. `onLinkEnter()` (line ~108): Replace `tooltip.style.display = "block"` with `tooltip.classList.add("visible")`. Keep `positionTooltip()` call before adding the class.
-
-**Verify:** `go test ./...`
-</task>
-
-<task order="4" title="Animate default layout sidebar slide">
-Add smooth slide transitions to the default layout sidebars (`#left-sidebar`, `#right-sidebar`). Currently they use `.collapsed` which toggles `display: none` at desktop breakpoint (>= 80rem). We switch to a transform-based approach.
-
-**Files to edit:**
-- `assets/default_style_input.css` — add sidebar transition rules
-- `assets/default_style.css` — add the equivalent raw CSS (this is the compiled Tailwind output that actually gets served)
-- `assets/default_app.js` — add `.animate-ready` class after initial render to prevent flash
-
-**CSS approach:** On desktop (>= 80rem), instead of `display: none`, use `transform: translateX(-100%)` for left sidebar and `translateX(100%)` for right sidebar when `.collapsed`, with `opacity: 0` and `pointer-events: none`. Transitions only activate after `.animate-ready` is on the body.
-
-**In `assets/default_style_input.css`**, add after the existing `.collapsed` block:
-```css
-@media (width >= 80rem) {
-  #left-sidebar, #right-sidebar {
-    transition: none;
-    will-change: transform, opacity;
-  }
-  .animate-ready #left-sidebar,
-  .animate-ready #right-sidebar {
-    transition: transform 200ms ease-out, opacity 200ms ease-out;
-  }
-  #left-sidebar.collapsed {
-    transform: translateX(-100%);
-    opacity: 0;
-    pointer-events: none;
-  }
-  #right-sidebar.collapsed {
-    transform: translateX(100%);
-    opacity: 0;
-    pointer-events: none;
-  }
-}
-```
-
-**IMPORTANT:** The existing `.collapsed` rule in `default_style_input.css` uses `display: none` at desktop. You need to REMOVE the `display: none` at desktop for the sidebars and replace it with the transform approach above. Keep the mobile behavior (`.collapsed` = `display: flex`) unchanged.
-
-**In `assets/default_style.css`** (compiled output), find the `.collapsed` rules and apply the same changes. Search for `.collapsed` in that file — there will be a media query `(width >= 80rem)` block setting `display: none`. Replace `display: none` with the transform/opacity/pointer-events approach. Also add the `.animate-ready` transition rules.
-
-**In `assets/default_app.js`**, at the end of `window.initAll` (line ~348), add:
-```js
-if (!document.body.classList.contains('animate-ready')) {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      document.body.classList.add('animate-ready');
-    });
-  });
-}
-```
-
-This double-rAF ensures the initial sidebar state renders without transition, then enables animations.
-
-**Verify:** `go test ./...`
-</task>
-
-<task order="5" title="Animate simple layout panel overlays">
-Add fade animations to the simple layout's full-screen panel overlays (menu, TOC, local graph). These use `.hidden` class toggling in `assets/simple_app.js`. Task 1 added `kiln-fade-in` and `kiln-fade-out` keyframes to `assets/shared.css`.
-
-**Files to edit:**
-- `assets/shared.css` — add panel animation rules
-- `assets/simple_app.js` — update panel toggle logic
-
-**CSS in `assets/shared.css`** (append near the animation section added in task 1):
-```css
-/* Simple layout panel animations */
-#menu-wrapper:not(.hidden):not(.closing),
-#toc-wrapper:not(.hidden):not(.closing),
-#local-graph-wrapper:not(.hidden):not(.closing) {
-  animation: kiln-fade-in 150ms ease-out;
-}
-#menu-wrapper.closing,
-#toc-wrapper.closing,
-#local-graph-wrapper.closing {
-  animation: kiln-fade-out 120ms ease-in forwards;
-}
-```
-
-**Note:** `#local-graph-wrapper` is used in both layouts. In default layout it uses `.expanded` class (not `.hidden`), so these rules won't conflict — they only fire when `.hidden` is toggled.
-
-**JS changes in `assets/simple_app.js`:**
-
-1. Add a new instant-close function (for htmx navigation):
-```js
-window._closePanelInstant = function (panel) {
-  var wrapper = document.getElementById(panel.wrapper);
-  var icon = document.getElementById(panel.icon);
-  if (wrapper) {
-    wrapper.classList.add("hidden");
-    wrapper.classList.remove("closing");
-  }
-  if (icon) {
-    icon.classList.remove("text-accent");
-    icon.classList.add("text-foreground");
-  }
-};
-```
-
-2. Update `window._closePanel` (line ~30) to animate:
-```js
-window._closePanel = function (panel) {
-  var wrapper = document.getElementById(panel.wrapper);
-  var icon = document.getElementById(panel.icon);
-  if (!wrapper || wrapper.classList.contains("hidden")) return;
-  wrapper.classList.add("closing");
-  wrapper.addEventListener("animationend", function handler() {
-    wrapper.removeEventListener("animationend", handler);
-    wrapper.classList.add("hidden");
-    wrapper.classList.remove("closing");
-  }, { once: true });
-  if (icon) {
-    icon.classList.remove("text-accent");
-    icon.classList.add("text-foreground");
-  }
-};
-```
-
-3. In `window._togglePanel` (line ~38), when opening, also remove `"closing"`:
-```js
-wrapper.classList.remove("hidden", "closing");
-```
-
-4. In `htmx:afterSwap` handler (line ~321), use instant close:
-```js
-window._panels.forEach((p) => window._closePanelInstant(p));
-```
-
-**Verify:** `go test ./...`
-</task>
-
-<task order="6" title="Animate navbar folder details expand">
-Add smooth height animation to navbar `<details>` folder elements in the sidebar. Currently only the arrow SVG rotates. The `<ul>` children should animate height on open/close.
-
-**Files to edit:**
-- `assets/shared.css` — add CSS for details content animation
-- `assets/default_app.js` — add `initNavFolderAnimation()` function and call it from `initAll()`
-- `assets/simple_app.js` — call the same function from its `initAll()`
-
-The navbar `<details>` elements (in `internal/templates/navbar.templ`) have this structure:
-```html
-<details class="[&[open]>summary>svg]:rotate-90">
-  <summary>...</summary>
-  <ul class="border-l ...">children</ul>
-</details>
-```
-
-**CSS in `assets/shared.css`:**
-```css
-/* Navbar folder height animation */
-#left-sidebar details > ul,
-#menu-wrapper details > ul {
-  overflow: hidden;
-}
-```
-
-**JS pattern** (add to both `default_app.js` and `simple_app.js`):
-
-Create `window.initNavFolderAnimation`:
-```js
-window.initNavFolderAnimation = function () {
-  var containers = document.querySelectorAll('#left-sidebar details, #menu-wrapper details');
-  containers.forEach(function (details) {
-    if (details.dataset.animBound) return;
-    details.dataset.animBound = '1';
-    var summary = details.querySelector('summary');
-    var content = details.querySelector('ul');
-    if (!summary || !content) return;
-
-    summary.addEventListener('click', function (e) {
-      e.preventDefault();
-      if (details.open) {
-        // Closing: animate height to 0, then remove open
-        var height = content.scrollHeight;
-        content.style.height = height + 'px';
-        requestAnimationFrame(function () {
-          content.style.transition = 'height 200ms ease-out';
-          content.style.height = '0px';
-          content.addEventListener('transitionend', function handler() {
-            content.removeEventListener('transitionend', handler);
-            details.open = false;
-            content.style.height = '';
-            content.style.transition = '';
-          }, { once: true });
-        });
-      } else {
-        // Opening: set open, animate from 0 to natural height
-        details.open = true;
-        var height = content.scrollHeight;
-        content.style.height = '0px';
-        requestAnimationFrame(function () {
-          content.style.transition = 'height 200ms ease-out';
-          content.style.height = height + 'px';
-          content.addEventListener('transitionend', function handler() {
-            content.removeEventListener('transitionend', handler);
-            content.style.height = '';
-            content.style.transition = '';
-          }, { once: true });
-        });
-      }
-    });
-  });
-};
-```
-
-Call `window.initNavFolderAnimation()` from `window.initAll()` in both `default_app.js` (after `highlightSidebarLink`, around line 354) and `simple_app.js` (after `initToggles`, around line 306).
-
-**Important:** The `highlightSidebarLink` function in `default_app.js` programmatically opens `<details>` parents. Make sure `initNavFolderAnimation` is called AFTER `highlightSidebarLink` so the programmatic opens aren't animated. The animation binding only applies to future user clicks.
-
-**Verify:** `go test ./...`
+**Verify**: Build the project with `go build ./...` to confirm no build errors. The JS changes are client-side only.
 </task>
 </tasks>
