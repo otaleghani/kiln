@@ -354,6 +354,7 @@ window.initAll = function () {
   window.highlightSidebarLink();
   window.addCopyButtons();
   window.initLightbox();
+  if (window.initLinkPreview) window.initLinkPreview();
   document.addEventListener("keydown", function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === "k") {
       e.preventDefault();

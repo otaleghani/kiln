@@ -30,6 +30,7 @@ templ SimpleLayout(data *PageData) {
 			@ThemeStyle(data.Site.Theme)
 			<script src={ data.Site.BaseURL + "/app.js" } defer></script>
 			<script defer src={ data.Site.BaseURL + "/search.js" }></script>
+			<script defer src={ data.Site.BaseURL + "/link-preview.js" }></script>
 			<script src={ data.Site.BaseURL + "/graph.js" } defer></script>
 			<script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js" defer></script>
 		</head>

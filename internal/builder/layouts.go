@@ -106,6 +106,17 @@ func (l *Layout) loadLayout() error {
 	}
 	l.JsSearchTemplate = tmplSearchJS
 
+	// Load and parse the link preview JS template
+	jsLinkPreviewContent, err := assets.TemplateFS.ReadFile("link_preview.js")
+	if err != nil {
+		return err
+	}
+	tmplLinkPreviewJS, err := textTemplate.New("js").Parse(string(jsLinkPreviewContent))
+	if err != nil {
+		return err
+	}
+	l.JsLinkPreviewTemplate = tmplLinkPreviewJS
+
 	// Load and parse the giscus CSS template
 	cssGiscusLightContent, err := assets.TemplateFS.ReadFile("giscus_theme_light.css")
 	if err != nil {
@@ -147,6 +158,7 @@ type Layout struct {
 	JsGraphTemplate        *textTemplate.Template                        // Usually you'll need to update the graph base url
 	JsCanvasTemplate       *textTemplate.Template                        // If you need to change some data
 	JsSearchTemplate       *textTemplate.Template                        // Full-text search JS
+	JsLinkPreviewTemplate  *textTemplate.Template                        // Link preview JS
 	CssGiscusLightTemplate *textTemplate.Template                        // Giscus template
 	CssGiscusDarkTemplate  *textTemplate.Template                        // Giscus template
 	log                    *slog.Logger

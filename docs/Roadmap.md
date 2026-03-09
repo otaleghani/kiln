@@ -24,14 +24,15 @@ These features were on the roadmap and have since been shipped:
 - [x] **Configuration File:** Support for `kiln.yaml` to save preferences (flags) persistently, so you don't need to pass CLI flags on every [generate](./Commands/generate.md) run.
 - [x] **Image Optimization:** Automatic WebP conversion and responsive image sizing to improve page load speed.
 - [ ] **Localization:** i18n support for translating the UI into multiple languages.
-- [ ] **Structured Data:** Automatically generate JSON-LD schema markup for articles and breadcrumbs to improve search engine visibility.
+- [x] **Structured Data:** Automatically generate JSON-LD schema markup for articles and breadcrumbs to improve search engine visibility.
+- [ ] Support for other kinds of links, not only wikilinks 
 
 ## UI & UX Improvements
 *Enhancing the reading and navigation experience.*
 
 - [ ] **Page Transitions:** Smooth View Transitions API support to complement the existing [client-side navigation](./Features/Navigation/Client Side Navigation.md).
 - [ ] **Link Previews:** Obsidian-style hover previews when mousing over [wikilinks](./Features/Navigation/Wikilinks.md).
-- [ ] **Full-Text Search:** Fuzzy finder with content search to go beyond the current name-based [search](./Features/Navigation/Search.md).
+- [x] **Full-Text Search:** Fuzzy finder with content search to go beyond the current name-based [search](./Features/Navigation/Search.md).
 - [ ] **Navigation Enhancements:** "Back to Top" buttons and improved breadcrumb trails.
 - [ ] **Animations:** Subtle CSS animations for interactive elements.
 - [ ] **Canvas Colors:** Custom color support for [Canvas](./Features/Rendering/Obsidian Canvas.md) nodes.
@@ -49,7 +50,7 @@ These features were on the roadmap and have since been shipped:
 *Power-user features for fine-grained control over the generated site.*
 
 - [ ] **Permalinks:** Custom URL slugs defined in frontmatter for complete control over your site's URL structure.
-- [ ] **Social Cards:** Auto-generated Open Graph images for rich social media previews when sharing links.
+- [x] **Social Cards:** Auto-generated Open Graph images for rich social media previews when sharing links.
 
 ## How to Stay Updated
 

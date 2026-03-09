@@ -333,6 +333,17 @@ func buildDefault(log *slog.Logger) {
 		log.Error("Couldn't execute template for 'search.js'", "error", err)
 	}
 
+	// Generate link preview JS
+	linkPreviewJsOut, err := os.Create(filepath.Join(OutputDir, "link-preview.js"))
+	if err != nil {
+		log.Error("Couldn't create 'link-preview.js'", "error", err)
+	}
+	defer linkPreviewJsOut.Close()
+	err = site.Layout.JsLinkPreviewTemplate.Execute(linkPreviewJsOut, site)
+	if err != nil {
+		log.Error("Couldn't execute template for 'link-preview.js'", "error", err)
+	}
+
 	// Generate discus CSS themes
 	log.Debug("Generating light giscus theme")
 	giscusLightOut, err := os.Create(filepath.Join(OutputDir, "giscus-theme-light.css"))
