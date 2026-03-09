@@ -1,215 +1,141 @@
 -- DwightAuto decomposition output
--- Request: - [ ] **Configuration File:** Support for `kiln.yaml` to save preferences (flags) persistently, so you don't need to pass CLI flags on every [generate](./Commands/generate.md) run.
--- Timestamp: Sun 08 Mar 2026 05:53:49 PM CET
+-- Request: - [ ] **Structured Data:** Automatically generate JSON-LD schema markup for articles and breadcrumbs to improve search engine visibility.
+-- Timestamp: Mon 09 Mar 2026 09:24:25 AM CET
 
-Now I have a thorough understanding of the codebase. Let me design the decomposition.
-
-The key observations:
-1. The project uses `gopkg.in/yaml.v3` already (a dependency).
-2. Configuration is currently done via CLI flags in `internal/cli/commands.go` with global vars, and the `run*` functions copy flag values into `builder.*` package-level vars.
-3. The convention is package-per-domain, with `@feature:` pragmas on line 1.
-4. Tests use standard `testing` package with `t.TempDir()` for filesystem tests.
-5. The config file should be `kiln.yaml` and map to the same fields as CLI flags.
+Now I have complete knowledge of the codebase. Here's my decomposition:
 
 <tasks>
-<task order="1" title="Config type and YAML loader">
-Create a new package `internal/config` that defines the `Config` struct and provides functions to load it from a `kiln.yaml` file.
+<task order="1" title="JSON-LD generation functions with tests">
+Create a new Go file `internal/jsonld/jsonld.go` with pure functions that generate JSON-LD structured data for Article and BreadcrumbList schemas. Write tests first in `internal/jsonld/jsonld_test.go`.
+
+**Context:** This project is a static site generator (kiln) that converts Obsidian vaults to HTML. Pages have frontmatter metadata (`title`, `description`, `author`, `date`), breadcrumbs (`[]obsidian.Breadcrumb` with `Label` and `Url` fields), and file metadata (`Created`, `Modified` time.Time fields, `WebPath`, `Name`). The site config has `BaseURL` and `SiteName` strings.
 
 **Files to create:**
+1. `internal/jsonld/jsonld_test.go` — Write tests FIRST
+2. `internal/jsonld/jsonld.go` — Implementation
 
-1. `internal/config/config_test.go` — Tests first (TDD). Add `// @feature:cli` pragma on line 1. Write the following tests using standard `testing` package with `t.TempDir()`:
-   - `TestLoad_ValidFile`: Create a temp dir, write a `kiln.yaml` with all supported fields (theme, font, url, name, input, output, mode, layout, flat-urls, disable-toc, disable-local-graph, port, log), call `Load(path)`, assert each field is correctly parsed.
-   - `TestLoad_PartialFile`: Write a `kiln.yaml` with only `theme` and `url` set, call `Load(path)`, assert those fields are set and all others are zero values (empty string / false).
-   - `TestLoad_FileNotFound`: Call `Load` with a nonexistent path, assert it returns `nil, nil` (no file = no config, not an error — allows graceful fallback to defaults).
-   - `TestLoad_InvalidYAML`: Write a file with `:::bad yaml[[[`, call `Load`, assert non-nil error.
-   - `TestLoad_EmptyFile`: Write an empty file, call `Load`, assert returns a zero-valued `*Config` with no error.
+**Add `// @feature:jsonld` pragma on line 1 of both files.**
 
-2. `internal/config/config.go` — Implementation. Add `// @feature:cli Configuration file loading and type definitions` pragma on line 1. Define:
-   ```go
-   package config
+**Types and functions to implement in `jsonld.go`:**
 
-   type Config struct {
-       Theme             string `yaml:"theme"`
-       Font              string `yaml:"font"`
-       URL               string `yaml:"url"`
-       Name              string `yaml:"name"`
-       Input             string `yaml:"input"`
-       Output            string `yaml:"output"`
-       Mode              string `yaml:"mode"`
-       Layout            string `yaml:"layout"`
-       FlatURLs          bool   `yaml:"flat-urls"`
-       DisableTOC        bool   `yaml:"disable-toc"`
-       DisableLocalGraph bool   `yaml:"disable-local-graph"`
-       Port              string `yaml:"port"`
-       Log               string `yaml:"log"`
-   }
+```go
+package jsonld
 
-   // Load reads a kiln.yaml file from the given path.
-   // Returns (nil, nil) if the file does not exist (not an error).
-   // Returns (*Config, nil) on success.
-   // Returns (nil, error) on parse failure.
-   func Load(path string) (*Config, error)
-   ```
-   Implementation: use `os.Open`, check `os.IsNotExist` to return `(nil, nil)`, otherwise `yaml.NewDecoder(f).Decode(&cfg)` (using `gopkg.in/yaml.v3`). Handle `io.EOF` from empty files by returning a zero-value Config.
+// ArticleParams holds the inputs needed to build an Article JSON-LD object.
+type ArticleParams struct {
+    Title       string
+    Description string
+    Author      string
+    BaseURL     string
+    WebPath     string
+    SiteName    string
+    DateCreated time.Time
+    DateModified time.Time
+    ImageURL    string  // OG image URL, can be empty
+}
 
-**Verify:** `go test ./internal/config/...`
+// BreadcrumbItem represents one breadcrumb for JSON-LD generation.
+type BreadcrumbItem struct {
+    Label string
+    URL   string
+}
+
+// BuildArticleJSON returns a JSON-LD string for schema.org/Article.
+// Returns empty string if title is empty.
+func BuildArticleJSON(p ArticleParams) string
+
+// BuildBreadcrumbJSON returns a JSON-LD string for schema.org/BreadcrumbList.
+// Returns empty string if items is empty.
+func BuildBreadcrumbJSON(baseURL string, items []BreadcrumbItem) string
+```
+
+**Implementation details:**
+- Use `encoding/json` with `json.Marshal` to produce the JSON-LD. Build the schema as `map[string]any` structures.
+- `BuildArticleJSON` should produce a `<script type="application/ld+json">` compatible JSON string (just the JSON object, not the script tag — the template will wrap it).
+- Article schema: `@context: "https://schema.org"`, `@type: "Article"`, `headline`, `description`, `author: {type: Person, name}`, `datePublished` (RFC3339 from DateCreated), `dateModified` (RFC3339 from DateModified), `publisher: {type: Organization, name: SiteName}`, `mainEntityOfPage: {type: WebPage, @id: BaseURL+WebPath}`, optionally `image` if ImageURL is non-empty.
+- If `Author` is empty, omit the `author` field. If `Description` is empty, omit it.
+- `BuildBreadcrumbJSON` should produce a `BreadcrumbList` schema with `itemListElement` containing `ListItem` entries with `position` (1-based), `name`, and `item` (full URL = baseURL + item.URL).
+- For breadcrumb items where URL is `"#"` (used for current page in tag pages), omit the `item` field from that ListItem.
+
+**Tests in `jsonld_test.go`:**
+- Test `BuildArticleJSON` with full params — verify output contains `"@type":"Article"`, correct headline, dates in RFC3339.
+- Test `BuildArticleJSON` with empty title returns `""`.
+- Test `BuildArticleJSON` with empty author omits author field.
+- Test `BuildArticleJSON` with empty description omits description field.
+- Test `BuildBreadcrumbJSON` with 3 breadcrumb items — verify `"@type":"BreadcrumbList"`, correct positions 1-3, full URLs.
+- Test `BuildBreadcrumbJSON` with empty items returns `""`.
+- Test `BuildBreadcrumbJSON` with `#` URL omits `item` field from that entry.
+
+**Verify:** `go test ./internal/jsonld/...`
 </task>
 
-<task order="2" title="Config discovery with FindFile">
-Add a function to locate `kiln.yaml` in the current directory (or a given directory), and add a helper to merge config values with CLI flag defaults.
+<task order="2" title="Add JSON-LD templ component to shared.templ" depends_on="1">
+Add a new templ component `StructuredData` to `internal/templates/shared.templ` that renders JSON-LD `<script>` tags for articles and breadcrumbs. Also add a helper function in `internal/templates/helpers.go` to bridge between template types and jsonld package types.
+
+**Context:** The existing `shared.templ` file already contains `Head()`, `Canonical()`, `Breadcrumbs()`, `ThemeToggler()`, and other shared components. The `PageData` struct (in `types.go`) has: `Site *SiteData` (with `BaseURL`, `SiteName`, `FlatURLs`), `Breadcrumbs []obsidian.Breadcrumb` (each has `Label` and `Url`), `File *obsidian.File` (with `Name`, `WebPath`, `Created`, `Modified`, `Frontmatter`), `Folder *obsidian.Folder`, `Tag *obsidian.Tag`, and boolean flags `IsNote`, `IsFolder`, `IsTag`, `IsGraph`, `IsCanvas`, `Is404`. The `helpers.go` file contains `toStr()`, `ogImageURL()`, `buildThemeCSS()`, and `FormatDate()` functions.
+
+**Existing `shared.templ` structure (preserve all existing components):**
+- `ThemeToggler()` (line 8)
+- `LeftSidebarToggle()` (line 57)
+- `RightSidebarToggle()` (line 79)
+- `GraphButton()` (line 101)
+- `Breadcrumbs()` (line 125)
+- `SimpleBreadcrumbs()` (line 139)
+- `PageName()` (line 162)
+- `Canonical()` (line 174)
+- `Head()` (line 194)
+- `ThemeStyle()` (line 254)
 
 **Files to edit:**
+1. `internal/templates/helpers.go` — Add a helper function
+2. `internal/templates/shared.templ` — Add the `StructuredData` templ component
 
-1. `internal/config/config_test.go` — Add these additional tests (the file already has 5 tests from task 1):
-   - `TestFindFile_Exists`: Create a temp dir, write `kiln.yaml` in it, call `FindFile(dir)`, assert it returns the correct path and no error.
-   - `TestFindFile_NotFound`: Call `FindFile` on an empty temp dir, assert it returns `""` and no error.
-   - `TestApplyIfEmpty_OnlyOverridesEmpty`: Create a `Config{Theme: "dracula", Font: ""}`, call `cfg.ValueOr("theme", "default")`, assert returns `"dracula"`. Call `cfg.ValueOr("font", "inter")`, assert returns `"inter"`. This tests that config values take precedence over defaults when set, but defaults apply when config values are empty.
+**Changes to `helpers.go`:**
+Add a function `buildStructuredDataJSON(data *PageData) string` that:
+- Imports `"github.com/otaleghani/kiln/internal/jsonld"`
+- For note pages (`data.IsNote && data.File != nil`):
+  - Extracts `title` from frontmatter (falling back to `data.File.Name`)
+  - Extracts `description` from frontmatter (can be empty)
+  - Extracts `author` from frontmatter (can be empty)
+  - Builds `ArticleParams` with BaseURL, WebPath, SiteName, Created, Modified, and ImageURL from `ogImageURL()`
+  - Calls `jsonld.BuildArticleJSON(params)`
+- Converts `data.Breadcrumbs` (type `[]obsidian.Breadcrumb`) to `[]jsonld.BreadcrumbItem`
+- Calls `jsonld.BuildBreadcrumbJSON(data.Site.BaseURL, items)`
+- Returns a concatenation of both JSON strings separated by a newline (with `<script type="application/ld+json">...</script>` wrappers around each non-empty result)
+- Returns empty string if both results are empty.
 
-2. `internal/config/config.go` — Add the following functions (file already has `Config` struct and `Load` from task 1):
-   ```go
-   // DefaultFilename is the conventional name for the config file.
-   const DefaultFilename = "kiln.yaml"
+**Changes to `shared.templ`:**
+Add after the existing `ThemeStyle` component (after line 256):
+```templ
+templ StructuredData(data *PageData) {
+    @templ.Raw(buildStructuredDataJSON(data))
+}
+```
 
-   // FindFile looks for kiln.yaml in the given directory.
-   // Returns the full path if found, or "" if not present.
-   // Returns an error only for filesystem errors (not for missing file).
-   func FindFile(dir string) (string, error)
+**After editing, regenerate templ files:**
+Run `go generate ./internal/templates/...` or `templ generate` if the project uses templ CLI.
 
-   // ValueOr returns the config string field if non-empty, otherwise the fallback.
-   func (c *Config) ValueOr(field, fallback string) string
-
-   // BoolOr returns the config bool field if the config is non-nil, otherwise the fallback.
-   func (c *Config) BoolOr(field string, fallback bool) bool
-   ```
-   - `FindFile`: use `os.Stat(filepath.Join(dir, DefaultFilename))`, return path if exists, `""` if `os.IsNotExist`.
-   - `ValueOr`: switch on field name (matching yaml tag names: "theme", "font", "url", "name", "input", "output", "mode", "layout", "port", "log"), return the struct field if non-empty, else fallback.
-   - `BoolOr`: same pattern for bool fields ("flat-urls", "disable-toc", "disable-local-graph").
-
-**Verify:** `go test ./internal/config/...`
+**Verify:** `go build ./internal/templates/...` (templ must compile). Also run `go test ./internal/jsonld/...` to ensure nothing broke.
 </task>
 
-<task order="3" title="Wire config into generate command">
-Integrate `kiln.yaml` loading into the `generate` CLI command so that config file values act as defaults that CLI flags can override. The precedence is: CLI flag (if explicitly set) > kiln.yaml value > hardcoded default.
+<task order="3" title="Wire StructuredData into both layout templates" depends_on="2">
+Add the `@StructuredData(data)` call to both layout templates so that JSON-LD is injected into the `<head>` of every generated HTML page.
+
+**Context:** The project has two layout templates:
+- `internal/templates/layout_default.templ` — `DefaultLayout(data *PageData)`, has `<head>` section from lines 7-33, currently calls `@Canonical(data)`, `@Head(data)`, `@ThemeStyle(data.Site.Theme)` inside `<head>`.
+- `internal/templates/layout_simple.templ` — `SimpleLayout(data *PageData)`, has `<head>` section from lines 7-33, same pattern.
+
+Both have identical `<head>` structures. The new `StructuredData` component was added to `shared.templ` in the previous task.
 
 **Files to edit:**
+1. `internal/templates/layout_default.templ` — Add `@StructuredData(data)` inside `<head>`, after the `@Head(data)` call (after line 26).
+2. `internal/templates/layout_simple.templ` — Same change, add `@StructuredData(data)` inside `<head>`, after the `@Head(data)` call (after line 26).
 
-1. `internal/cli/generate.go` — This file currently defines `cmdGenerate`, registers flags in `init()`, and has `runGenerate` that copies flag vars to `builder.*` globals. Modify `runGenerate` to:
-   - At the start of `runGenerate`, call `config.FindFile(".")` to discover `kiln.yaml`.
-   - If found, call `config.Load(path)` to parse it. Log a debug message on success, log a warning on error (but don't abort — fall back to defaults).
-   - For each flag, use Cobra's `cmd.Flags().Changed("flagname")` to check if the user explicitly set it on the command line. If the flag was NOT explicitly changed by the user, AND the config file has a non-empty value for that field, use the config value instead.
-   - Implement this with a helper pattern: for string flags, `if !cmd.Flags().Changed(FlagTheme) { themeName = cfg.ValueOr("theme", DefaultThemeName) }`, and similarly for bool flags using `BoolOr`.
-   - The rest of `runGenerate` (copying to `builder.*` globals and calling `builder.Build`) stays the same.
-   - Add import for `"github.com/otaleghani/kiln/internal/config"`.
+**After editing, regenerate templ files:**
+Run `templ generate` from the project root, OR `go generate ./internal/templates/...` if the project uses go generate for templ. Check if there's a `go:generate` directive or a Makefile target.
 
-2. `internal/cli/generate.go` — Also add a `log` output line (using `slog`) indicating when a config file is loaded, e.g. `log.Info("Loaded configuration", "file", path)` so users get feedback.
-
-**Do NOT edit any other command files in this task** — only `generate.go`. Other commands (serve, clean, etc.) will be wired in the next task.
-
-**Verify:** `go build ./cmd/kiln/` (ensures it compiles). Then `go test ./...` to ensure no regressions.
-</task>
-
-<task order="4" title="Wire config into serve and clean commands">
-Integrate `kiln.yaml` loading into the `serve` and `clean` commands, following the exact same pattern established in task 3 for `generate`.
-
-**Files to edit:**
-
-1. `internal/cli/serve.go` — This file defines `cmdServe` with flags for `port`, `output`, and `log`. Modify `runServe` to:
-   - At the start, call `config.FindFile(".")` and `config.Load(path)` (same pattern as generate).
-   - For each flag (`port`, `output`, `log`), check `cmd.Flags().Changed(flagName)`. If not changed, use the config value via `cfg.ValueOr(...)`.
-   - Add import for `"github.com/otaleghani/kiln/internal/config"`.
-
-2. `internal/cli/clean.go` — This file defines `cmdClean` with flags for `output` and `log`. Modify `runClean` to:
-   - Same pattern: discover config, load it, apply non-overridden values.
-   - Add import for `"github.com/otaleghani/kiln/internal/config"`.
-
-3. `internal/cli/doctor.go` — This file defines `cmdDoctor` with flags for `input` and `log`. Modify `runDoctor` to:
-   - Same pattern.
-   - Add import for `"github.com/otaleghani/kiln/internal/config"`.
-
-4. `internal/cli/stats.go` — This file defines `cmdStats` with flags for `input` and `log`. Modify `runStats` to:
-   - Same pattern.
-   - Add import for `"github.com/otaleghani/kiln/internal/config"`.
-
-5. `internal/cli/init.go` — This file defines `cmdInit` with flags for `input` and `log`. Modify `runInit` to:
-   - Same pattern.
-   - Add import for `"github.com/otaleghani/kiln/internal/config"`.
-
-For all commands, the logic is: if `FindFile` returns a path, load the config. If loading fails, log a warning and continue with defaults. For each flag, only apply config values when the flag was not explicitly set by the user.
-
-**Verify:** `go build ./cmd/kiln/` and `go test ./...`
-</task>
-
-<task order="5" title="Refactor config loading into shared helper">
-The config-loading boilerplate added in tasks 3 and 4 is now duplicated across 6 command files. Refactor it into a single shared helper in `internal/cli/commands.go` to keep the code DRY.
-
-**Files to edit:**
-
-1. `internal/cli/commands.go` — This file already has constants, flag name definitions, and global vars. Add:
-   ```go
-   // loadConfig discovers and loads kiln.yaml from the current directory.
-   // Returns a non-nil Config (possibly zero-valued) that is safe to call methods on.
-   // Logs a message when a config file is found and loaded.
-   func loadConfig(cmd *cobra.Command) *config.Config
-   ```
-   Implementation:
-   - Call `config.FindFile(".")`. If path is empty, return `&config.Config{}`.
-   - Call `config.Load(path)`. If error, log warning, return `&config.Config{}`.
-   - Return the loaded config.
-   
-   Also add a helper to apply config values for common flag patterns:
-   ```go
-   // applyStringFlag sets the target variable to the config value if the CLI flag was not explicitly set.
-   func applyStringFlag(cmd *cobra.Command, flagName string, target *string, cfg *config.Config, defaultVal string)
-   
-   // applyBoolFlag sets the target variable to the config value if the CLI flag was not explicitly set.
-   func applyBoolFlag(cmd *cobra.Command, flagName string, target *bool, cfg *config.Config, defaultVal bool)
-   ```
-   Add import for `"github.com/otaleghani/kiln/internal/config"`.
-
-2. `internal/cli/generate.go` — Replace the inline config-loading code added in task 3 with calls to `loadConfig(cmd)`, `applyStringFlag(...)`, and `applyBoolFlag(...)`. The `runGenerate` function should become much shorter.
-
-3. `internal/cli/serve.go` — Same refactor: replace inline config code with helper calls.
-
-4. `internal/cli/clean.go` — Same refactor.
-
-5. `internal/cli/doctor.go` — Same refactor.
-
-6. `internal/cli/stats.go` — Same refactor.
-
-7. `internal/cli/init.go` — Same refactor.
-
-**Verify:** `go build ./cmd/kiln/` and `go test ./...`
-</task>
-
-<task order="6" title="Integration test and kiln init config scaffolding">
-Add an integration test that verifies the full config file flow end-to-end, and optionally scaffold a `kiln.yaml` during `kiln init`.
-
-**Files to create/edit:**
-
-1. `internal/config/config_integration_test.go` — Create this file with `// @feature:cli Integration tests for config file loading` pragma. Write:
-   - `TestConfigIntegration_FullPipeline`: Create a temp dir, write a `kiln.yaml` with `theme: dracula`, `font: lato`, `url: https://example.com`. Call `FindFile(dir)`, assert path found. Call `Load(path)`, assert `cfg.Theme == "dracula"`, `cfg.Font == "lato"`, `cfg.URL == "https://example.com"`. Call `cfg.ValueOr("theme", "default")`, assert returns `"dracula"` (config wins). Call `cfg.ValueOr("mode", "default")`, assert returns `"default"` (fallback wins for unset field).
-   - `TestConfigIntegration_BoolFields`: Write a `kiln.yaml` with `flat-urls: true`, `disable-toc: true`. Load and verify `cfg.FlatURLs == true`, `cfg.DisableTOC == true`, `cfg.DisableLocalGraph == false`. Verify `cfg.BoolOr("flat-urls", false)` returns `true`, `cfg.BoolOr("disable-local-graph", false)` returns `false`.
-
-2. `internal/cli/init.go` — After the vault directory and welcome note are created successfully in `runInit`, also create a minimal `kiln.yaml` in the current directory (not inside the vault). The content should be:
-   ```yaml
-   # Kiln configuration file
-   # Uncomment and edit the options below to set defaults for your project.
-   # CLI flags will override these values.
-   
-   # theme: default
-   # font: inter
-   # url: ""
-   # name: "My Notes"
-   # input: ./vault
-   # output: ./public
-   # mode: default
-   # layout: default
-   # flat-urls: false
-   # disable-toc: false
-   # disable-local-graph: false
-   ```
-   Use `os.WriteFile` to write it. Check if `kiln.yaml` already exists before writing (don't overwrite). Log an info message like `"Created kiln.yaml configuration file"`.
-
-**Verify:** `go test ./internal/config/...` and `go build ./cmd/kiln/`
+**Verify:** 
+1. `go build ./...` — Ensure the whole project compiles.
+2. `go test ./...` — Ensure all existing tests pass.
 </task>
 </tasks>
