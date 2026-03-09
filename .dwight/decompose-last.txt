@@ -1,112 +1,120 @@
 -- DwightAuto decomposition output
--- Request: Is it possible to not animate on page change the `header` inside of the `<main>` tag. Also the link preview is fired everytime I change page in mobile. Link preview should be disabled in mobile and ev
--- Timestamp: Mon 09 Mar 2026 04:31:10 PM CET
+-- Request: Delete the `search-hint` from the search overlay. also add the ability to close the search overlay using esc key. add the search-hint in the button instead with a flex-between and items center. Change
+-- Timestamp: Mon 09 Mar 2026 04:44:38 PM CET
 
-The simple layout doesn't use `hx-select` or `hx-target`, so it swaps the whole body — meaning the header is outside `<main>` and also gets re-rendered. But the main concern from the user is the default layout where `#kiln-main` includes the header.
+I'll stop retrying and provide the changes as diffs you can apply manually.
 
-Now I have everything needed for the decomposition.
+---
 
-<tasks>
-<task order="1" title="Exclude header from fade animation on page change">
-**Goal**: Prevent the `<header>` inside `<main id="kiln-main">` from animating with the `kiln-fade-in` on htmx page changes, while keeping the content below it animated.
+## Change 1: `assets/search.js`
 
-**Context**: In `assets/shared.css` (lines 1088-1091), the rule `#kiln-main { animation: kiln-fade-in 200ms ease-out; }` applies a fade-in to the entire `#kiln-main` element on every htmx swap. Since `#kiln-main` contains both the `<header>` (breadcrumbs/toggles bar) and the page content, the header fades in on every navigation. The user wants only the content to animate, not the header.
+Remove the search-hint div from `createOverlay()` and add an Escape key listener:
 
-**Files to edit**:
+```diff
+--- a/assets/search.js
++++ b/assets/search.js
+@@ -116,17 +116,12 @@
+     input.placeholder = "Search...";
+     input.autocomplete = "off";
+ 
+-    var hint = document.createElement("div");
+-    hint.className = "search-hint";
+-    hint.textContent = navigator.platform.indexOf("Mac") > -1 ? "⌘K" : "Ctrl+K";
+-
+     var results = document.createElement("div");
+     results.id = "search-modal-results";
+ 
+     modal.appendChild(input);
+-    modal.appendChild(hint);
+     modal.appendChild(results);
+     overlay.appendChild(modal);
+     document.body.appendChild(overlay);
+ 
+@@ -132,6 +127,14 @@
+       if (e.target === overlay) hideOverlay();
+     });
+ 
++    document.addEventListener("keydown", function (e) {
++      if (e.key === "Escape") {
++        var ov = document.getElementById("search-overlay");
++        if (ov && !ov.classList.contains("hidden")) {
++          hideOverlay();
++        }
++      }
++    });
++
+     return overlay;
+   }
+```
 
-1. **`assets/shared.css`** — Change the animation target from `#kiln-main` to `#kiln-main > :not(header)` (or use a wrapper). The cleanest approach: remove the animation from `#kiln-main` itself and instead apply it to all direct children of `#kiln-main` except `header`:
-   - Remove or replace the existing rule at lines 1088-1091:
-     ```css
-     /* Page content fade on htmx swap */
-     #kiln-main {
-       animation: kiln-fade-in 200ms ease-out;
-     }
-     ```
-   - Replace with:
-     ```css
-     /* Page content fade on htmx swap — skip header */
-     #kiln-main > *:not(header) {
-       animation: kiln-fade-in 200ms ease-out;
-     }
-     ```
+## Change 2: `assets/shared.css`
 
-This selector targets all direct children of `#kiln-main` except the `<header>`, so `@ContentCanvas`, `@ContentNote`, `@ContentGraph`, etc. will still fade in but the header (breadcrumbs bar) will not animate on page change.
+Remove `.search-hint` CSS and add scrollbar styles to `#search-modal-results`:
 
-**Verify**: Build the project with `go build ./...` to confirm no build errors. The CSS change is purely client-side so there are no Go tests to run, but the build should succeed.
-</task>
+```diff
+--- a/assets/shared.css
++++ b/assets/shared.css
+@@ -940,15 +940,24 @@
+ }
+ #search-modal-results {
+   flex: 1;
+   overflow-y: auto;
++  scrollbar-width: thin;
++  scrollbar-color: var(--sidebar-border) transparent;
++}
++#search-modal-results::-webkit-scrollbar {
++  width: 8px;
++}
++#search-modal-results::-webkit-scrollbar-track {
++  background: transparent;
++}
++#search-modal-results::-webkit-scrollbar-thumb {
++  background-color: var(--sidebar-border);
++  border-radius: 4px;
++}
++#search-modal-results::-webkit-scrollbar-thumb:hover {
++  background-color: var(--accent-color);
+ }
+-.search-hint {
+-  text-align: right;
+-  padding: 0.25rem 1rem;
+-  font-size: 0.7rem;
+-  color: var(--color-comment, #888);
+-  border-bottom: 1px solid var(--sidebar-border);
+-}
+```
 
-<task order="2" title="Disable link preview on mobile and hide on page change" depends_on="1">
-**Goal**: 
-1. Link preview should be completely disabled on mobile devices (viewport width < 1024px or no hover capability).
-2. Any active link preview tooltip should be hidden whenever the user navigates to a new page (htmx swap).
+## Change 3: `internal/templates/layout_default.templ`
 
-**Context**: In `assets/link_preview.js`, the `initLinkPreview` function (line 170) checks for mobile only on the first invocation (when `initialized` is false). On subsequent htmx navigations, `initAll()` calls `initLinkPreview()` which sees `initialized = true` and skips the guard, calling `bindLinks()` directly. This means on mobile, after the first page load (where it correctly skips), subsequent htmx swaps will still bind link listeners because `initialized` remains `false` and the guard prevents initialization — but new links won't get bound either, so the real problem is that the tooltip may remain visible across navigations. Additionally, the user reports link preview fires on mobile during page changes.
+Restructure the search button to have `justify-between` and add the keyboard shortcut hint:
 
-**Files to edit**:
+```diff
+--- a/internal/templates/layout_default.templ
++++ b/internal/templates/layout_default.templ
+@@ -67,11 +67,16 @@
+ 				<button
+ 					id="search-button"
+ 					onclick="if(window.openSearchModal)window.openSearchModal()"
+-					class="w-full p-2 rounded border border-sidebar-border text-sm text-left cursor-pointer bg-transparent hover:bg-hover transition-colors flex items-center gap-2"
++					class="w-full p-2 rounded border border-sidebar-border text-sm text-left cursor-pointer bg-transparent hover:bg-hover transition-colors flex items-center justify-between"
+ 				>
+-					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 opacity-60"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+-					<span class="opacity-60">Search notes...</span>
++					<span class="flex items-center gap-2">
++						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 opacity-60"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
++						<span class="opacity-60">Search notes...</span>
++					</span>
++					<span class="opacity-40 text-xs" id="search-hint-key"></span>
+ 				</button>
++				<script>
++					document.getElementById("search-hint-key").textContent = navigator.platform.indexOf("Mac") > -1 ? "\u2318K" : "Ctrl+K";
++				</script>
+```
 
-1. **`assets/link_preview.js`** — Make two changes:
+## After applying changes
 
-   **Change A — Always check for mobile/touch before binding links**:
-   Move the mobile/touch guard so it runs on every call, not just the first. Change the `initLinkPreview` function (starting at line 170) from:
-   ```js
-   window.initLinkPreview = function () {
-     if (initialized) {
-       bindLinks();
-       return;
-     }
-
-     if (window.innerWidth < 1024) return;
-     if (!window.matchMedia("(hover: hover)").matches) return;
-
-     initialized = true;
-
-     getTooltip();
-     bindLinks();
-
-     window.addEventListener("scroll", onScroll, true);
-     document.addEventListener("keydown", onKeydown);
-     document.addEventListener("click", onClickOutside);
-   };
-   ```
-   
-   To:
-   ```js
-   window.initLinkPreview = function () {
-     if (window.innerWidth < 1024 || !window.matchMedia("(hover: hover)").matches) {
-       hideTooltip();
-       return;
-     }
-
-     if (initialized) {
-       bindLinks();
-       return;
-     }
-
-     initialized = true;
-
-     getTooltip();
-     bindLinks();
-
-     window.addEventListener("scroll", onScroll, true);
-     document.addEventListener("keydown", onKeydown);
-     document.addEventListener("click", onClickOutside);
-   };
-   ```
-
-   This ensures that on every htmx navigation, if the viewport is mobile-sized (or there's no hover capability), the function exits early AND hides any visible tooltip. On desktop, it proceeds as before.
-
-   **Change B — Hide tooltip on htmx beforeSwap**:
-   Add an event listener at the bottom of the IIFE (before the closing `})();`) to hide the tooltip whenever htmx is about to swap content:
-   ```js
-   document.addEventListener("htmx:beforeSwap", function () {
-     hideTooltip();
-     clearTimeout(hoverTimer);
-     clearTimeout(leaveTimer);
-   });
-   ```
-
-   This ensures that any visible link preview tooltip is immediately hidden when the user clicks a link to navigate, preventing it from persisting across page transitions.
-
-**Verify**: Build the project with `go build ./...` to confirm no build errors. The JS changes are client-side only.
-</task>
-</tasks>
+Run:
+```bash
+go generate ./internal/templates/
+go build ./...
+```
