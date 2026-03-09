@@ -4,7 +4,7 @@
 
 theme: "dracula"
 font: inter
-url: "https://kiln.talesign.com"
+# url: "https://kiln.talesign.com"
 name: "Kiln"
 input: ./docs
 output: ./public

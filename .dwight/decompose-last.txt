@@ -1,213 +1,114 @@
 -- DwightAuto decomposition output
--- Request: Implement the Link preview feature. The idea is that when you hover over a link that is internal of the site it should create an overlay of said content to preview the content inside. This feature nee
--- Timestamp: Mon 09 Mar 2026 11:42:32 AM CET
+-- Request: The link preview feature works, but it has a couple of problems. The first is that when I hover over a link and scroll the preview disappears. The second is that the preview doesn't have the same styl
+-- Timestamp: Mon 09 Mar 2026 02:07:43 PM CET
 
-I now have a complete understanding of the architecture. Here's my decomposition:
+Now I have a clear picture. Let me analyze the two issues:
 
----
+1. **Scroll hides preview**: Line 175 shows `window.addEventListener("scroll", onScroll, true)` which calls `hideTooltip()` on any scroll event. This uses `position: absolute` positioning which is relative to the document — so when you scroll, the tooltip stays at its original document position but the viewport moves. The fix should either reposition the tooltip on scroll or use `position: fixed` instead.
 
-**Design Summary:**
-
-The link preview feature requires:
-1. A new JavaScript file (`link_preview.js`) that handles hover events on `a.internal-link` elements on desktop only
-2. On hover, fetch the target page, extract the content from `#kiln-main`, and display it in a floating tooltip
-3. CSS styles for the preview tooltip in `shared.css`
-4. Wire the new JS file into the asset embedding pipeline (`assets.go`), layout loading (`layouts.go`), layout templates (`.templ`), and the build output step (`builder_default.go`)
-
-The approach mirrors exactly how `search.js` is integrated: embedded asset → `text/template` parsed → written to output → `<script>` tag in layout templates.
+2. **Preview lacks page styles**: The tooltip injects raw `innerHTML` from `#content .content`, but the tooltip div doesn't have the `.content` class, so none of the `.content *` CSS rules from `shared.css` apply to the preview content.
 
 <tasks>
-<task order="1" title="Create link_preview.js asset">
-Create the link preview JavaScript file at `/home/oliviero/Workspace/kiln/assets/link_preview.js`.
+<task order="1" title="Fix scroll-dismissal and add content styling class">
+Fix two issues in the link preview tooltip in `assets/link_preview.js` and `assets/shared.css`:
 
-This file implements the full link preview feature. It should follow the exact same patterns as the existing JS files (`search.js`, `default_app.js`):
-- Uses `var BASE_URL = "{{.BaseURL}}";` for the template variable (this gets replaced at build time, matching the pattern in `search.js`)
-- Exposes `window.initLinkPreview` as an idempotent function
-- Desktop-only: check `window.innerWidth >= 1024` or use `window.matchMedia("(hover: hover)")` — if the device doesn't support hover, skip initialization entirely
-- Targets links with `a.internal-link` CSS class (this is the class set by the wikilink renderer in `internal/obsidian/markdown/wikilinks.go:452`)
+**Problem 1 — Scroll dismisses the tooltip:**
+Currently, line 175 of `assets/link_preview.js` registers a scroll listener that calls `hideTooltip()` on ANY scroll event (including scrolling inside the tooltip itself, due to `true` capture). The tooltip uses `position: absolute` (document-relative), so when the user scrolls the page, the tooltip drifts away from the anchor link.
 
-Behavior:
-1. On `mouseenter` of an `a.internal-link`, start a 300ms delay timer
-2. On `mouseleave`, cancel the timer and hide the preview (with a small 100ms grace period so the user can move into the preview tooltip)
-3. When the timer fires, fetch the href URL, parse the response HTML, extract the content from the `#content .content` element (this is the main prose div in both layouts)
-4. Display the extracted content in a floating tooltip positioned near the hovered link
-5. Cache fetched pages in a `Map` so repeat hovers don't re-fetch
-6. The preview tooltip should:
-   - Have id `link-preview-tooltip`
-   - Be created once and reused (same pattern as lightbox in `default_app.js:261-277`)
-   - Be positioned absolutely near the link (below if space, above if near bottom)
-   - Have max-width 400px, max-height 300px, overflow-y auto
-   - Support the preview itself being hovered (grace period on mouseleave)
-   - Close on scroll, on Escape key, and on clicking outside
-7. Handle edge cases: skip links with `target="_blank"`, skip anchor-only links (`#...`), skip the currently-active page URL
+Fix: Change the tooltip from `position: absolute` to `position: fixed` and update `positionTooltip()` to use viewport-relative coordinates (i.e., use `getBoundingClientRect()` directly without adding `scrollX`/`scrollY`). Then replace the blanket scroll-hide behavior with a smarter approach: instead of hiding on every scroll, **reposition** the tooltip to follow the anchor link on scroll. Also, hide the tooltip only if the anchor link scrolls out of the viewport.
 
-Add the feature pragma on line 1:
-```javascript
-// @feature:layouts Client-side link preview on hover for internal links (desktop only).
-```
+Specific changes to `assets/link_preview.js`:
 
-Verify: The file exists and has valid JavaScript syntax.
-```
-node --check /home/oliviero/Workspace/kiln/assets/link_preview.js
-```
-</task>
+1. In `getTooltip()` (line 20), change `el.style.position = "absolute"` to `el.style.position = "fixed"`.
 
-<task order="2" title="Add link preview CSS to shared.css">
-Add link preview tooltip styles to `/home/oliviero/Workspace/kiln/assets/shared.css`.
+2. Rewrite `positionTooltip(tooltip, anchor)` to use viewport-relative coordinates:
+   - Use `rect = anchor.getBoundingClientRect()` directly (no scrollX/scrollY offsets).
+   - Calculate `top` as: if space below (`window.innerHeight - rect.bottom`) >= `TOOLTIP_MAX_HEIGHT + 8`, use `rect.bottom + 8`; else use `rect.top - TOOLTIP_MAX_HEIGHT - 8`.
+   - Calculate `left` as: `rect.left`, clamped to `[8, window.innerWidth - TOOLTIP_MAX_WIDTH - 8]`.
+   - Set `tooltip.style.top` and `tooltip.style.left` in px.
 
-This file already exists and contains shared styles (canvas styles, markdown styles, TOC styles, scrollbar styles, lightbox styles). The feature pragma is already on line 1: `/* @feature:themes */`.
+3. Add a module-level variable `var activeAnchor = null;` (near line 10, alongside `hoverTimer`, `leaveTimer`, etc.).
 
-Append the following CSS block at the end of `shared.css` (after all existing rules). The styles should use the project's existing CSS custom properties for theming:
+4. In `onLinkEnter()`, after `positionTooltip(tooltip, link)` and `tooltip.style.display = "block"`, set `activeAnchor = link;`.
 
+5. In `hideTooltip()`, set `activeAnchor = null;`.
+
+6. Replace the `onScroll` function (line 144-146) with a new version:
+   ```javascript
+   function onScroll() {
+     if (!activeAnchor) return;
+     var tooltip = document.getElementById("link-preview-tooltip");
+     if (!tooltip || tooltip.style.display === "none") return;
+     var rect = activeAnchor.getBoundingClientRect();
+     if (rect.bottom < 0 || rect.top > window.innerHeight) {
+       hideTooltip();
+       return;
+     }
+     positionTooltip(tooltip, activeAnchor);
+   }
+   ```
+   This repositions the tooltip as the user scrolls, and only hides it when the anchor scrolls out of view.
+
+**Problem 2 — Preview content lacks page styles:**
+The fetched content is injected into `#link-preview-tooltip` as raw HTML from `#content .content`. But the tooltip div doesn't have the `.content` class, so all the `.content *` CSS rules from `shared.css` (headings, lists, tables, blockquotes, callouts, code blocks, links, images, etc.) don't apply.
+
+Fix in `assets/link_preview.js`:
+1. In `getTooltip()`, after creating the element, add `el.classList.add("content");` so the tooltip gets the `.content` class.
+
+Fix in `assets/shared.css`:
+The `.content` class in shared.css has `max-width: 65ch` and `margin: 0 auto` (lines 453-457) which would fight with the tooltip's max-width. Add an override rule inside the existing `#link-preview-tooltip` block (lines 976-994):
+
+Add these rules to the `#link-preview-tooltip` section (after line 993):
 ```css
-/* LINK PREVIEW */
-#link-preview-tooltip {
-  position: absolute;
-  z-index: 9000;
+#link-preview-tooltip.content {
   max-width: 400px;
-  max-height: 300px;
-  overflow-y: auto;
-  background: var(--bg-color);
-  border: 1px solid var(--sidebar-border);
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  font-family: var(--font-main);
-  color: var(--text-color);
-  font-size: 0.875rem;
-  line-height: 1.5;
-  scrollbar-width: thin;
-  scrollbar-color: var(--sidebar-border) transparent;
-  pointer-events: auto;
+  margin: 0;
 }
-
-#link-preview-tooltip.hidden {
-  display: none;
-}
-
-#link-preview-tooltip img {
+#link-preview-tooltip .content {
   max-width: 100%;
-  height: auto;
+  margin: 0;
 }
+```
 
-#link-preview-tooltip h1,
-#link-preview-tooltip h2,
-#link-preview-tooltip h3 {
+Also scale down headings inside the tooltip to fit the smaller viewport. Add after the existing `#link-preview-tooltip h1, h2, h3` rules (after line 1007):
+```css
+#link-preview-tooltip h1 {
+  font-size: 1.25em;
   margin-top: 0.5em;
-  margin-bottom: 0.25em;
+  border-bottom: none;
+  padding-bottom: 0;
 }
-
-#link-preview-tooltip :first-child {
-  margin-top: 0;
+#link-preview-tooltip h2 {
+  font-size: 1.1em;
+  margin-top: 0.5em;
+  border-bottom: none;
+  padding-bottom: 0;
 }
-```
-
-Verify: The file still has valid CSS (check it wasn't corrupted).
-```
-grep -c "LINK PREVIEW" /home/oliviero/Workspace/kiln/assets/shared.css
-```
-This should output `1`.
-</task>
-
-<task order="3" title="Wire link_preview.js into asset pipeline">
-Wire the new `link_preview.js` into the Go build pipeline. This requires editing 4 files to mirror exactly how `search.js` is integrated.
-
-**1. Edit `/home/oliviero/Workspace/kiln/assets/assets.go`:**
-Add `//go:embed link_preview.js` before the `var TemplateFS embed.FS` line. Place it right after the existing `//go:embed search.js` line. The file currently has these embed directives ending with:
-```go
-//go:embed simple_app.js
-//go:embed search.js
-var TemplateFS embed.FS
-```
-Add `//go:embed link_preview.js` between `//go:embed search.js` and `var TemplateFS embed.FS`.
-
-**2. Edit `/home/oliviero/Workspace/kiln/internal/builder/layouts.go`:**
-- Add a `JsLinkPreviewTemplate *textTemplate.Template` field to the `Layout` struct (line ~140-153). Place it after `JsSearchTemplate`.
-- In the `loadLayout()` method, add a block to load `link_preview.js` from `assets.TemplateFS`, following the exact same pattern as the search JS loading (lines 98-107). After the search JS block, add:
-```go
-jsLinkPreviewContent, err := assets.TemplateFS.ReadFile("link_preview.js")
-if err != nil {
-    return err
+#link-preview-tooltip h3 {
+  font-size: 1em;
+  margin-top: 0.5em;
 }
-tmplLinkPreviewJS, err := textTemplate.New("js").Parse(string(jsLinkPreviewContent))
-if err != nil {
-    return err
+#link-preview-tooltip pre,
+#link-preview-tooltip .chroma {
+  font-size: 0.8rem;
+  padding: 0.5em;
 }
-l.JsLinkPreviewTemplate = tmplLinkPreviewJS
-```
-
-**3. Edit `/home/oliviero/Workspace/kiln/internal/builder/builder_default.go`:**
-After the search JS generation block (around lines 325-334 where `search.js` is written), add an identical block for `link_preview.js`:
-```go
-linkPreviewJsOut, err := os.Create(filepath.Join(OutputDir, "link-preview.js"))
-if err != nil {
-    log.Error("Couldn't create 'link-preview.js'", "error", err)
+#link-preview-tooltip table {
+  font-size: 0.8rem;
 }
-defer linkPreviewJsOut.Close()
-err = site.Layout.JsLinkPreviewTemplate.Execute(linkPreviewJsOut, site)
-if err != nil {
-    log.Error("Couldn't execute template for 'link-preview.js'", "error", err)
+#link-preview-tooltip blockquote:not(.callout) {
+  margin: 0.5em 0;
+}
+#link-preview-tooltip .callout {
+  margin: 0.5em 0;
+}
+#link-preview-tooltip p {
+  margin-bottom: 0.5rem;
 }
 ```
 
-Verify: Build compiles successfully.
-```
-cd /home/oliviero/Workspace/kiln && go build ./...
-```
-</task>
+These rules ensure the tooltip inherits all `.content` styling (links, lists, callouts, code, tables, etc.) while scaling down headings, code blocks, and spacing to fit the smaller tooltip viewport.
 
-<task order="4" title="Add script tag to templ layouts">
-Add the `<script>` tag for `link-preview.js` to both layout templates so browsers load it.
-
-**1. Edit `/home/oliviero/Workspace/kiln/internal/templates/layout_default.templ`:**
-After line 32 (`<script defer src={ data.Site.BaseURL + "/search.js" }></script>`), add:
-```
-<script defer src={ data.Site.BaseURL + "/link-preview.js" }></script>
-```
-
-**2. Edit `/home/oliviero/Workspace/kiln/internal/templates/layout_simple.templ`:**
-After line 32 (`<script defer src={ data.Site.BaseURL + "/search.js" }></script>`), add:
-```
-<script defer src={ data.Site.BaseURL + "/link-preview.js" }></script>
-```
-
-**3. Regenerate the templ Go files:**
-Run the templ code generator to produce the `_templ.go` files from the modified `.templ` sources:
-```
-cd /home/oliviero/Workspace/kiln && go run github.com/a-h/templ/cmd/templ@v0.3.1001 generate
-```
-
-If the `templ generate` command is not available or fails, check how the project generates templ files (look at `go.mod` for templ version, or check for a Makefile/build script). The templ version in go.mod is `v0.3.1001`.
-
-**4. Also add `window.initLinkPreview()` to the `initAll()` function in both app JS files:**
-
-In `/home/oliviero/Workspace/kiln/assets/default_app.js`, inside the `window.initAll` function (around line 348-365), add `window.initLinkPreview();` call. Place it after `window.initLightbox();` (line 356). The call should be guarded: `if (window.initLinkPreview) window.initLinkPreview();`
-
-In `/home/oliviero/Workspace/kiln/assets/simple_app.js`, inside `window.initAll` (around line 299-314), add the same guarded call after `window.initLightbox();` (line 306): `if (window.initLinkPreview) window.initLinkPreview();`
-
-Verify: Build compiles and templ files are regenerated.
-```
-cd /home/oliviero/Workspace/kiln && go build ./...
-```
-</task>
-
-<task order="5" title="Test end-to-end with go test">
-Run the existing test suite to make sure nothing is broken by the changes:
-
-```
-cd /home/oliviero/Workspace/kiln && go test ./...
-```
-
-If any tests fail, investigate and fix the issue. Common problems:
-- Missing embed directive: check `assets/assets.go` has `//go:embed link_preview.js`
-- Templ regeneration didn't run: re-run `templ generate`
-- Template parse errors: check `link_preview.js` doesn't have stray `{{` outside the `{{.BaseURL}}` placeholder
-
-Also verify the JavaScript file is syntactically valid:
-```
-node --check /home/oliviero/Workspace/kiln/assets/link_preview.js
-```
-
-If all tests pass and JS is valid, the feature is complete.
+**Verify:** Since this is client-side JS/CSS with no Go tests, verify by running `go build ./...` to ensure the project still compiles (the JS/CSS are embedded at build time).
 </task>
 </tasks>
