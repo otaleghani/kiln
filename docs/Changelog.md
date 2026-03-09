@@ -6,6 +6,9 @@ description: "Complete changelog for Kiln, the Obsidian vault to static site gen
 
 Every release of Kiln is listed below with new features, bug fixes, and improvements. Check the [[Roadmap]] for upcoming plans, or visit [[Installation]] to get the latest version.
 
+## v0.8.0
+- ADDED: Structure data
+
 ## v0.3.13
 - FIX: mobile sidebar was by default open on mobile
 
