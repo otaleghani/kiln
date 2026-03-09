@@ -51,4 +51,5 @@ import "embed"
 //go:embed simple_style.css
 //go:embed simple_app.js
 //go:embed search.js
+//go:embed link_preview.js
 var TemplateFS embed.FS
