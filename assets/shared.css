@@ -1062,6 +1062,12 @@ details.callout[open] > summary .callout-title::after {
   margin-bottom: 0.5rem;
 }
 
+/* Navbar folder height animation */
+#left-sidebar details > ul,
+#menu-wrapper details > ul {
+  overflow: hidden;
+}
+
 /* === ANIMATIONS === */
 
 @keyframes kiln-fade-in {

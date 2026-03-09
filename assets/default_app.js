@@ -351,6 +351,47 @@ window.initLightbox = function () {
   });
 };
 
+window.initNavFolderAnimation = function () {
+  var containers = document.querySelectorAll('#left-sidebar details, #menu-wrapper details');
+  containers.forEach(function (details) {
+    if (details.dataset.animBound) return;
+    details.dataset.animBound = '1';
+    var summary = details.querySelector('summary');
+    var content = details.querySelector('ul');
+    if (!summary || !content) return;
+    summary.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (details.open) {
+        var height = content.scrollHeight;
+        content.style.height = height + 'px';
+        requestAnimationFrame(function () {
+          content.style.transition = 'height 200ms ease-out';
+          content.style.height = '0px';
+          content.addEventListener('transitionend', function handler() {
+            content.removeEventListener('transitionend', handler);
+            details.open = false;
+            content.style.height = '';
+            content.style.transition = '';
+          }, { once: true });
+        });
+      } else {
+        details.open = true;
+        var height = content.scrollHeight;
+        content.style.height = '0px';
+        requestAnimationFrame(function () {
+          content.style.transition = 'height 200ms ease-out';
+          content.style.height = height + 'px';
+          content.addEventListener('transitionend', function handler() {
+            content.removeEventListener('transitionend', handler);
+            content.style.height = '';
+            content.style.transition = '';
+          }, { once: true });
+        });
+      }
+    });
+  });
+};
+
 // Calls every init function
 window.initAll = function () {
   window.initThemeToggle();
@@ -359,6 +400,7 @@ window.initAll = function () {
   }
   window.setupSidebarDelegation();
   window.highlightSidebarLink();
+  window.initNavFolderAnimation();
   window.addCopyButtons();
   window.initLightbox();
   if (window.initLinkPreview) window.initLinkPreview();
