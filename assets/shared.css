@@ -942,6 +942,21 @@ details.callout[open] > summary .callout-title::after {
 #search-modal-results {
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-border) transparent;
+}
+#search-modal-results::-webkit-scrollbar {
+  width: 8px;
+}
+#search-modal-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+#search-modal-results::-webkit-scrollbar-thumb {
+  background-color: var(--sidebar-border);
+  border-radius: 4px;
+}
+#search-modal-results::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-color);
 }
 .search-result-item {
   display: block;
@@ -966,13 +981,6 @@ details.callout[open] > summary .callout-title::after {
   color: var(--color-comment, #888);
   font-size: 0.75rem;
   margin-top: 0.125rem;
-}
-.search-hint {
-  text-align: right;
-  padding: 0.25rem 1rem;
-  font-size: 0.7rem;
-  color: var(--color-comment, #888);
-  border-bottom: 1px solid var(--sidebar-border);
 }
 .search-empty {
   padding: 2rem;
