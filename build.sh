@@ -30,11 +30,12 @@ chmod +x ./kiln
 # Run the build
 # Adjust the flags as needed for your site
 echo "Building site..."
-./kiln generate \
-  --input "$INPUT_DIR" \
-  --output ./public \
-  --name "$SITE_NAME" \
-  --url "$DEPLOYMENT_URL"
+./kiln generate
+# ./kiln generate \
+  # --input "$INPUT_DIR" \
+  # --output ./public \
+  # --name "$SITE_NAME" \
+  # --url "$DEPLOYMENT_URL"
 
 # Note: CF_PAGES_URL is a magic variable provided automatically by Cloudflare
 

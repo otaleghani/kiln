@@ -254,3 +254,7 @@ templ Head(data *PageData) {
 templ ThemeStyle(theme *ThemeData) {
 	@templ.Raw(buildThemeCSS(theme))
 }
+
+templ StructuredData(data *PageData) {
+	@templ.Raw(buildStructuredDataJSON(data))
+}

@@ -6,6 +6,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/otaleghani/kiln/internal/jsonld"
 )
 
 // FormatDate formats a time.Time as "Jan 02, 2006".
@@ -80,6 +82,52 @@ func buildThemeCSS(theme *ThemeData) string {
 	b.WriteString("}\n}\n")
 
 	b.WriteString("</style>")
+	return b.String()
+}
+
+// buildStructuredDataJSON returns HTML script tags containing JSON-LD
+// structured data for articles and breadcrumbs.
+func buildStructuredDataJSON(data *PageData) string {
+	var articleJSON string
+	if data.IsNote && data.File != nil {
+		title := toStr(data.Frontmatter["title"])
+		if title == "" {
+			title = data.File.Name
+		}
+		params := jsonld.ArticleParams{
+			Title:        title,
+			Description:  toStr(data.Frontmatter["description"]),
+			Author:       toStr(data.Frontmatter["author"]),
+			BaseURL:      data.Site.BaseURL,
+			WebPath:      data.File.WebPath,
+			SiteName:     data.Site.SiteName,
+			DateCreated:  data.File.Created,
+			DateModified: data.File.Modified,
+			ImageURL:     ogImageURL(data.Site.BaseURL, data.File.WebPath, data.File.Name, "og", data.Site.FlatURLs),
+		}
+		articleJSON = jsonld.BuildArticleJSON(params)
+	}
+
+	items := make([]jsonld.BreadcrumbItem, len(data.Breadcrumbs))
+	for i, c := range data.Breadcrumbs {
+		items[i] = jsonld.BreadcrumbItem{Label: c.Label, URL: c.Url}
+	}
+	breadcrumbJSON := jsonld.BuildBreadcrumbJSON(data.Site.BaseURL, items)
+
+	var b strings.Builder
+	if articleJSON != "" {
+		b.WriteString(`<script type="application/ld+json">`)
+		b.WriteString(articleJSON)
+		b.WriteString(`</script>`)
+	}
+	if breadcrumbJSON != "" {
+		if b.Len() > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(`<script type="application/ld+json">`)
+		b.WriteString(breadcrumbJSON)
+		b.WriteString(`</script>`)
+	}
 	return b.String()
 }
 

@@ -24,6 +24,7 @@ templ DefaultLayout(data *PageData) {
 			</script>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			@Head(data)
+			@StructuredData(data)
 			<link rel="stylesheet" href={ data.Site.BaseURL + "/style.css" }/>
 			<link rel="stylesheet" href={ data.Site.BaseURL + "/shared.css" }/>
 			@ThemeStyle(data.Site.Theme)

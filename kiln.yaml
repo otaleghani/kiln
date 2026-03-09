@@ -1,0 +1,15 @@
+# Kiln configuration file
+# Uncomment and edit the options below to set defaults for your project.
+# CLI flags will override these values.
+
+theme: "dracula"
+font: inter
+url: "https://kiln.talesign.com"
+name: "Kiln"
+input: ./docs
+output: ./public
+mode: default
+layout: default
+# flat-urls: false
+# disable-toc: false
+# disable-local-graph: false
