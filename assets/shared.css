@@ -1085,8 +1085,8 @@ details.callout[open] > summary .callout-title::after {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Page content fade on htmx swap */
-#kiln-main {
+/* Page content fade on htmx swap — skip header */
+#kiln-main > *:not(header) {
   animation: kiln-fade-in 200ms ease-out;
 }
 
