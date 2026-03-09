@@ -156,6 +156,25 @@ func (o *Obsidian) NewFile(path string) (*File, error) {
 		if err := f.processMarkdown(); err != nil {
 			return nil, fmt.Errorf("failed to process markdown for %s: %w", fullName, err)
 		}
+
+		title := f.Name
+		if t, ok := f.Frontmatter["title"]; ok {
+			if s, ok := t.(string); ok && s != "" {
+				title = s
+			}
+		}
+		var desc string
+		if d, ok := f.Frontmatter["description"]; ok {
+			if s, ok := d.(string); ok {
+				desc = s
+			}
+		}
+		o.Vault.RSS = append(o.Vault.RSS, RSSEntry{
+			Title:       title,
+			Description: desc,
+			WebPath:     webPath,
+			PubDate:     birthTime,
+		})
 	}
 
 	return f, nil
@@ -356,6 +375,7 @@ func (o *Obsidian) Scan() error {
 		Sitemap: &Sitemap{
 			Path: filepath.Join(o.BaseURL, "/sitemap.xml"),
 		},
+		RSS: []RSSEntry{},
 	}
 
 	filepath.WalkDir(o.InputDir, func(path string, info fs.DirEntry, err error) error {
@@ -696,6 +716,14 @@ func (f Folder) LogValue() slog.Value {
 	)
 }
 
+// RSSEntry holds the data collected during vault scanning for a single RSS item.
+type RSSEntry struct {
+	Title       string
+	Description string
+	WebPath     string
+	PubDate     time.Time
+}
+
 // Vault represents the vault scan
 type Vault struct {
 	FileIndex  map[string][]*File // Used to resolve wikilinks. "Link" => []Candidates
@@ -703,6 +731,7 @@ type Vault struct {
 	GraphNodes []GraphNode        // Lists of all pages for graph
 	Files      []*File            // List of all the files found in the vault
 	Sitemap    *Sitemap           // Sitemap entity
+	RSS        []RSSEntry         // RSS feed entries collected during scan
 	Folders    map[string]*Folder // Map of all the folder -> Name of folder -> Folder
 	Tags       map[string]*Tag    //
 }
