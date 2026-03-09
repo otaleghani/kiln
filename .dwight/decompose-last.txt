@@ -1,141 +1,213 @@
 -- DwightAuto decomposition output
--- Request: - [ ] **Structured Data:** Automatically generate JSON-LD schema markup for articles and breadcrumbs to improve search engine visibility.
--- Timestamp: Mon 09 Mar 2026 09:24:25 AM CET
+-- Request: Implement the Link preview feature. The idea is that when you hover over a link that is internal of the site it should create an overlay of said content to preview the content inside. This feature nee
+-- Timestamp: Mon 09 Mar 2026 11:42:32 AM CET
 
-Now I have complete knowledge of the codebase. Here's my decomposition:
+I now have a complete understanding of the architecture. Here's my decomposition:
+
+---
+
+**Design Summary:**
+
+The link preview feature requires:
+1. A new JavaScript file (`link_preview.js`) that handles hover events on `a.internal-link` elements on desktop only
+2. On hover, fetch the target page, extract the content from `#kiln-main`, and display it in a floating tooltip
+3. CSS styles for the preview tooltip in `shared.css`
+4. Wire the new JS file into the asset embedding pipeline (`assets.go`), layout loading (`layouts.go`), layout templates (`.templ`), and the build output step (`builder_default.go`)
+
+The approach mirrors exactly how `search.js` is integrated: embedded asset → `text/template` parsed → written to output → `<script>` tag in layout templates.
 
 <tasks>
-<task order="1" title="JSON-LD generation functions with tests">
-Create a new Go file `internal/jsonld/jsonld.go` with pure functions that generate JSON-LD structured data for Article and BreadcrumbList schemas. Write tests first in `internal/jsonld/jsonld_test.go`.
+<task order="1" title="Create link_preview.js asset">
+Create the link preview JavaScript file at `/home/oliviero/Workspace/kiln/assets/link_preview.js`.
 
-**Context:** This project is a static site generator (kiln) that converts Obsidian vaults to HTML. Pages have frontmatter metadata (`title`, `description`, `author`, `date`), breadcrumbs (`[]obsidian.Breadcrumb` with `Label` and `Url` fields), and file metadata (`Created`, `Modified` time.Time fields, `WebPath`, `Name`). The site config has `BaseURL` and `SiteName` strings.
+This file implements the full link preview feature. It should follow the exact same patterns as the existing JS files (`search.js`, `default_app.js`):
+- Uses `var BASE_URL = "{{.BaseURL}}";` for the template variable (this gets replaced at build time, matching the pattern in `search.js`)
+- Exposes `window.initLinkPreview` as an idempotent function
+- Desktop-only: check `window.innerWidth >= 1024` or use `window.matchMedia("(hover: hover)")` — if the device doesn't support hover, skip initialization entirely
+- Targets links with `a.internal-link` CSS class (this is the class set by the wikilink renderer in `internal/obsidian/markdown/wikilinks.go:452`)
 
-**Files to create:**
-1. `internal/jsonld/jsonld_test.go` — Write tests FIRST
-2. `internal/jsonld/jsonld.go` — Implementation
+Behavior:
+1. On `mouseenter` of an `a.internal-link`, start a 300ms delay timer
+2. On `mouseleave`, cancel the timer and hide the preview (with a small 100ms grace period so the user can move into the preview tooltip)
+3. When the timer fires, fetch the href URL, parse the response HTML, extract the content from the `#content .content` element (this is the main prose div in both layouts)
+4. Display the extracted content in a floating tooltip positioned near the hovered link
+5. Cache fetched pages in a `Map` so repeat hovers don't re-fetch
+6. The preview tooltip should:
+   - Have id `link-preview-tooltip`
+   - Be created once and reused (same pattern as lightbox in `default_app.js:261-277`)
+   - Be positioned absolutely near the link (below if space, above if near bottom)
+   - Have max-width 400px, max-height 300px, overflow-y auto
+   - Support the preview itself being hovered (grace period on mouseleave)
+   - Close on scroll, on Escape key, and on clicking outside
+7. Handle edge cases: skip links with `target="_blank"`, skip anchor-only links (`#...`), skip the currently-active page URL
 
-**Add `// @feature:jsonld` pragma on line 1 of both files.**
+Add the feature pragma on line 1:
+```javascript
+// @feature:layouts Client-side link preview on hover for internal links (desktop only).
+```
 
-**Types and functions to implement in `jsonld.go`:**
+Verify: The file exists and has valid JavaScript syntax.
+```
+node --check /home/oliviero/Workspace/kiln/assets/link_preview.js
+```
+</task>
 
+<task order="2" title="Add link preview CSS to shared.css">
+Add link preview tooltip styles to `/home/oliviero/Workspace/kiln/assets/shared.css`.
+
+This file already exists and contains shared styles (canvas styles, markdown styles, TOC styles, scrollbar styles, lightbox styles). The feature pragma is already on line 1: `/* @feature:themes */`.
+
+Append the following CSS block at the end of `shared.css` (after all existing rules). The styles should use the project's existing CSS custom properties for theming:
+
+```css
+/* LINK PREVIEW */
+#link-preview-tooltip {
+  position: absolute;
+  z-index: 9000;
+  max-width: 400px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--bg-color);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  font-family: var(--font-main);
+  color: var(--text-color);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-border) transparent;
+  pointer-events: auto;
+}
+
+#link-preview-tooltip.hidden {
+  display: none;
+}
+
+#link-preview-tooltip img {
+  max-width: 100%;
+  height: auto;
+}
+
+#link-preview-tooltip h1,
+#link-preview-tooltip h2,
+#link-preview-tooltip h3 {
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+}
+
+#link-preview-tooltip :first-child {
+  margin-top: 0;
+}
+```
+
+Verify: The file still has valid CSS (check it wasn't corrupted).
+```
+grep -c "LINK PREVIEW" /home/oliviero/Workspace/kiln/assets/shared.css
+```
+This should output `1`.
+</task>
+
+<task order="3" title="Wire link_preview.js into asset pipeline">
+Wire the new `link_preview.js` into the Go build pipeline. This requires editing 4 files to mirror exactly how `search.js` is integrated.
+
+**1. Edit `/home/oliviero/Workspace/kiln/assets/assets.go`:**
+Add `//go:embed link_preview.js` before the `var TemplateFS embed.FS` line. Place it right after the existing `//go:embed search.js` line. The file currently has these embed directives ending with:
 ```go
-package jsonld
+//go:embed simple_app.js
+//go:embed search.js
+var TemplateFS embed.FS
+```
+Add `//go:embed link_preview.js` between `//go:embed search.js` and `var TemplateFS embed.FS`.
 
-// ArticleParams holds the inputs needed to build an Article JSON-LD object.
-type ArticleParams struct {
-    Title       string
-    Description string
-    Author      string
-    BaseURL     string
-    WebPath     string
-    SiteName    string
-    DateCreated time.Time
-    DateModified time.Time
-    ImageURL    string  // OG image URL, can be empty
+**2. Edit `/home/oliviero/Workspace/kiln/internal/builder/layouts.go`:**
+- Add a `JsLinkPreviewTemplate *textTemplate.Template` field to the `Layout` struct (line ~140-153). Place it after `JsSearchTemplate`.
+- In the `loadLayout()` method, add a block to load `link_preview.js` from `assets.TemplateFS`, following the exact same pattern as the search JS loading (lines 98-107). After the search JS block, add:
+```go
+jsLinkPreviewContent, err := assets.TemplateFS.ReadFile("link_preview.js")
+if err != nil {
+    return err
 }
-
-// BreadcrumbItem represents one breadcrumb for JSON-LD generation.
-type BreadcrumbItem struct {
-    Label string
-    URL   string
+tmplLinkPreviewJS, err := textTemplate.New("js").Parse(string(jsLinkPreviewContent))
+if err != nil {
+    return err
 }
-
-// BuildArticleJSON returns a JSON-LD string for schema.org/Article.
-// Returns empty string if title is empty.
-func BuildArticleJSON(p ArticleParams) string
-
-// BuildBreadcrumbJSON returns a JSON-LD string for schema.org/BreadcrumbList.
-// Returns empty string if items is empty.
-func BuildBreadcrumbJSON(baseURL string, items []BreadcrumbItem) string
+l.JsLinkPreviewTemplate = tmplLinkPreviewJS
 ```
 
-**Implementation details:**
-- Use `encoding/json` with `json.Marshal` to produce the JSON-LD. Build the schema as `map[string]any` structures.
-- `BuildArticleJSON` should produce a `<script type="application/ld+json">` compatible JSON string (just the JSON object, not the script tag — the template will wrap it).
-- Article schema: `@context: "https://schema.org"`, `@type: "Article"`, `headline`, `description`, `author: {type: Person, name}`, `datePublished` (RFC3339 from DateCreated), `dateModified` (RFC3339 from DateModified), `publisher: {type: Organization, name: SiteName}`, `mainEntityOfPage: {type: WebPage, @id: BaseURL+WebPath}`, optionally `image` if ImageURL is non-empty.
-- If `Author` is empty, omit the `author` field. If `Description` is empty, omit it.
-- `BuildBreadcrumbJSON` should produce a `BreadcrumbList` schema with `itemListElement` containing `ListItem` entries with `position` (1-based), `name`, and `item` (full URL = baseURL + item.URL).
-- For breadcrumb items where URL is `"#"` (used for current page in tag pages), omit the `item` field from that ListItem.
-
-**Tests in `jsonld_test.go`:**
-- Test `BuildArticleJSON` with full params — verify output contains `"@type":"Article"`, correct headline, dates in RFC3339.
-- Test `BuildArticleJSON` with empty title returns `""`.
-- Test `BuildArticleJSON` with empty author omits author field.
-- Test `BuildArticleJSON` with empty description omits description field.
-- Test `BuildBreadcrumbJSON` with 3 breadcrumb items — verify `"@type":"BreadcrumbList"`, correct positions 1-3, full URLs.
-- Test `BuildBreadcrumbJSON` with empty items returns `""`.
-- Test `BuildBreadcrumbJSON` with `#` URL omits `item` field from that entry.
-
-**Verify:** `go test ./internal/jsonld/...`
-</task>
-
-<task order="2" title="Add JSON-LD templ component to shared.templ" depends_on="1">
-Add a new templ component `StructuredData` to `internal/templates/shared.templ` that renders JSON-LD `<script>` tags for articles and breadcrumbs. Also add a helper function in `internal/templates/helpers.go` to bridge between template types and jsonld package types.
-
-**Context:** The existing `shared.templ` file already contains `Head()`, `Canonical()`, `Breadcrumbs()`, `ThemeToggler()`, and other shared components. The `PageData` struct (in `types.go`) has: `Site *SiteData` (with `BaseURL`, `SiteName`, `FlatURLs`), `Breadcrumbs []obsidian.Breadcrumb` (each has `Label` and `Url`), `File *obsidian.File` (with `Name`, `WebPath`, `Created`, `Modified`, `Frontmatter`), `Folder *obsidian.Folder`, `Tag *obsidian.Tag`, and boolean flags `IsNote`, `IsFolder`, `IsTag`, `IsGraph`, `IsCanvas`, `Is404`. The `helpers.go` file contains `toStr()`, `ogImageURL()`, `buildThemeCSS()`, and `FormatDate()` functions.
-
-**Existing `shared.templ` structure (preserve all existing components):**
-- `ThemeToggler()` (line 8)
-- `LeftSidebarToggle()` (line 57)
-- `RightSidebarToggle()` (line 79)
-- `GraphButton()` (line 101)
-- `Breadcrumbs()` (line 125)
-- `SimpleBreadcrumbs()` (line 139)
-- `PageName()` (line 162)
-- `Canonical()` (line 174)
-- `Head()` (line 194)
-- `ThemeStyle()` (line 254)
-
-**Files to edit:**
-1. `internal/templates/helpers.go` — Add a helper function
-2. `internal/templates/shared.templ` — Add the `StructuredData` templ component
-
-**Changes to `helpers.go`:**
-Add a function `buildStructuredDataJSON(data *PageData) string` that:
-- Imports `"github.com/otaleghani/kiln/internal/jsonld"`
-- For note pages (`data.IsNote && data.File != nil`):
-  - Extracts `title` from frontmatter (falling back to `data.File.Name`)
-  - Extracts `description` from frontmatter (can be empty)
-  - Extracts `author` from frontmatter (can be empty)
-  - Builds `ArticleParams` with BaseURL, WebPath, SiteName, Created, Modified, and ImageURL from `ogImageURL()`
-  - Calls `jsonld.BuildArticleJSON(params)`
-- Converts `data.Breadcrumbs` (type `[]obsidian.Breadcrumb`) to `[]jsonld.BreadcrumbItem`
-- Calls `jsonld.BuildBreadcrumbJSON(data.Site.BaseURL, items)`
-- Returns a concatenation of both JSON strings separated by a newline (with `<script type="application/ld+json">...</script>` wrappers around each non-empty result)
-- Returns empty string if both results are empty.
-
-**Changes to `shared.templ`:**
-Add after the existing `ThemeStyle` component (after line 256):
-```templ
-templ StructuredData(data *PageData) {
-    @templ.Raw(buildStructuredDataJSON(data))
+**3. Edit `/home/oliviero/Workspace/kiln/internal/builder/builder_default.go`:**
+After the search JS generation block (around lines 325-334 where `search.js` is written), add an identical block for `link_preview.js`:
+```go
+linkPreviewJsOut, err := os.Create(filepath.Join(OutputDir, "link-preview.js"))
+if err != nil {
+    log.Error("Couldn't create 'link-preview.js'", "error", err)
+}
+defer linkPreviewJsOut.Close()
+err = site.Layout.JsLinkPreviewTemplate.Execute(linkPreviewJsOut, site)
+if err != nil {
+    log.Error("Couldn't execute template for 'link-preview.js'", "error", err)
 }
 ```
 
-**After editing, regenerate templ files:**
-Run `go generate ./internal/templates/...` or `templ generate` if the project uses templ CLI.
-
-**Verify:** `go build ./internal/templates/...` (templ must compile). Also run `go test ./internal/jsonld/...` to ensure nothing broke.
+Verify: Build compiles successfully.
+```
+cd /home/oliviero/Workspace/kiln && go build ./...
+```
 </task>
 
-<task order="3" title="Wire StructuredData into both layout templates" depends_on="2">
-Add the `@StructuredData(data)` call to both layout templates so that JSON-LD is injected into the `<head>` of every generated HTML page.
+<task order="4" title="Add script tag to templ layouts">
+Add the `<script>` tag for `link-preview.js` to both layout templates so browsers load it.
 
-**Context:** The project has two layout templates:
-- `internal/templates/layout_default.templ` — `DefaultLayout(data *PageData)`, has `<head>` section from lines 7-33, currently calls `@Canonical(data)`, `@Head(data)`, `@ThemeStyle(data.Site.Theme)` inside `<head>`.
-- `internal/templates/layout_simple.templ` — `SimpleLayout(data *PageData)`, has `<head>` section from lines 7-33, same pattern.
+**1. Edit `/home/oliviero/Workspace/kiln/internal/templates/layout_default.templ`:**
+After line 32 (`<script defer src={ data.Site.BaseURL + "/search.js" }></script>`), add:
+```
+<script defer src={ data.Site.BaseURL + "/link-preview.js" }></script>
+```
 
-Both have identical `<head>` structures. The new `StructuredData` component was added to `shared.templ` in the previous task.
+**2. Edit `/home/oliviero/Workspace/kiln/internal/templates/layout_simple.templ`:**
+After line 32 (`<script defer src={ data.Site.BaseURL + "/search.js" }></script>`), add:
+```
+<script defer src={ data.Site.BaseURL + "/link-preview.js" }></script>
+```
 
-**Files to edit:**
-1. `internal/templates/layout_default.templ` — Add `@StructuredData(data)` inside `<head>`, after the `@Head(data)` call (after line 26).
-2. `internal/templates/layout_simple.templ` — Same change, add `@StructuredData(data)` inside `<head>`, after the `@Head(data)` call (after line 26).
+**3. Regenerate the templ Go files:**
+Run the templ code generator to produce the `_templ.go` files from the modified `.templ` sources:
+```
+cd /home/oliviero/Workspace/kiln && go run github.com/a-h/templ/cmd/templ@v0.3.1001 generate
+```
 
-**After editing, regenerate templ files:**
-Run `templ generate` from the project root, OR `go generate ./internal/templates/...` if the project uses go generate for templ. Check if there's a `go:generate` directive or a Makefile target.
+If the `templ generate` command is not available or fails, check how the project generates templ files (look at `go.mod` for templ version, or check for a Makefile/build script). The templ version in go.mod is `v0.3.1001`.
 
-**Verify:** 
-1. `go build ./...` — Ensure the whole project compiles.
-2. `go test ./...` — Ensure all existing tests pass.
+**4. Also add `window.initLinkPreview()` to the `initAll()` function in both app JS files:**
+
+In `/home/oliviero/Workspace/kiln/assets/default_app.js`, inside the `window.initAll` function (around line 348-365), add `window.initLinkPreview();` call. Place it after `window.initLightbox();` (line 356). The call should be guarded: `if (window.initLinkPreview) window.initLinkPreview();`
+
+In `/home/oliviero/Workspace/kiln/assets/simple_app.js`, inside `window.initAll` (around line 299-314), add the same guarded call after `window.initLightbox();` (line 306): `if (window.initLinkPreview) window.initLinkPreview();`
+
+Verify: Build compiles and templ files are regenerated.
+```
+cd /home/oliviero/Workspace/kiln && go build ./...
+```
+</task>
+
+<task order="5" title="Test end-to-end with go test">
+Run the existing test suite to make sure nothing is broken by the changes:
+
+```
+cd /home/oliviero/Workspace/kiln && go test ./...
+```
+
+If any tests fail, investigate and fix the issue. Common problems:
+- Missing embed directive: check `assets/assets.go` has `//go:embed link_preview.js`
+- Templ regeneration didn't run: re-run `templ generate`
+- Template parse errors: check `link_preview.js` doesn't have stray `{{` outside the `{{.BaseURL}}` placeholder
+
+Also verify the JavaScript file is syntactically valid:
+```
+node --check /home/oliviero/Workspace/kiln/assets/link_preview.js
+```
+
+If all tests pass and JS is valid, the feature is complete.
 </task>
 </tasks>
