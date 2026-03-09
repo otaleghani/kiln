@@ -168,13 +168,15 @@
   }
 
   window.initLinkPreview = function () {
+    if (window.innerWidth < 1024 || !window.matchMedia("(hover: hover)").matches) {
+      hideTooltip();
+      return;
+    }
+
     if (initialized) {
       bindLinks();
       return;
     }
-
-    if (window.innerWidth < 1024) return;
-    if (!window.matchMedia("(hover: hover)").matches) return;
 
     initialized = true;
 
@@ -185,4 +187,10 @@
     document.addEventListener("keydown", onKeydown);
     document.addEventListener("click", onClickOutside);
   };
+
+  document.addEventListener("htmx:beforeSwap", function () {
+    hideTooltip();
+    clearTimeout(hoverTimer);
+    clearTimeout(leaveTimer);
+  });
 })();
