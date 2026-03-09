@@ -1,114 +1,13 @@
 -- DwightAuto decomposition output
--- Request: The link preview feature works, but it has a couple of problems. The first is that when I hover over a link and scroll the preview disappears. The second is that the preview doesn't have the same styl
--- Timestamp: Mon 09 Mar 2026 02:07:43 PM CET
+-- Request: The link preview feature now has a little problem where scrolling is mainteinded between one preview and another. It needs to reset when someone changes link to preview
+-- Timestamp: Mon 09 Mar 2026 02:15:34 PM CET
 
-Now I have a clear picture. Let me analyze the two issues:
+The fix is a single line addition in `assets/link_preview.js` at line 121. After setting `tooltip.innerHTML = content`, we need to add:
 
-1. **Scroll hides preview**: Line 175 shows `window.addEventListener("scroll", onScroll, true)` which calls `hideTooltip()` on any scroll event. This uses `position: absolute` positioning which is relative to the document — so when you scroll, the tooltip stays at its original document position but the viewport moves. The fix should either reposition the tooltip on scroll or use `position: fixed` instead.
-
-2. **Preview lacks page styles**: The tooltip injects raw `innerHTML` from `#content .content`, but the tooltip div doesn't have the `.content` class, so none of the `.content *` CSS rules from `shared.css` apply to the preview content.
-
-<tasks>
-<task order="1" title="Fix scroll-dismissal and add content styling class">
-Fix two issues in the link preview tooltip in `assets/link_preview.js` and `assets/shared.css`:
-
-**Problem 1 — Scroll dismisses the tooltip:**
-Currently, line 175 of `assets/link_preview.js` registers a scroll listener that calls `hideTooltip()` on ANY scroll event (including scrolling inside the tooltip itself, due to `true` capture). The tooltip uses `position: absolute` (document-relative), so when the user scrolls the page, the tooltip drifts away from the anchor link.
-
-Fix: Change the tooltip from `position: absolute` to `position: fixed` and update `positionTooltip()` to use viewport-relative coordinates (i.e., use `getBoundingClientRect()` directly without adding `scrollX`/`scrollY`). Then replace the blanket scroll-hide behavior with a smarter approach: instead of hiding on every scroll, **reposition** the tooltip to follow the anchor link on scroll. Also, hide the tooltip only if the anchor link scrolls out of the viewport.
-
-Specific changes to `assets/link_preview.js`:
-
-1. In `getTooltip()` (line 20), change `el.style.position = "absolute"` to `el.style.position = "fixed"`.
-
-2. Rewrite `positionTooltip(tooltip, anchor)` to use viewport-relative coordinates:
-   - Use `rect = anchor.getBoundingClientRect()` directly (no scrollX/scrollY offsets).
-   - Calculate `top` as: if space below (`window.innerHeight - rect.bottom`) >= `TOOLTIP_MAX_HEIGHT + 8`, use `rect.bottom + 8`; else use `rect.top - TOOLTIP_MAX_HEIGHT - 8`.
-   - Calculate `left` as: `rect.left`, clamped to `[8, window.innerWidth - TOOLTIP_MAX_WIDTH - 8]`.
-   - Set `tooltip.style.top` and `tooltip.style.left` in px.
-
-3. Add a module-level variable `var activeAnchor = null;` (near line 10, alongside `hoverTimer`, `leaveTimer`, etc.).
-
-4. In `onLinkEnter()`, after `positionTooltip(tooltip, link)` and `tooltip.style.display = "block"`, set `activeAnchor = link;`.
-
-5. In `hideTooltip()`, set `activeAnchor = null;`.
-
-6. Replace the `onScroll` function (line 144-146) with a new version:
-   ```javascript
-   function onScroll() {
-     if (!activeAnchor) return;
-     var tooltip = document.getElementById("link-preview-tooltip");
-     if (!tooltip || tooltip.style.display === "none") return;
-     var rect = activeAnchor.getBoundingClientRect();
-     if (rect.bottom < 0 || rect.top > window.innerHeight) {
-       hideTooltip();
-       return;
-     }
-     positionTooltip(tooltip, activeAnchor);
-   }
-   ```
-   This repositions the tooltip as the user scrolls, and only hides it when the anchor scrolls out of view.
-
-**Problem 2 — Preview content lacks page styles:**
-The fetched content is injected into `#link-preview-tooltip` as raw HTML from `#content .content`. But the tooltip div doesn't have the `.content` class, so all the `.content *` CSS rules from `shared.css` (headings, lists, tables, blockquotes, callouts, code blocks, links, images, etc.) don't apply.
-
-Fix in `assets/link_preview.js`:
-1. In `getTooltip()`, after creating the element, add `el.classList.add("content");` so the tooltip gets the `.content` class.
-
-Fix in `assets/shared.css`:
-The `.content` class in shared.css has `max-width: 65ch` and `margin: 0 auto` (lines 453-457) which would fight with the tooltip's max-width. Add an override rule inside the existing `#link-preview-tooltip` block (lines 976-994):
-
-Add these rules to the `#link-preview-tooltip` section (after line 993):
-```css
-#link-preview-tooltip.content {
-  max-width: 400px;
-  margin: 0;
-}
-#link-preview-tooltip .content {
-  max-width: 100%;
-  margin: 0;
-}
+```js
+tooltip.scrollTop = 0;
 ```
 
-Also scale down headings inside the tooltip to fit the smaller viewport. Add after the existing `#link-preview-tooltip h1, h2, h3` rules (after line 1007):
-```css
-#link-preview-tooltip h1 {
-  font-size: 1.25em;
-  margin-top: 0.5em;
-  border-bottom: none;
-  padding-bottom: 0;
-}
-#link-preview-tooltip h2 {
-  font-size: 1.1em;
-  margin-top: 0.5em;
-  border-bottom: none;
-  padding-bottom: 0;
-}
-#link-preview-tooltip h3 {
-  font-size: 1em;
-  margin-top: 0.5em;
-}
-#link-preview-tooltip pre,
-#link-preview-tooltip .chroma {
-  font-size: 0.8rem;
-  padding: 0.5em;
-}
-#link-preview-tooltip table {
-  font-size: 0.8rem;
-}
-#link-preview-tooltip blockquote:not(.callout) {
-  margin: 0.5em 0;
-}
-#link-preview-tooltip .callout {
-  margin: 0.5em 0;
-}
-#link-preview-tooltip p {
-  margin-bottom: 0.5rem;
-}
-```
+This resets the scroll position to the top whenever new preview content is loaded, so each new link preview starts scrolled to the top regardless of where the previous preview was scrolled.
 
-These rules ensure the tooltip inherits all `.content` styling (links, lists, callouts, code, tables, etc.) while scaling down headings, code blocks, and spacing to fit the smaller tooltip viewport.
-
-**Verify:** Since this is client-side JS/CSS with no Go tests, verify by running `go build ./...` to ensure the project still compiles (the JS/CSS are embedded at build time).
-</task>
-</tasks>
+Want me to apply this edit?
