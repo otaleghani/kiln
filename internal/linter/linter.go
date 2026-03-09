@@ -53,10 +53,27 @@ func CollectNotes(inputDir string) map[string]bool {
 	return validFiles
 }
 
-// BrokenLinks iterates through all Markdown files in the directory and validates their WikiLinks.
+func checkCandidates(rawLink string, notes map[string]bool) bool {
+	candidates := []string{
+		rawLink,
+		rawLink + ".md",
+		rawLink + ".png",
+		rawLink + ".jpg",
+		rawLink + ".jpeg",
+		rawLink + ".canvas",
+	}
+	for _, c := range candidates {
+		if notes[c] {
+			return true
+		}
+	}
+	return false
+}
+
+// BrokenLinks iterates through all Markdown files in the directory and validates their links.
 func BrokenLinks(inputDir string, notes map[string]bool, log *slog.Logger) {
-	// Regex to find standard WikiLink syntax: [[Target]]
-	linkRegex := regexp.MustCompile(`\[\[(.*?)\]\]`)
+	wikiLinkRegex := regexp.MustCompile(`\[\[(.*?)\]\]`)
+	mdLinkRegex := regexp.MustCompile(`\[([^\]]*)\]\(([^)]+)\)`)
 	issuesFound := 0
 
 	filepath.WalkDir(inputDir, func(path string, d fs.DirEntry, err error) error {
@@ -71,50 +88,55 @@ func BrokenLinks(inputDir string, notes map[string]bool, log *slog.Logger) {
 		}
 
 		content, _ := os.ReadFile(path)
-		matches := linkRegex.FindAllStringSubmatch(string(content), -1)
+		relPath, _ := filepath.Rel(inputDir, path)
 
-		for _, match := range matches {
+		// Check wikilinks
+		for _, match := range wikiLinkRegex.FindAllStringSubmatch(string(content), -1) {
 			rawLink := match[1]
 
-			// Handle Aliasing: [[Note Name|Custom Text]] -> "Note Name"
 			if strings.Contains(rawLink, "|") {
 				rawLink = strings.Split(rawLink, "|")[0]
 			}
-
-			// Handle Anchors: [[Note Name#Section]] -> "Note Name"
 			if strings.Contains(rawLink, "#") {
 				rawLink = strings.Split(rawLink, "#")[0]
 			}
-
 			if rawLink == "" {
 				continue
 			}
 
-			// Check candidates against the now robust 'notes' map
-			exists := false
-			candidates := []string{
-				rawLink,             // "Note"
-				rawLink + ".md",     // "Note.md"
-				rawLink + ".png",    // "Note.png"
-				rawLink + ".jpg",    // "Note.jpg"
-				rawLink + ".jpeg",   // "Note.jpeg"
-				rawLink + ".canvas", // "Note.canvas"
-			}
-
-			for _, c := range candidates {
-				if notes[c] {
-					exists = true
-					break
-				}
-			}
-
-			if !exists {
-				// Use Rel path for cleaner logging
-				relPath, _ := filepath.Rel(inputDir, path)
+			if !checkCandidates(rawLink, notes) {
 				log.Warn("Found broken link", "path", relPath, "link", rawLink)
 				issuesFound++
 			}
 		}
+
+		// Check markdown links
+		for _, match := range mdLinkRegex.FindAllStringSubmatch(string(content), -1) {
+			linkPath := match[2]
+
+			if strings.HasPrefix(linkPath, "http://") ||
+				strings.HasPrefix(linkPath, "https://") ||
+				strings.HasPrefix(linkPath, "mailto:") {
+				continue
+			}
+			if strings.HasPrefix(linkPath, "#") {
+				continue
+			}
+
+			// Strip anchor
+			if idx := strings.Index(linkPath, "#"); idx != -1 {
+				linkPath = linkPath[:idx]
+			}
+
+			// Resolve relative to the directory of the current file
+			resolved := filepath.Clean(filepath.Join(filepath.Dir(relPath), linkPath))
+
+			if !checkCandidates(resolved, notes) {
+				log.Warn("Found broken link", "path", relPath, "link", linkPath)
+				issuesFound++
+			}
+		}
+
 		return nil
 	})
 
