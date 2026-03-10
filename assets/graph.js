@@ -71,6 +71,23 @@
     attributeFilter: ["data-theme", "class"],
   });
 
+  const bodyClassObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.type === "attributes" && m.attributeName === "class") {
+        const local = document.getElementById("local-graph-container");
+        const localWrapper = document.getElementById("local-graph-wrapper");
+        if (local) {
+          setTimeout(() => initGraph(null, local, localWrapper), 50);
+        }
+        break;
+      }
+    }
+  });
+  bodyClassObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+
   if (window.matchMedia) {
     window
       .matchMedia("(prefers-color-scheme: dark)")

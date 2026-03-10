@@ -249,7 +249,16 @@ window.initCanvasMode = function (canvasData) {
 
 // Expands the graph
 window.toggleGraphExpand = function () {
-  document.body.classList.toggle("expanded");
+  var isExpanded = document.body.classList.toggle("expanded");
+  if (isExpanded) {
+    var handler = function(e) {
+      if (e.key === "Escape") {
+        document.body.classList.remove("expanded");
+        document.removeEventListener("keydown", handler);
+      }
+    };
+    document.addEventListener("keydown", handler);
+  }
 };
 
 // Highlights the sidebar link
