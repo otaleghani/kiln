@@ -1,94 +1,112 @@
 -- DwightAuto decomposition output
--- Request: There is an empty file in docs.md that needs to be filled with the internationalization feature. Read the content of the other features and create this one.
--- Timestamp: Tue 10 Mar 2026 05:28:29 PM CET
+-- Request: I would like to add a new thing in the kiln.yaml configuration file, which is the accent color. We have different themes to generate the websites, but I decided which accent color to use. I would like
+-- Timestamp: Tue 10 Mar 2026 06:26:55 PM CET
 
-Now I have a thorough understanding of the i18n system and the documentation format. This is a single documentation task — writing the `docs/I18n.md` file. It doesn't need decomposition into multiple sub-tasks; it's a single file to write based on existing patterns. Let me produce the task decomposition anyway since the framework requires it.
+Now I have a comprehensive understanding of the codebase. Let me trace the full flow:
+
+1. `kiln.yaml` → `config.Config` struct (parsed via yaml tags)
+2. CLI flags + config → `builder.*` globals
+3. `builder.ResolveTheme(themeName, fontName)` → `*Theme` with `Light.Accent` and `Dark.Accent` set from theme registry
+4. The `Accent` field flows through `toTemplTheme` → `templates.ThemeColors.Accent` → CSS `--accent-color` variable via `writeColorVars()`
+
+The user wants to let users pick which palette color (Red, Orange, Yellow, Green, Blue, Purple, Cyan) to use as the accent color. This means:
+- A new `accent-color` field in `kiln.yaml` 
+- After resolving the theme, if the user specified an accent color, override `theme.Light.Accent` and `theme.Dark.Accent` with the corresponding palette color from the theme
+- The existing CSS variable system (`--accent-color`) already propagates automatically
 
 <tasks>
-<task order="1" title="Write I18n documentation">
-Write the documentation file `docs/I18n.md` for the internationalization (i18n) feature. This is a documentation-only task — no Go code changes needed.
+<task order="1" title="Add accent-color to Config and tests">
+Add the `accent-color` field to the config system and update tests.
 
-**Context**: The file `docs/I18n.md` is currently empty and needs to be filled with documentation about Kiln's internationalization feature. You must match the style and structure of the existing feature documentation files.
+**What to do:**
 
-**Step 1**: Read these existing feature doc files to understand the exact format, tone, and structure:
-- `docs/Features/Feed RSS.md`
-- `docs/Features/Link Preview.md`
-- `docs/Features/Image Optimization.md`
+1. Edit `internal/config/config.go`:
+   - Add `AccentColor string \`yaml:"accent-color"\`` field to the `Config` struct (after `Lang string \`yaml:"lang"\``)
+   - Add a `"accent-color"` case to the `ValueOr` switch statement that returns `c.AccentColor`
 
-All docs follow this structure:
-```
----
-title: "Feature Name"
-description: "One-sentence description for SEO/meta."
----
-# Feature Name
+2. Edit `internal/config/config_test.go`:
+   - In `TestLoad_ValidFile`: add `accent-color: blue` to the test YAML content, and add an assertion: `if cfg.AccentColor != "blue" { t.Errorf(...) }`
+   - In `TestLoad_PartialFile`: add assertion that `cfg.AccentColor` is empty string (zero value)
+   - In `TestLoad_EmptyFile`: add assertion that `cfg.AccentColor` is empty string
+   - In `TestValueOr_OnlyOverridesEmpty`: add a test case for `accent-color` — set `AccentColor: "red"` in the Config struct, verify `ValueOr("accent-color", "")` returns `"red"`, and verify that when AccentColor is empty, `ValueOr("accent-color", "")` returns `""`
 
-Opening paragraph explaining what the feature does.
+3. Edit `internal/config/config_integration_test.go`:
+   - In `TestConfigIntegration_FullPipeline`: add `accent-color: green` to the YAML content and assert `cfg.AccentColor == "green"`
+   - Add a `ValueOr` assertion: `cfg.ValueOr("accent-color", "") == "green"`
 
-## Section 1
-...
-## Section N
-...
-## Limitations
-- Bullet list of current limitations
-```
-
-**Step 2**: Read the i18n source code to understand the feature thoroughly:
-- `internal/i18n/i18n.go` — Contains the `Labels` struct (21 fields for UI strings), a `languages` map with `"en"` and `"it"` entries, and `Resolve(lang string) *Labels` function that falls back to English for unknown codes.
-- `internal/i18n/i18n_test.go` — Tests for English, Italian, unknown fallback, and all-fields-populated checks.
-
-**Step 3**: Read how i18n is configured and wired:
-- `internal/cli/commands.go` — Defines `FlagLang = "lang"`, `FlagLangShort = "g"`, `DefaultLang = "en"`
-- `internal/cli/generate.go` — The `--lang` / `-g` flag is registered on the generate command, sets `builder.Lang`
-- `internal/config/config.go` — The `Lang` field in the YAML config struct (`lang` YAML key)
-- `internal/builder/templ_adapter.go` — Calls `i18n.Resolve(p.Site.Lang)` and passes `Labels` to templates
-- `internal/templates/types.go` — `SiteData` struct has `Lang string` and `Labels *i18n.Labels`
-
-**Step 4**: Write `docs/I18n.md` with the following sections and content:
-
-1. **Frontmatter** — title: "Internationalization (i18n)", description about Kiln translating UI strings.
-
-2. **Opening paragraph** — Kiln supports multiple languages for all user-facing UI strings (buttons, labels, tooltips). Set a language code and every built-in string adapts automatically.
-
-3. **## How it works** — Explain the `Labels` struct, the `languages` registry, and `Resolve()` fallback behavior. Mention that labels are injected into HTML templates at build time AND passed to JavaScript via a hidden `#kiln-labels` element for client-side strings (search, copy button, etc.).
-
-4. **## Configuration** — Show how to set the language:
-   - CLI flag: `kiln generate --lang it` (or `-g it`)
-   - Config file: `lang: it` in `kiln.yaml`
-   - Default is `en` (English)
-
-5. **## Supported languages** — Table listing language codes and names:
-   | Code | Language |
-   | `en` | English (default) |
-   | `it` | Italian |
-
-6. **## Translated strings** — Table listing all 21 Labels fields with their English values, grouped logically (search, navigation, content metadata, UI actions, etc.). Show the field name and the English default string.
-
-7. **## Adding a new language** — Explain that currently new languages require adding an entry to the `languages` map in `internal/i18n/i18n.go`. There is no user-facing config file for custom translations. Describe the steps: add a new map entry with the language code key and fill in all 21 `Labels` fields.
-
-8. **## Limitations** — Bullet list:
-   - Only 2 languages built in (English and Italian)
-   - No user-facing translation file — adding languages requires editing Go source
-   - All 21 strings must be provided; there is no per-field fallback to English
-   - No right-to-left (RTL) layout support
-   - Custom Mode does not use the i18n labels — it is only for the default/simple themes
-
-**Verify**: The file should be valid Markdown with proper frontmatter. Run: `head -5 docs/I18n.md` to confirm the frontmatter is present.
+**Verify:** `go test ./internal/config/...`
 </task>
-<task order="2" title="Review and verify I18n doc completeness" depends_on="1">
-Review `docs/I18n.md` written in the previous task to ensure it is complete, accurate, and matches the project's documentation style.
 
-**Step 1**: Read `docs/I18n.md` in full.
+<task order="2" title="Add AccentColorName to builder and CLI wiring" depends_on="1">
+Wire the new `accent-color` config field through CLI flags and builder globals, and add the accent color override logic to `ResolveTheme`.
 
-**Step 2**: Cross-reference the documented strings against the actual `Labels` struct in `internal/i18n/i18n.go`. The struct has exactly 21 fields:
-- SearchPlaceholder, ToggleTheme, BackToTop, OnThisPage, TableOfContents, LocalGraph, GeneratedWith, PageNotFound, GoBackHome, Folder, Tag, Updated, Created, Words, MinRead, Copy, NoResults, Search, Navbar, Expand, LastModified
+**What to do:**
 
-Verify that all 21 are mentioned in the documentation.
+1. Edit `internal/cli/commands.go`:
+   - Add a default constant: `DefaultAccentColor = ""` (empty string means "use the theme's built-in accent")
+   - Add flag name constants: `FlagAccentColor = "accent-color"` and `FlagAccentColorShort = "a"`
+   - Add a CLI variable: `accentColor string`
 
-**Step 3**: Verify the CLI flag documentation matches `internal/cli/commands.go` (flag name `lang`, short flag `g`, default `en`).
+2. Edit `internal/cli/generate.go`:
+   - Add a new flag registration in `init()`:
+     ```go
+     cmdGenerate.Flags().StringVarP(&accentColor, FlagAccentColor, FlagAccentColorShort, DefaultAccentColor, "Accent color from theme palette (red, orange, yellow, green, blue, purple, cyan)")
+     ```
+   - In `runGenerate`, add `applyStringFlag(cmd, FlagAccentColor, &accentColor, cfg, DefaultAccentColor)` after the existing applyStringFlag calls
+   - Add `builder.AccentColorName = accentColor` after the existing builder assignments
 
-**Step 4**: If any discrepancies are found (missing fields, wrong flag names, wrong defaults), fix them in `docs/I18n.md`.
+3. Edit `internal/builder/builder.go`:
+   - Add `AccentColorName string` to the `var` block (the package-level globals), with comment `// Accent color override (palette color name)`
 
-**Verify**: Run `wc -l docs/I18n.md` to confirm the file has substantial content (should be 80+ lines). Run `grep -c '|' docs/I18n.md` to confirm tables are present.
+4. Edit `internal/builder/themes.go`:
+   - Change `ResolveTheme` signature to: `func ResolveTheme(themeName, fontName, accentColorName string, log *slog.Logger) *Theme`
+   - Inside `ResolveTheme`, after resolving the font, add accent color override logic:
+     ```go
+     if accentColorName != "" {
+         overrideAccentColor(theme, accentColorName, log)
+     }
+     ```
+   - Add a new function `overrideAccentColor(theme *Theme, colorName string, log *slog.Logger)` that:
+     - Creates a map `colorMap` of palette color names to getter functions, or use a switch statement
+     - For light theme: looks up `colorName` (lowercased) against the palette colors (Red, Orange, Yellow, Green, Blue, Purple, Cyan) of `theme.Light` and sets `theme.Light.Accent` to that value
+     - For dark theme: does the same with `theme.Dark`
+     - If the color name is not recognized, logs a warning and leaves the accent unchanged
+     - Implementation approach using a helper:
+       ```go
+       func paletteColor(c *ThemeColors, name string) (string, bool) {
+           switch strings.ToLower(name) {
+           case "red":    return c.Red, true
+           case "orange": return c.Orange, true
+           case "yellow": return c.Yellow, true
+           case "green":  return c.Green, true
+           case "blue":   return c.Blue, true
+           case "purple": return c.Purple, true
+           case "cyan":   return c.Cyan, true
+           default:       return "", false
+           }
+       }
+       ```
+
+5. Update callers of `ResolveTheme` — there are two:
+   - `internal/builder/builder_default.go` line 31: change `ResolveTheme(ThemeName, FontName, log)` to `ResolveTheme(ThemeName, FontName, AccentColorName, log)`
+   - `internal/builder/builder_custom.go`: search for `ResolveTheme` call and update similarly
+
+**Verify:** `go test ./...`
+</task>
+
+<task order="3" title="Update kiln.yaml with accent-color example" depends_on="2">
+Update the project's `kiln.yaml` to document the new `accent-color` option.
+
+**What to do:**
+
+1. Edit `kiln.yaml` at the project root — add a commented-out `accent-color` line after the `theme` line:
+   ```yaml
+   theme: "dracula"
+   # accent-color: blue
+   font: inter
+   ```
+   The comment serves as documentation for users. The available values are: red, orange, yellow, green, blue, purple, cyan. When unset, the theme's default accent color is used.
+
+**Verify:** `go test ./...` (ensure nothing broke)
 </task>
 </tasks>
