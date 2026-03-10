@@ -134,10 +134,12 @@ templ DefaultLayout(data *PageData) {
 						</div>
 					</header>
 					<div id="right-sidebar-content" class="p-4 flex-1 overflow-y-auto flex flex-col gap-8">
-						@LocalGraph(data.Site.DisableLocalGraph)
 						@TOCPanel(data)
 					</div>
 				</aside>
+			}
+			if !data.Site.DisableLocalGraph {
+				@LocalGraph(data.Site.DisableLocalGraph)
 			}
 		</body>
 	</html>

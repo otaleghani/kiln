@@ -71,6 +71,22 @@ body {
   }
 }
 
+#local-graph-wrapper {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 18rem;
+  padding: 1rem;
+  z-index: 51;
+  background-color: var(--sidebar-bg);
+}
+
+@media (max-width: 1279px) {
+  #local-graph-wrapper {
+    display: none;
+  }
+}
+
 .expanded #local-graph-container {
   position: fixed;
   background-color: var(--color-background);
