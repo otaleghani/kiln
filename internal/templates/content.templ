@@ -8,11 +8,57 @@ import (
 	"github.com/otaleghani/kiln/internal/obsidian"
 )
 
+// NoteMetaBar renders the reading metadata bar at the top of note content.
+templ NoteMetaBar(data *PageData) {
+	if data.IsNote && data.Meta != nil {
+		<div class="note-meta-bar">
+			<div class="note-meta-items">
+				<span class="note-meta-item">
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="10"></circle>
+						<polyline points="12 6 12 12 16 14"></polyline>
+					</svg>
+					{ FormatReadingTime(data.Meta.ReadingTime) }
+				</span>
+				<span class="note-meta-item">
+					{ strconv.Itoa(data.Meta.WordCount) } words
+				</span>
+				<span class="note-meta-item">
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+						<line x1="16" y1="2" x2="16" y2="6"></line>
+						<line x1="8" y1="2" x2="8" y2="6"></line>
+						<line x1="3" y1="10" x2="21" y2="10"></line>
+					</svg>
+					Updated { FormatDate(data.Meta.Modified) }
+				</span>
+				<span class="note-meta-item">
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+						<line x1="16" y1="2" x2="16" y2="6"></line>
+						<line x1="8" y1="2" x2="8" y2="6"></line>
+						<line x1="3" y1="10" x2="21" y2="10"></line>
+					</svg>
+					Created { FormatDate(data.Meta.Created) }
+				</span>
+			</div>
+			if len(data.Meta.Tags) > 0 {
+				<div class="note-meta-tags">
+					for _, tag := range data.Meta.Tags {
+						<span class="note-meta-tag">#{ tag }</span>
+					}
+				</div>
+			}
+		</div>
+	}
+}
+
 // ContentNote renders a markdown note.
 templ ContentNote(data *PageData) {
 	if data.IsNote {
 		<div id="content" class="h-dvh overflow-y-auto overflow-x-hidden">
 			<div class="p-4 content">
+				@NoteMetaBar(data)
 				@templ.Raw(data.Content)
 			</div>
 		</div>
