@@ -909,46 +909,6 @@ body {
     overflow: hidden;
   }
 }
-.expanded #local-graph-wrapper {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  padding: 0;
-  border-bottom: none;
-  background: transparent;
-}
-.expanded #local-graph-container {
-  position: fixed;
-  background-color: var(--color-background);
-  top: 5vh;
-  left: 5vw;
-  width: 90vw;
-  height: 90vh;
-  z-index: 10000;
-  border-radius: 0.5rem;
-  border: 2px solid var(--accent-color);
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-  aspect-ratio: auto;
-}
-.expanded::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 9999;
-  backdrop-filter: blur(2px);
-}
-.expanded #local-graph-wrapper header button {
-  position: fixed;
-  top: calc(5vh + 10px);
-  right: calc(5vw + 10px);
-  z-index: 10001;
-  width: auto;
-  margin: 0;
-}
 @property --tw-border-spacing-x {
   syntax: "<length>";
   inherits: false;
