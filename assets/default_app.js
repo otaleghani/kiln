@@ -249,9 +249,7 @@ window.initCanvasMode = function (canvasData) {
 
 // Expands the graph
 window.toggleGraphExpand = function () {
-  const wrapper = document.getElementById("local-graph-wrapper");
-  if (!wrapper) return;
-  wrapper.classList.toggle("expanded");
+  document.body.classList.toggle("expanded");
 };
 
 // Highlights the sidebar link

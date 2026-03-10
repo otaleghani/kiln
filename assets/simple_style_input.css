@@ -58,7 +58,7 @@
   backdrop-filter: blur(2px);
 }
 
-.expanded header button {
+.expanded #local-graph-wrapper header button {
   position: fixed;
   top: calc(5vh + 10px);
   right: calc(5vw + 10px);
