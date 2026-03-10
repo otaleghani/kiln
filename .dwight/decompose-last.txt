@@ -1,109 +1,232 @@
 -- DwightAuto decomposition output
--- Request: The Local Graph needs to be in the right sidebar, as the first thing after the header. Also we still have problems with the expanded local graph. It displays correctly in the right position, but it's 
--- Timestamp: Tue 10 Mar 2026 10:57:12 AM CET
+-- Request: Rework the local-graph expanding logic, window.toggleGraphExpand(), to be the same that we use for the search-button. Basically whenever is clicked, instead of moving and scaling the local graph in th
+-- Timestamp: Tue 10 Mar 2026 11:10:50 AM CET
 
+Now I have a complete picture. Let me understand the current state:
 
+**Current approach** (`default_app.js`): `window.toggleGraphExpand()` toggles `document.body.classList.toggle("expanded")`, which then uses CSS (`.expanded #local-graph-wrapper`, `.expanded #local-graph-container`, `.expanded::before`) to reposition the sidebar graph container via `position: fixed` to fill the screen with a backdrop.
+
+**Search overlay approach** (`search.js`): Creates a _separate_ overlay container (`#search-overlay` with `#search-modal` inside), appended to `document.body`, with `hidden`/`closing` class toggling and fade animations. Click-outside and Escape key close it.
+
+**What the developer wants**: Instead of mutating the sidebar graph via `body.expanded`, create a _new_ overlay container (like search does) that holds a separate full-screen graph rendering.
 
 <tasks>
-<task order="1" title="Move local graph into right sidebar template">
-Move the local graph component from body-level into the right sidebar, placing it as the first element after the sidebar header.
+<task order="1" title="Add graph overlay CSS to shared.css">
+In `assets/shared.css`, add CSS styles for the new graph expand overlay, following the exact same pattern used by the search overlay (`#search-overlay`/`#search-modal`). 
 
-**Files to edit:**
+Add the following CSS rules at the end of `assets/shared.css` (before the closing of the file, after the search styles section around line 1009):
 
-1. **`internal/templates/layout_default.templ`**
+```css
+/* GRAPH expand overlay */
+#graph-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  animation: kiln-fade-in 150ms ease-out;
+}
+#graph-overlay.closing {
+  animation: kiln-fade-out 120ms ease-in forwards;
+}
+#graph-overlay.hidden {
+  display: none;
+}
+#graph-modal {
+  background: var(--bg-color);
+  width: 90vw;
+  height: 90vh;
+  border-radius: 0.5rem;
+  border: 2px solid var(--accent-color);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: kiln-scale-in 150ms ease-out;
+}
+#graph-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  padding: 4px;
+  border-radius: 4px;
+}
+#graph-modal-close:hover {
+  background: var(--hover-color);
+}
+#graph-modal-container {
+  width: 100%;
+  height: 100%;
+}
+```
 
-   Current structure (lines 114-143):
-   ```
-   <aside id="right-sidebar">
-     <header>...</header>
-     <div id="right-sidebar-content">@TOCPanel</div>
-   </aside>
-   if !data.Site.DisableLocalGraph {
-     @LocalGraph(data.Site.DisableLocalGraph)
-   }
-   ```
+These IDs follow the exact same naming convention and animation pattern as `#search-overlay`/`#search-modal`. The `kiln-fade-in`, `kiln-fade-out`, and `kiln-scale-in` keyframe animations already exist in `shared.css`.
 
-   Change to:
-   - Remove lines 141-143 (the standalone `@LocalGraph` after `</aside>`)
-   - Insert `if !data.Site.DisableLocalGraph { @LocalGraph(data.Site.DisableLocalGraph) }` inside the `<aside>` block, between `</header>` (line 135) and the `<div id="right-sidebar-content">` (line 136)
-
-2. **`internal/templates/content.templ`** — Update the `LocalGraph` templ component (lines 297-334). Change the wrapper div classes from no classes to `class="p-4 border-b border-b-sidebar-border"` so it has padding and a bottom border matching the sidebar style. The `id="local-graph-wrapper"` stays the same.
-
-**Verify:** Run `templ generate && go build ./...`
+Verify: Run `go test ./...` to ensure nothing is broken.
 </task>
 
-<task order="2" title="Update CSS for in-sidebar graph and fix expanded overlay" depends_on="1">
-Update CSS so the local graph flows inside the sidebar normally, and fix the expanded graph being behind the overlay.
+<task order="2" title="Remove old expanded CSS from default_style_input.css" depends_on="1">
+Edit `assets/default_style_input.css` to remove the old `.expanded` CSS rules that are no longer needed. These rules are at lines 74-116 of the file:
 
-**Files to edit:**
+Remove these CSS rule blocks:
+- `.expanded #local-graph-wrapper` (lines 74-81)
+- `.expanded #local-graph-container` (lines 83-95)
+- `.expanded::before` (lines 97-107)
+- `.expanded #local-graph-wrapper header button` (lines 109-116)
 
-1. **`assets/default_style_input.css`** — Replace lines 74-126 with:
+After removing, the file should go from the `#right-sidebar.collapsed` closing brace directly to whatever follows (likely end of file or next rule block).
 
-   Remove these three blocks entirely:
-   - `#local-graph-wrapper { position: fixed; bottom: 0; right: 0; ... }` (lines 74-82)
-   - `@media (max-width: 1279px) { #local-graph-wrapper { display: none; } }` (lines 84-88)
-   - `#right-sidebar.collapsed ~ #local-graph-wrapper { display: none; }` (lines 90-92)
+Also check `assets/default_style.css` — it is the compiled output. The same `.expanded` rules exist there (around lines 912-949). Remove the matching CSS blocks from `assets/default_style.css` as well:
+- `.expanded #local-graph-wrapper`
+- `.expanded #local-graph-container`
+- `.expanded::before`
+- `.expanded #local-graph-wrapper header button`
 
-   Keep the expanded rules (lines 94-126) but add a new rule for the wrapper in expanded state:
-   ```css
-   .expanded #local-graph-wrapper {
-     position: fixed;
-     inset: 0;
-     z-index: 10000;
-     padding: 0;
-     border-bottom: none;
-     background: transparent;
-   }
-   ```
-
-   Also add `aspect-ratio: auto;` to the existing `.expanded #local-graph-container` rule so it overrides the `aspect-square` class.
-
-2. **`assets/default_style.css`** — Apply the exact same changes (this is the compiled output). Remove lines 912-928, keep lines 929-959, add the new `.expanded #local-graph-wrapper` rule.
-
-**Verify:** Run `go build ./...`
+Verify: Run `go test ./...` to ensure nothing is broken.
 </task>
 
-<task order="3" title="Update JS for expanded graph re-render and Escape key" depends_on="2">
-Update JavaScript so the expanded graph re-renders at full size and can be closed with Escape.
+<task order="3" title="Rewrite toggleGraphExpand in default_app.js" depends_on="2">
+Edit `assets/default_app.js` to replace `window.toggleGraphExpand` (lines 250-262) with a new overlay-based implementation modeled after the search overlay pattern in `assets/search.js`.
 
-**Files to edit:**
+The current implementation at lines 250-262 is:
+```js
+// Expands the graph
+window.toggleGraphExpand = function () {
+  var isExpanded = document.body.classList.toggle("expanded");
+  if (isExpanded) {
+    var handler = function(e) {
+      if (e.key === "Escape") {
+        document.body.classList.remove("expanded");
+        document.removeEventListener("keydown", handler);
+      }
+    };
+    document.addEventListener("keydown", handler);
+  }
+};
+```
 
-1. **`assets/default_app.js`** — Replace `toggleGraphExpand` (lines 251-253) with:
-   ```javascript
-   window.toggleGraphExpand = function () {
-     var isExpanded = document.body.classList.toggle("expanded");
-     if (isExpanded) {
-       var handler = function(e) {
-         if (e.key === "Escape") {
-           document.body.classList.remove("expanded");
-           document.removeEventListener("keydown", handler);
-         }
-       };
-       document.addEventListener("keydown", handler);
-     }
-   };
-   ```
+Replace it with this overlay-based implementation:
 
-2. **`assets/graph.js`** — After the existing `themeObserver.observe(...)` block (around line 72), add a MutationObserver on `document.body` to re-render the local graph when the `expanded` class is toggled:
-   ```javascript
-   const bodyClassObserver = new MutationObserver((mutations) => {
-     for (const m of mutations) {
-       if (m.type === "attributes" && m.attributeName === "class") {
-         const local = document.getElementById("local-graph-container");
-         const localWrapper = document.getElementById("local-graph-wrapper");
-         if (local) {
-           setTimeout(() => initGraph(null, local, localWrapper), 50);
-         }
-         break;
-       }
-     }
-   });
-   bodyClassObserver.observe(document.body, {
-     attributes: true,
-     attributeFilter: ["class"],
-   });
-   ```
+```js
+// Graph expand overlay — mirrors the search overlay pattern from search.js
+function createGraphOverlay() {
+  var overlay = document.createElement("div");
+  overlay.id = "graph-overlay";
+  overlay.className = "hidden";
 
-**Verify:** Run `go build ./...`
+  var modal = document.createElement("div");
+  modal.id = "graph-modal";
+
+  var closeBtn = document.createElement("button");
+  closeBtn.id = "graph-modal-close";
+  closeBtn.type = "button";
+  closeBtn.setAttribute("aria-label", "Close");
+  closeBtn.innerHTML = "&times;";
+
+  var container = document.createElement("div");
+  container.id = "graph-modal-container";
+
+  modal.appendChild(closeBtn);
+  modal.appendChild(container);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) hideGraphOverlay();
+  });
+  closeBtn.addEventListener("click", function () {
+    hideGraphOverlay();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      var ov = document.getElementById("graph-overlay");
+      if (ov && !ov.classList.contains("hidden")) {
+        hideGraphOverlay();
+      }
+    }
+  });
+
+  return overlay;
+}
+
+function getGraphOverlay() {
+  return document.getElementById("graph-overlay") || createGraphOverlay();
+}
+
+function showGraphOverlay() {
+  var overlay = getGraphOverlay();
+  overlay.classList.remove("hidden", "closing");
+}
+
+function hideGraphOverlay() {
+  var overlay = document.getElementById("graph-overlay");
+  if (!overlay || overlay.classList.contains("hidden")) return;
+  overlay.classList.add("closing");
+  overlay.addEventListener("animationend", function handler() {
+    overlay.removeEventListener("animationend", handler);
+    overlay.classList.add("hidden");
+    overlay.classList.remove("closing");
+  }, { once: true });
+}
+
+window.toggleGraphExpand = function () {
+  var overlay = getGraphOverlay();
+  if (overlay.classList.contains("hidden")) {
+    showGraphOverlay();
+    // Dispatch custom event so graph.js can render into the modal container
+    window.dispatchEvent(new CustomEvent("graph-overlay-opened"));
+  } else {
+    hideGraphOverlay();
+  }
+};
+```
+
+This creates the overlay DOM (`#graph-overlay` > `#graph-modal` > `#graph-modal-container`) lazily, supports Escape key, click-outside-to-close, and a close button. When opened, it dispatches a `"graph-overlay-opened"` custom event that `graph.js` will listen for to render into the new container.
+
+Verify: Run `go test ./...` to ensure nothing is broken.
+</task>
+
+<task order="4" title="Update graph.js to render into the overlay container" depends_on="3">
+Edit `assets/graph.js` to listen for the `"graph-overlay-opened"` custom event and render the local graph data into `#graph-modal-container`.
+
+At the end of the IIFE in `assets/graph.js`, just before the closing `})();` (before line 398), add a listener for the custom event:
+
+```js
+  // Listen for graph overlay open and render local graph into the modal
+  window.addEventListener("graph-overlay-opened", function () {
+    var modalContainer = document.getElementById("graph-modal-container");
+    if (!modalContainer) return;
+
+    if (!graphDataPromise) return;
+
+    graphDataPromise.then(function (data) {
+      if (!data) return;
+
+      var pageTitleEl = document.getElementById("page-title-data");
+      if (!pageTitleEl) return;
+
+      var currentTitle = pageTitleEl.dataset.title;
+      var localData = filterLocalData(
+        JSON.parse(JSON.stringify(data)),
+        currentTitle,
+      );
+
+      if (localData.nodes.length > 0) {
+        renderGraph(modalContainer, localData, true);
+      }
+    });
+  });
+```
+
+This reuses the existing `graphDataPromise`, `filterLocalData`, and `renderGraph` functions already in the IIFE scope. It renders the same local graph data (filtered by current page title) into the modal's container. The `renderGraph` function already reads dimensions from `container.getBoundingClientRect()`, so it will automatically use the 90vw x 90vh modal dimensions.
+
+Verify: Run `go test ./...` to ensure nothing is broken. Then manually verify by building the site with `go run ./cmd/kiln/main.go generate` (if a vault is available) and checking that the expand button in the right sidebar opens the overlay with the local graph rendered at full size.
 </task>
 </tasks>
