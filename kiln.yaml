@@ -3,6 +3,7 @@
 # CLI flags will override these values.
 
 theme: "dracula"
+# accent-color: blue
 font: inter
 # url: "https://kiln.talesign.com"
 name: "Kiln"
