@@ -923,6 +923,9 @@ body {
     display: none;
   }
 }
+#right-sidebar.collapsed ~ #local-graph-wrapper {
+  display: none;
+}
 .expanded #local-graph-container {
   position: fixed;
   background-color: var(--color-background);
