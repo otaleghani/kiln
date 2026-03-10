@@ -1007,6 +1007,54 @@ details.callout[open] > summary .callout-title::after {
   font-size: 0.875rem;
 }
 
+/* GRAPH expand overlay */
+#graph-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  animation: kiln-fade-in 150ms ease-out;
+}
+#graph-overlay.closing {
+  animation: kiln-fade-out 120ms ease-in forwards;
+}
+#graph-overlay.hidden {
+  display: none;
+}
+#graph-modal {
+  background: var(--bg-color);
+  width: 90vw;
+  height: 90vh;
+  border-radius: 0.5rem;
+  border: 2px solid var(--accent-color);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: kiln-scale-in 150ms ease-out;
+}
+#graph-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--text-color);
+  padding: 4px;
+  border-radius: 4px;
+}
+#graph-modal-close:hover {
+  background: var(--hover-color);
+}
+#graph-modal-container {
+  width: 100%;
+  height: 100%;
+}
+
 /* LINK PREVIEW */
 #link-preview-tooltip {
   position: fixed;
