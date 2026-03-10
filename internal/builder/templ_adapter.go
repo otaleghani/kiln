@@ -35,6 +35,7 @@ func toTemplPageData(p *DefaultSitePageData) *templates.PageData {
 			DisableLocalGraph: p.Site.DisableLocalGraph,
 			DisableTOC:        p.Site.DisableTOC,
 			FlatURLs:          p.Site.FlatURLs,
+			Lang:              p.Site.Lang,
 		},
 	}
 

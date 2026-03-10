@@ -76,6 +76,7 @@ func buildDefault(log *slog.Logger) {
 		DisableTOC:        DisableTOC,
 		FlatURLs:          FlatUrls,
 		OGFontFace:        ogFace,
+		Lang:              Lang,
 		log:               log,
 		Obsidian:          obs,
 		ImageResults:      make(map[string]*imgopt.Result),
@@ -871,6 +872,7 @@ type DefaultSite struct {
 	DisableTOC        bool                       // If set, disables the Table of contents
 	FlatURLs          bool                       // If set, handles flat urls (used in canonical)
 	OGFontFace        font.Face                  // Font face for OG image text rendering
+	Lang              string                     // Language code for the site
 	log               *slog.Logger
 	Obsidian          *obsidian.Obsidian
 	ImageResults      map[string]*imgopt.Result // Optimized image variants keyed by WebPath

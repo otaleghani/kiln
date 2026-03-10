@@ -48,6 +48,7 @@ type SiteData struct {
 	DisableLocalGraph bool
 	DisableTOC        bool
 	FlatURLs          bool
+	Lang              string
 }
 
 // ThemeData bundles color schemes and typography for the site.

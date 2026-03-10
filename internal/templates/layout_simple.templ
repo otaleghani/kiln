@@ -3,7 +3,7 @@ package templates
 
 templ SimpleLayout(data *PageData) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang={ data.Site.Lang }>
 		<head>
 			<meta charset="UTF-8"/>
 			@Canonical(data)

@@ -28,4 +28,5 @@ var (
 	LayoutName        string // Layout name
 	DisableTOC        bool   // Disables table of contents
 	DisableLocalGraph bool   // Disables local graph
+	Lang              string // Language code for the site
 )

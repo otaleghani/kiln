@@ -41,6 +41,8 @@ func init() {
 		BoolVar(&disableTOC, FlagDisableTOC, DefaultDisableTOC, "Disables the Table of contents on the right sidebar. If the local graph is disabled too, hides the right sidebar.")
 	cmdGenerate.Flags().
 		BoolVar(&disableLocalGraph, FlagDisableLocalGraph, DefaultDisableLocalGraph, "Disables the Local graph. If the table of contents is disabled too, hides the right sidebar.")
+	cmdGenerate.Flags().
+		StringVarP(&lang, FlagLang, FlagLangShort, DefaultLang, "Language code for the site (e.g. en, it, fr)")
 }
 
 // runGenerate executes the build logic.
@@ -58,6 +60,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	applyBoolFlag(cmd, FlagFlatURLS, &flatUrls, cfg, DefaultFlatURLS)
 	applyBoolFlag(cmd, FlagDisableTOC, &disableTOC, cfg, DefaultDisableTOC)
 	applyBoolFlag(cmd, FlagDisableLocalGraph, &disableLocalGraph, cfg, DefaultDisableLocalGraph)
+	applyStringFlag(cmd, FlagLang, &lang, cfg, DefaultLang)
 
 	builder.OutputDir = outputDir
 	builder.InputDir = inputDir
@@ -70,6 +73,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	builder.LayoutName = layout
 	builder.DisableTOC = disableTOC
 	builder.DisableLocalGraph = disableLocalGraph
+	builder.Lang = lang
 
 	log := getLogger()
 	builder.Build(log)

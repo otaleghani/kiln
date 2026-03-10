@@ -29,6 +29,7 @@ const (
 	DefaultLayout            = "default"
 	DefaultDisableTOC        = false
 	DefaultDisableLocalGraph = false
+	DefaultLang              = "en"
 )
 
 // Flag names
@@ -56,6 +57,8 @@ const (
 	FlagFlatURLS          = "flat-urls"
 	FlagDisableTOC        = "disable-toc"
 	FlagDisableLocalGraph = "disable-local-graph"
+	FlagLang              = "lang"
+	FlagLangShort         = "g"
 )
 
 // Global variables to store the values of command-line flags.
@@ -73,6 +76,7 @@ var (
 	layout            string // The chosen layout
 	disableTOC        bool   // Disable the Table of contents
 	disableLocalGraph bool   // Disable the local graph
+	lang              string // Language code for the site
 )
 
 // Init constructs and returns the root command for the application.
