@@ -1,206 +1,94 @@
 -- DwightAuto decomposition output
--- Request: Under docs you can find 3 empty files: "Feed RSS.md", "Image Optimization.md" and "Link Preview.md". Read the other files in the Features folder and create for these empty files the missing documentat
--- Timestamp: Tue 10 Mar 2026 03:17:23 PM CET
+-- Request: There is an empty file in docs.md that needs to be filled with the internationalization feature. Read the content of the other features and create this one.
+-- Timestamp: Tue 10 Mar 2026 05:28:29 PM CET
 
-Now I have a thorough understanding of the documentation style and the technical details for all three features. Let me produce the task decomposition.
+Now I have a thorough understanding of the i18n system and the documentation format. This is a single documentation task — writing the `docs/I18n.md` file. It doesn't need decomposition into multiple sub-tasks; it's a single file to write based on existing patterns. Let me produce the task decomposition anyway since the framework requires it.
 
 <tasks>
-<task order="1" title="Write Feed RSS documentation">
-Write the documentation file `docs/Features/Feed RSS.md`. 
+<task order="1" title="Write I18n documentation">
+Write the documentation file `docs/I18n.md` for the internationalization (i18n) feature. This is a documentation-only task — no Go code changes needed.
 
-Read the existing documentation files in `docs/Features/` to match the style exactly. All docs use YAML frontmatter with `title` and `description` fields, an H1 heading matching the title, an explanatory opening paragraph, then H2 sections. They use wikilinks (`[[Page Name]]`) for cross-references, code blocks with language identifiers, callout blocks (`> [!warning]`), bold for key terms, and tables where appropriate.
+**Context**: The file `docs/I18n.md` is currently empty and needs to be filled with documentation about Kiln's internationalization feature. You must match the style and structure of the existing feature documentation files.
 
-**Source code context for accuracy:**
-- RSS implementation lives in `internal/rss/rss.go` and `internal/obsidian/rss.go`
-- During vault scanning, every `.md` file is automatically processed for RSS inclusion
-- Metadata extracted per file: title (from frontmatter, falls back to filename), description (from frontmatter), WebPath, PubDate (file creation/birth time)
-- Entries are sorted newest-first and limited to 50 most recent
-- Output file is `feed.xml` in the output directory
-- RSS 2.0 compliant XML format
-- Channel title and link use the site's BaseURL
-- The `--url` flag is required for absolute URLs in the feed; without it, RSS generation is skipped
-- No explicit opt-in needed — all `.md` files are included automatically
-- No way to exclude specific files or customize max entries
+**Step 1**: Read these existing feature doc files to understand the exact format, tone, and structure:
+- `docs/Features/Feed RSS.md`
+- `docs/Features/Link Preview.md`
+- `docs/Features/Image Optimization.md`
 
-**Document structure to follow:**
-
+All docs follow this structure:
 ```
 ---
-title: "Feed RSS"
-description: "..."
+title: "Feature Name"
+description: "One-sentence description for SEO/meta."
 ---
-# Feed RSS
+# Feature Name
 
-Opening paragraph explaining what RSS is and that Kiln auto-generates a feed.
+Opening paragraph explaining what the feature does.
 
-## Why it matters
-Explain RSS benefits for readers (subscribe, aggregators, etc.)
-
-## Configuration
-Explain the --url flag requirement (similar to Sitemap xml.md pattern).
-Include a bash code block showing the command.
-Add a callout warning about missing --url flag.
-
-## How it works
-- All .md files included automatically
-- Title from frontmatter `title` field, falls back to filename
-- Description from frontmatter `description` field (optional)
-- Publication date from file creation time
-- Sorted newest first, max 50 entries
-- Output: `feed.xml` in root of output directory
-
-## Customizing entries
-Explain how frontmatter fields affect RSS output. Show a YAML frontmatter example.
-
+## Section 1
+...
+## Section N
+...
 ## Limitations
-- Max 50 entries (hard-coded)
-- All .md files included, no way to exclude specific files
-- No full-text content in feed (title + description only)
-- Publication date uses file creation time, cannot override via frontmatter
-- Channel title uses BaseURL, not a custom site name
+- Bullet list of current limitations
 ```
 
-Use wikilinks to cross-reference related pages like `[[Sitemap xml]]`, `[[Configuration File]]`. Keep the tone instructional and clear, matching the existing docs. Do NOT add any `@feature:` pragma — this is a markdown documentation file, not source code.
+**Step 2**: Read the i18n source code to understand the feature thoroughly:
+- `internal/i18n/i18n.go` — Contains the `Labels` struct (21 fields for UI strings), a `languages` map with `"en"` and `"it"` entries, and `Resolve(lang string) *Labels` function that falls back to English for unknown codes.
+- `internal/i18n/i18n_test.go` — Tests for English, Italian, unknown fallback, and all-fields-populated checks.
 
-**Verify:** Read the file after writing to confirm it has proper frontmatter and is non-empty.
+**Step 3**: Read how i18n is configured and wired:
+- `internal/cli/commands.go` — Defines `FlagLang = "lang"`, `FlagLangShort = "g"`, `DefaultLang = "en"`
+- `internal/cli/generate.go` — The `--lang` / `-g` flag is registered on the generate command, sets `builder.Lang`
+- `internal/config/config.go` — The `Lang` field in the YAML config struct (`lang` YAML key)
+- `internal/builder/templ_adapter.go` — Calls `i18n.Resolve(p.Site.Lang)` and passes `Labels` to templates
+- `internal/templates/types.go` — `SiteData` struct has `Lang string` and `Labels *i18n.Labels`
+
+**Step 4**: Write `docs/I18n.md` with the following sections and content:
+
+1. **Frontmatter** — title: "Internationalization (i18n)", description about Kiln translating UI strings.
+
+2. **Opening paragraph** — Kiln supports multiple languages for all user-facing UI strings (buttons, labels, tooltips). Set a language code and every built-in string adapts automatically.
+
+3. **## How it works** — Explain the `Labels` struct, the `languages` registry, and `Resolve()` fallback behavior. Mention that labels are injected into HTML templates at build time AND passed to JavaScript via a hidden `#kiln-labels` element for client-side strings (search, copy button, etc.).
+
+4. **## Configuration** — Show how to set the language:
+   - CLI flag: `kiln generate --lang it` (or `-g it`)
+   - Config file: `lang: it` in `kiln.yaml`
+   - Default is `en` (English)
+
+5. **## Supported languages** — Table listing language codes and names:
+   | Code | Language |
+   | `en` | English (default) |
+   | `it` | Italian |
+
+6. **## Translated strings** — Table listing all 21 Labels fields with their English values, grouped logically (search, navigation, content metadata, UI actions, etc.). Show the field name and the English default string.
+
+7. **## Adding a new language** — Explain that currently new languages require adding an entry to the `languages` map in `internal/i18n/i18n.go`. There is no user-facing config file for custom translations. Describe the steps: add a new map entry with the language code key and fill in all 21 `Labels` fields.
+
+8. **## Limitations** — Bullet list:
+   - Only 2 languages built in (English and Italian)
+   - No user-facing translation file — adding languages requires editing Go source
+   - All 21 strings must be provided; there is no per-field fallback to English
+   - No right-to-left (RTL) layout support
+   - Custom Mode does not use the i18n labels — it is only for the default/simple themes
+
+**Verify**: The file should be valid Markdown with proper frontmatter. Run: `head -5 docs/I18n.md` to confirm the frontmatter is present.
 </task>
+<task order="2" title="Review and verify I18n doc completeness" depends_on="1">
+Review `docs/I18n.md` written in the previous task to ensure it is complete, accurate, and matches the project's documentation style.
 
-<task order="2" title="Write Image Optimization documentation">
-Write the documentation file `docs/Features/Image Optimization.md`.
+**Step 1**: Read `docs/I18n.md` in full.
 
-Read the existing documentation files in `docs/Features/` to match the style exactly. All docs use YAML frontmatter with `title` and `description` fields, an H1 heading matching the title, an explanatory opening paragraph, then H2 sections. They use wikilinks (`[[Page Name]]`) for cross-references, code blocks with language identifiers, callout blocks (`> [!tip]`, `> [!warning]`), bold for key terms, and tables where appropriate.
+**Step 2**: Cross-reference the documented strings against the actual `Labels` struct in `internal/i18n/i18n.go`. The struct has exactly 21 fields:
+- SearchPlaceholder, ToggleTheme, BackToTop, OnThisPage, TableOfContents, LocalGraph, GeneratedWith, PageNotFound, GoBackHome, Folder, Tag, Updated, Created, Words, MinRead, Copy, NoResults, Search, Navbar, Expand, LastModified
 
-**Source code context for accuracy:**
-- Implementation in `internal/imgopt/imgopt.go` and wired in `internal/builder/builder_default.go`
-- Responsive image rendering in `internal/obsidian/markdown/wikilinks.go`
-- Supported input formats: `.png`, `.jpg`, `.jpeg`
-- Output formats: AVIF (best compression), WebP (good compression), original format (fallback)
-- Default breakpoints: 1200px, 800px, 400px wide
-- Quality: 80 (hard-coded)
-- Requires external CLI tools: `cwebp` (from libwebp) for WebP, `avifenc` (from libavif) for AVIF
-- If tools are missing, graceful degradation — originals are copied as-is, no error
-- Each optimizable image produces up to 9 variants (3 sizes × 3 formats)
-- HTML output uses `<picture>` element with `<source>` tags for each format and `srcset`/`sizes` attributes
-- All images get `loading="lazy"` attribute
-- Images also get an expand button (lightbox) for full-size viewing
-- No user configuration needed — runs automatically at build time for supported formats
-- GIF, SVG, WebP inputs are NOT optimized (copied as-is)
+Verify that all 21 are mentioned in the documentation.
 
-**Document structure to follow:**
+**Step 3**: Verify the CLI flag documentation matches `internal/cli/commands.go` (flag name `lang`, short flag `g`, default `en`).
 
-```
----
-title: "Image Optimization"
-description: "..."
----
-# Image Optimization
+**Step 4**: If any discrepancies are found (missing fields, wrong flag names, wrong defaults), fix them in `docs/I18n.md`.
 
-Opening paragraph: Kiln automatically optimizes images at build time, generating responsive variants in modern formats.
-
-## How it works
-Explain the pipeline: decode → resize at breakpoints → encode to AVIF/WebP/original → generate <picture> HTML.
-Mention breakpoints (1200, 800, 400), quality (80), and format priority.
-
-## Supported formats
-Table showing input formats (.png, .jpg, .jpeg) and what they produce.
-Note that .gif, .svg, .webp are copied as-is without optimization.
-
-## Requirements
-Explain the two external tools needed:
-- `cwebp` from libwebp (for WebP)
-- `avifenc` from libavif (for AVIF)
-Include install commands for common systems (apt, brew, nix).
-Add a callout: if tools aren't installed, Kiln silently falls back to copying originals.
-
-## The generated HTML
-Show the <picture> element structure with <source> tags. Explain srcset, sizes, and lazy loading.
-Mention the expand/lightbox button.
-
-## Usage
-Explain that no configuration is needed. Just reference images normally in markdown:
-- `![alt](image.png)` or `![[image.png]]`
-Kiln handles the rest.
-
-## Limitations
-- External tools required for WebP/AVIF
-- Fixed breakpoints and quality (not configurable)
-- GIF/SVG not optimized
-- Increases output size (multiple variants per image)
-- Adds build time proportional to image count/size
-```
-
-Use wikilinks to cross-reference `[[Wikilinks]]` for image embedding syntax. Keep the tone instructional. Do NOT add any `@feature:` pragma.
-
-**Verify:** Read the file after writing to confirm it has proper frontmatter and is non-empty.
-</task>
-
-<task order="3" title="Write Link Preview documentation">
-Write the documentation file `docs/Features/Link Preview.md`.
-
-Read the existing documentation files in `docs/Features/` to match the style exactly. All docs use YAML frontmatter with `title` and `description` fields, an H1 heading matching the title, an explanatory opening paragraph, then H2 sections. They use wikilinks (`[[Page Name]]`) for cross-references, code blocks, callout blocks, bold for key terms, and tables where appropriate.
-
-**Source code context for accuracy:**
-- Implementation in `assets/link_preview.js` (client-side JavaScript)
-- Styling in `assets/shared.css` (tooltip CSS with theme variable support)
-- Works only on desktop: requires viewport ≥1024px AND hover-capable device (`matchMedia("(hover: hover)")`)
-- Targets all `a.internal-link` elements (class added automatically by Kiln's markdown renderer for wikilinks)
-- Hover flow: 300ms delay → fetch target page HTML → parse and extract `#content .content` → render in tooltip
-- Tooltip positioning: prefers below link, falls above if insufficient space, constrained to viewport
-- Max tooltip size: 400px wide × 300px tall, scrollable if content overflows
-- In-memory cache (Map) persists for browser session — each page fetched only once
-- Tooltip inherits `.content` styles for visual consistency with page content
-- Tooltip respects light/dark theme via CSS variables
-- Automatically dismissed on navigation (htmx:beforeSwap), scroll, Escape key, or clicking outside
-- Fully automatic — no opt-in or configuration needed
-- Does NOT work for: external links, hash-only links (#), current page links, links with target="_blank"
-- No keyboard/accessibility support
-- Vanilla JavaScript, no external libraries
-
-**Document structure to follow:**
-
-```
----
-title: "Link Preview"
-description: "..."
----
-# Link Preview
-
-Opening paragraph: Kiln shows a live preview tooltip when you hover over internal links, letting readers peek at content without navigating away.
-
-## How it works
-Explain the hover → delay → fetch → render flow.
-Mention caching (fetched once per session).
-Mention tooltip positioning (below or above link).
-
-## Compatibility
-- Desktop only (≥1024px viewport)
-- Hover-capable devices (not touch-only)
-- Modern browsers with JavaScript enabled
-Add a callout noting that on mobile/tablet the feature is automatically disabled — readers simply follow links normally.
-
-## What triggers a preview
-Explain which links get previews:
-- Internal wikilinks (rendered with class `internal-link`)
-- NOT external links, hash links, or links to the current page
-
-## Visual behavior
-- Tooltip appears after a short delay (300ms)
-- Max 400×300px, scrollable
-- Styled consistently with page content
-- Follows light/dark theme automatically
-- Dismissed by: moving mouse away, scrolling, pressing Escape, or navigating
-
-## Limitations
-- Desktop only — disabled on mobile and touch devices
-- No keyboard navigation or screen reader support
-- Downloads full page HTML to extract content (no dedicated preview endpoint)
-- Cache grows unbounded during session
-- No loading indicator during fetch
-- No error feedback if fetch fails
-```
-
-Use wikilinks to cross-reference `[[Wikilinks]]`, `[[Light-Dark Mode]]`, `[[Client Side Navigation]]`. Keep the tone instructional. Do NOT add any `@feature:` pragma.
-
-**Verify:** Read the file after writing to confirm it has proper frontmatter and is non-empty.
+**Verify**: Run `wc -l docs/I18n.md` to confirm the file has substantial content (should be 80+ lines). Run `grep -c '|' docs/I18n.md` to confirm tables are present.
 </task>
 </tasks>
