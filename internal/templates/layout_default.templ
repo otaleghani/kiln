@@ -133,7 +133,7 @@ templ DefaultLayout(data *PageData) {
 							@GraphButton(data.Site.BaseURL)
 						</div>
 					</header>
-					<div class="p-4 flex flex-col gap-8">
+					<div id="right-sidebar-content" class="p-4 flex-1 overflow-y-auto flex flex-col gap-8">
 						@LocalGraph(data.Site.DisableLocalGraph)
 						@TOCPanel(data)
 					</div>
