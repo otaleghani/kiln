@@ -408,6 +408,11 @@ templ BacklinksPanel(data *PageData) {
 					<li>
 						<a
 							href={ templ.SafeURL(bl.WebPath) }
+							hx-get={ string(templ.SafeURL(bl.WebPath)) }
+							hx-target="#kiln-main"
+							hx-select="#kiln-main"
+							hx-swap="outerHTML"
+							hx-push-url="true"
 							class="text-sm hover:text-accent transition-colors"
 						>
 							{ bl.Name }
