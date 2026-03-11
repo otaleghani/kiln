@@ -23,7 +23,7 @@ These features were on the roadmap and have since been shipped:
 
 - [x] **Configuration File:** Support for `kiln.yaml` to save preferences (flags) persistently, so you don't need to pass CLI flags on every [generate](./Commands/generate.md) run.
 - [x] **Image Optimization:** Automatic WebP conversion and responsive image sizing to improve page load speed.
-- [ ] **Localization:** i18n support for translating the UI into multiple languages.
+- [x] **Localization:** i18n support for translating the UI into multiple languages.
 - [x] **Structured Data:** Automatically generate JSON-LD schema markup for articles and breadcrumbs to improve search engine visibility.
 - [x] Support for other kinds of links, not only wikilinks 
 
@@ -35,12 +35,12 @@ These features were on the roadmap and have since been shipped:
 - [x] **Full-Text Search:** Fuzzy finder with content search to go beyond the current name-based [search](./Features/Navigation/Search.md).
 - [x] **Navigation Enhancements:** "Back to Top" buttons and improved breadcrumb trails.
 - [x] **Animations:** Subtle CSS animations for interactive elements.
-- [ ] **Canvas Colors:** Custom color support for [Canvas](./Features/Rendering/Obsidian Canvas.md) nodes.
+- [x] **Canvas Colors:** Custom color support for [Canvas](./Features/Rendering/Obsidian Canvas.md) nodes.
 
 ## Content Management
 *Tools to help you manage and publish your digital garden.*
 
-- [ ] **Reading Metadata:** Display "Last Updated" and "Time to Read" indicators on every page.
+- [x] **Reading Metadata:** Display "Last Updated" and "Time to Read" indicators on every page.
 - [ ] **Backlinks Panel:** A dedicated sidebar section showing all incoming links to the current page.
 - [x] **RSS Feeds:** Automatic RSS/Atom feed generation for blog-style vaults, making it easy for readers to subscribe.
 - [ ] **Draft Support:** Exclude work-in-progress pages from the build using frontmatter flags. For now, you can use [hidden files and folders](./Features/Rendering/Hidden files folders.md) to keep content out of the generated site.
