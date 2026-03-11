@@ -1,263 +1,162 @@
 -- DwightAuto decomposition output
--- Request: Create in the right sidebar a backlink panel, so a dedicated section where we show all the incoming links to the current page.
--- Timestamp: Wed 11 Mar 2026 02:51:39 PM CET
+-- Request: The backlink section in the right sidebar is good, but it has a fatal flaw: the HTMX request doesn't swap just the container with id `content` with the incoming container with id `content`, but with t
+-- Timestamp: Wed 11 Mar 2026 03:07:32 PM CET
 
-Now I have a complete understanding. The backlinks are stored as `[]string` containing `[[NoteName]]` format. To render clickable links in the backlink panel, we need to resolve each backlink name to its `WebPath` using the `FileIndex`. 
+Now I understand the full picture. Let me analyze the architecture:
 
-Looking at the data flow, `PageData.File` already contains `File.Backlinks`, but we need resolved backlinks (name + URL pairs). Let me now formulate the task decomposition.
+**Default layout:**
+- `<body>` has `hx-boost="true" hx-select="#kiln-main" hx-target="#kiln-main" hx-swap="outerHTML"`
+- `#kiln-main` is the `<main>` element containing the header + content areas (but NOT the sidebars)
+- Both `TOCPanel` and `BacklinksPanel` use `hx-swap-oob="true"` on their containers, which means HTMX should update them out-of-band when they appear in the response
+- The backlinks links are plain `<a href>` tags — so `hx-boost` picks them up
+
+**Simple layout:**
+- `<body>` has `hx-boost="true" hx-swap="outerHTML"` but NO `hx-select` or `hx-target`
+- This means boosted links swap the **entire body** with the response body
+- This is the problematic layout — clicking a backlink causes the whole page to be replaced
+
+The issue is actually about the **simple layout** missing `hx-select` and `hx-target`, meaning every boosted link replaces the whole page. But wait — let me re-read the user's complaint: "the HTMX request doesn't swap just the container with id `content` with the incoming container with id `content`, but with the entire page. This basically means after clicking on a backlink a new left sidebar and right sidebar appear together with the content."
+
+This sounds like it's about the **default layout** where left/right sidebars exist. The `hx-select="#kiln-main"` and `hx-target="#kiln-main"` should work — but the `hx-swap-oob` on backlinks-container means it's supposed to update out-of-band. The problem might be that the OOB swap is interfering, or that the content isn't being properly selected.
+
+Let me think more carefully. The user says "a new left sidebar and right sidebar appear together with the content." This means that after clicking a backlink, the response HTML is being inserted in a way that includes sidebars. Given that `hx-select="#kiln-main"` should extract only `#kiln-main` from the response... but `#kiln-main` is the `<main>` element. If HTMX fetches the full page, selects `#kiln-main`, and swaps it outerHTML... that should work correctly for the default layout.
+
+Wait — unless the `hx-swap-oob` on `BacklinksPanel` (which is INSIDE the right sidebar, not inside `#kiln-main`) is causing issues. Let me look at where `BacklinksPanel` is rendered relative to `#kiln-main`:
+
+- `#kiln-main` (lines 98-120) contains the main content
+- Right sidebar (lines 122-150) is OUTSIDE `#kiln-main` and contains `BacklinksPanel` at line 148
+- `BacklinksPanel` renders `<div id="backlinks-container" hx-swap-oob="true">` 
+
+So when HTMX selects `#kiln-main` from the response, the `backlinks-container` with `hx-swap-oob` is NOT inside `#kiln-main` — it's in the sidebar. HTMX should process OOB elements from the selected content... but the backlinks div isn't inside `#kiln-main`. This might mean the OOB swap doesn't get processed.
+
+Actually wait, let me reconsider. The user explicitly says "a new left sidebar and right sidebar appear **together with the content**". This suggests the ENTIRE page is being rendered inside the content area. This could happen if `hx-select` doesn't work properly or if the backlinks links have some attribute that overrides the body-level settings.
+
+The most likely explanation: the backlinks are plain `<a>` tags. With `hx-boost="true"` on body, HTMX intercepts them. The body-level `hx-select="#kiln-main"` and `hx-target="#kiln-main"` should apply. But perhaps HTMX isn't correctly inheriting these attributes for boosted links? Or there could be a version-specific issue with HTMX 1.9.10.
+
+Actually, I just realized something crucial. Let me check the HTMX docs: `hx-select` on boosted links — in HTMX 1.9.x, `hx-boost` inherits `hx-target` and `hx-swap` from parent elements, but `hx-select` might not be inherited for boosted links in all cases.
+
+Looking at this more pragmatically, the fix should ensure that backlink `<a>` tags explicitly carry the right HTMX attributes to swap only `#kiln-main`, or we should investigate why the body-level settings aren't being inherited.
 
 <tasks>
-<task order="1" title="Add Backlinks i18n label and config flag">
-Add the `DisableBacklinks` configuration option and the `Backlinks` i18n label, following the exact same pattern as `DisableTOC` and `DisableLocalGraph`.
+<task order="1" title="Fix backlinks HTMX swap in default layout">
+**Problem**: In the default layout, clicking a backlink in the right sidebar causes the entire page (including sidebars) to appear inside the content area instead of properly swapping just `#kiln-main`. The backlinks are plain `<a href>` tags in `BacklinksPanel` that rely on `hx-boost="true"` inheritance from the `<body>` tag, but the body-level `hx-select="#kiln-main"` and `hx-target="#kiln-main"` attributes may not be properly inherited by boosted links.
 
-Files to edit:
+**Files to edit**:
+- `/home/oliviero/Workspace/kiln/internal/templates/content.templ` — the `BacklinksPanel` templ component (around lines 399-420)
 
-1. **`internal/i18n/i18n.go`** — Add a `Backlinks` field to the `Labels` struct (after `LocalGraph`). Set the English value to `"Backlinks"` and the Italian value to `"Backlinks"` (it's the same term in both languages). The struct currently has fields like `SearchPlaceholder`, `ToggleTheme`, `BackToTop`, `OnThisPage`, `TableOfContents`, `LocalGraph`, etc.
+**What to do**:
+1. Read the file `/home/oliviero/Workspace/kiln/internal/templates/content.templ` around lines 399-420 to see the `BacklinksPanel` component
+2. Read the file `/home/oliviero/Workspace/kiln/internal/templates/layout_default.templ` lines 38-41 to see the body-level HTMX attributes: `hx-boost="true"`, `hx-select="#kiln-main"`, `hx-target="#kiln-main"`, `hx-swap="outerHTML"`
+3. Modify the `<a>` tags inside the `BacklinksPanel` component to explicitly include HTMX attributes that ensure only `#kiln-main` is swapped. Change:
+```templ
+<a
+    href={ templ.SafeURL(bl.WebPath) }
+    class="text-sm hover:text-accent transition-colors"
+>
+```
+to:
+```templ
+<a
+    href={ templ.SafeURL(bl.WebPath) }
+    hx-get={ string(templ.SafeURL(bl.WebPath)) }
+    hx-target="#kiln-main"
+    hx-select="#kiln-main"
+    hx-swap="outerHTML"
+    hx-push-url="true"
+    class="text-sm hover:text-accent transition-colors"
+>
+```
 
-2. **`internal/config/config.go`** — Add `DisableBacklinks bool \`yaml:"disable-backlinks"\`` to the `Config` struct (after `DisableLocalGraph`). Add a case `"disable-backlinks": return c.DisableBacklinks` to the `BoolOr` method's switch statement.
+This makes the backlinks explicitly tell HTMX to: fetch the page, select only `#kiln-main` from the response, and replace the current `#kiln-main` with it, while updating the browser URL.
 
-3. **`internal/cli/commands.go`** — Add `DefaultDisableBacklinks = false` to the defaults const block (after `DefaultDisableLocalGraph`). Add `FlagDisableBacklinks = "disable-backlinks"` to the flag names const block (after `FlagDisableLocalGraph`). Add `disableBacklinks bool` to the var block (after `disableLocalGraph`).
+4. After editing, run `cd /home/oliviero/Workspace/kiln && go run github.com/a-h/templ/cmd/templ@v0.3.1001 generate` to regenerate the `_templ.go` files.
+5. Verify the build compiles: `cd /home/oliviero/Workspace/kiln && go build ./...`
 
-4. **`internal/cli/generate.go`** — In `init()`, add a flag registration: `cmdGenerate.Flags().BoolVar(&disableBacklinks, FlagDisableBacklinks, DefaultDisableBacklinks, "Disables the Backlinks panel on the right sidebar.")`. In `runGenerate`, add `applyBoolFlag(cmd, FlagDisableBacklinks, &disableBacklinks, cfg, DefaultDisableBacklinks)` and `builder.DisableBacklinks = disableBacklinks`.
+**Important note**: The `BacklinksPanel` also has `hx-swap-oob="true"` on its container div (`<div id="backlinks-container" hx-swap-oob="true">`). This is used for out-of-band updates when the main content swaps — the backlinks panel in the sidebar should update with new backlinks for the newly loaded page. Do NOT remove this attribute. The OOB swap is a separate mechanism that should continue working: when HTMX swaps `#kiln-main`, it also looks for OOB elements in the response to update other parts of the page.
 
-5. **`internal/cli/init.go`** — Add `# disable-backlinks: false` to the scaffold YAML template string, after the `# disable-local-graph: false` line.
-
-6. **`internal/builder/builder.go`** — Add `DisableBacklinks bool` to the package-level var block (after `DisableLocalGraph`).
-
-All files already exist — only edit, don't create new files. Verify with: `go build ./...`
+**Verify**: `cd /home/oliviero/Workspace/kiln && go build ./... && go test ./...`
 </task>
+<task order="2" title="Fix backlinks HTMX swap in simple layout" depends_on="1">
+**Problem**: The simple layout has a similar issue with backlinks in `SimpleBacklinksContainer`. The simple layout's `<body>` tag only has `hx-boost="true" hx-swap="outerHTML"` with NO `hx-select` or `hx-target`, so boosted links replace the entire body content, which means the whole page gets duplicated inside the body.
 
-<task order="2" title="Wire DisableBacklinks through builder and template types">
-Wire the `DisableBacklinks` flag from the builder through the templ adapter into the template's `SiteData`, and add a `Backlink` struct to the template types for resolved backlinks.
+**Files to edit**:
+- `/home/oliviero/Workspace/kiln/internal/templates/content.templ` — the `SimpleBacklinksContainer` templ component (around lines 594-622)
 
-Files to edit:
-
-1. **`internal/templates/types.go`** — Add `DisableBacklinks bool` to the `SiteData` struct (after `DisableTOC`). The struct currently has: `BaseURL`, `SiteName`, `Theme`, `NavbarRoot`, `DisableLocalGraph`, `DisableTOC`, `FlatURLs`, `Lang`, `Labels`. Also add a new `Backlink` struct:
-```go
-type Backlink struct {
-    Name    string
-    WebPath string
-}
+**What to do**:
+1. Read `/home/oliviero/Workspace/kiln/internal/templates/content.templ` around lines 594-622 to see the `SimpleBacklinksContainer` component
+2. Read `/home/oliviero/Workspace/kiln/internal/templates/layout_simple.templ` to understand the simple layout structure. Note: the simple layout has no `#kiln-main` id on its `<main>` element (just `class="flex-1 flex flex-col h-dvh overflow-y-scroll markdown-body"`). The body tag is `<body hx-boost="true" hx-swap="outerHTML" class="bg-background relative">`.
+3. Modify the `<a>` tags inside `SimpleBacklinksContainer` to explicitly include HTMX navigation attributes. The simple layout doesn't have `hx-select` or `hx-target` on the body, so we need to be more explicit. Change:
+```templ
+<a
+    href={ templ.SafeURL(bl.WebPath) }
+    class="text-sm hover:text-accent transition-colors"
+>
 ```
-Add a `Backlinks []Backlink` field to the `PageData` struct (after the `Meta` field).
-
-2. **`internal/builder/builder_default.go`** — Add `DisableBacklinks bool` to the `DefaultSite` struct (after `DisableTOC`, around line 872). The struct currently has fields: `BaseURL`, `SiteName`, `Theme`, `Layout`, `NavbarRoot`, `Markdown`, `Minifier`, `DisableLocalGraph`, `DisableTOC`, `FlatURLs`, `OGFontFace`, `Lang`, `log`, `Obsidian`, `ImageResults`. In the `buildDefault` function (around line 66-83), add `DisableBacklinks: DisableBacklinks,` to the `DefaultSite` initialization (after `DisableTOC: DisableTOC,`).
-
-3. **`internal/builder/templ_adapter.go`** — In the `toTemplPageData` function, add `DisableBacklinks: p.Site.DisableBacklinks,` to the `templates.SiteData` initialization (after `DisableTOC`). Also, inside the `if p.IsNote && p.File != nil` block (after the `data.Meta` assignment), add backlink resolution:
-```go
-if !p.Site.DisableBacklinks && len(p.File.Backlinks) > 0 {
-    for _, bl := range p.File.Backlinks {
-        name := strings.TrimPrefix(bl, "[[")
-        name = strings.TrimSuffix(name, "]]")
-        if files, ok := p.Site.Obsidian.Vault.FileIndex[name]; ok && len(files) > 0 {
-            data.Backlinks = append(data.Backlinks, templates.Backlink{
-                Name:    name,
-                WebPath: files[0].WebPath,
-            })
-        }
-    }
-}
+to:
+```templ
+<a
+    href={ templ.SafeURL(bl.WebPath) }
+    hx-get={ string(templ.SafeURL(bl.WebPath)) }
+    hx-target="body"
+    hx-select="body"
+    hx-swap="innerHTML"
+    hx-push-url="true"
+    class="text-sm hover:text-accent transition-colors"
+>
 ```
-This will require adding `"strings"` to the imports if not already present. The `DefaultSitePageData` struct has a `Site *DefaultSite` field which already has the `Obsidian` field with `Vault.FileIndex`.
 
-4. **`internal/builder/builder_default.go`** (same file as step 2) — Ensure that `DefaultSitePageData` is accessible. Check its definition — it likely has `Site *DefaultSite` field which gives access to `Site.Obsidian.Vault.FileIndex`.
+Wait — actually, for the simple layout, since the body-level `hx-boost` with `hx-swap="outerHTML"` works for regular sidebar navigation links (presumably), the same approach should work for backlinks too. The fact that it doesn't work suggests a different issue.
 
-Verify with: `go build ./...`
+Actually, the safest fix for the simple layout is the same approach as the default layout: make the backlinks navigate like normal boosted links but ensure they're consistent. Since the simple layout doesn't have `hx-select`/`hx-target` on the body, boosted links effectively do a full-page navigation via HTMX (replacing body outerHTML). For consistency and correctness, we should add `hx-boost="true"` explicitly on these links, OR simply ensure they behave like all other navigation links in the simple layout.
+
+Looking more carefully at the simple layout: the body has `hx-boost="true" hx-swap="outerHTML"`. This means ALL `<a>` tags inside the body are boosted. For boosted links, HTMX fetches the page and uses the body's swap strategy. Without `hx-select`, it takes the entire response body and swaps it as `outerHTML` of the `<body>`. This would effectively replace the body with the full HTML response... which would include `<html><head>...` elements.
+
+The real fix for simple layout might be to add `hx-select="body"` to the body tag. But that's a broader change. For now, to fix just the backlinks:
+
+```templ
+<a
+    href={ templ.SafeURL(bl.WebPath) }
+    class="text-sm hover:text-accent transition-colors"
+>
+```
+
+Since these links are INSIDE the `backlinks-wrapper` div which is a direct child of `<body>`, they should inherit `hx-boost="true"`. If the issue is specifically with backlinks, the backlinks panel overlay might be interfering. The backlinks wrapper has `class="fixed inset-0 z-40 ... hidden"` — it's an overlay/modal.
+
+The safest approach: add explicit HTMX attributes to the backlinks `<a>` tags that match what regular navigation does in the simple layout. This means the link click should navigate to the new page properly. Use `hx-get` with the URL, targeting the whole body replacement:
+
+```templ
+<a
+    href={ templ.SafeURL(bl.WebPath) }
+    hx-boost="true"
+    class="text-sm hover:text-accent transition-colors"
+>
+```
+
+If regular `hx-boost` from the body already applies, and it works for sidebar links but not backlinks, the issue might be that the overlay prevents proper inheritance. In that case, explicitly setting `hx-boost="true"` on the link itself should fix it.
+
+**Final approach**: Apply the same explicit HTMX attributes to the simple layout backlinks as in task 1, but adapted for the simple layout's navigation pattern. Since the simple layout doesn't use `#kiln-main`, keep it simple:
+
+```templ
+<a
+    href={ templ.SafeURL(bl.WebPath) }
+    hx-boost="true"
+    class="text-sm hover:text-accent transition-colors"
+>
+```
+
+4. After editing, run `cd /home/oliviero/Workspace/kiln && go run github.com/a-h/templ/cmd/templ@v0.3.1001 generate` to regenerate the `_templ.go` files.
+5. Verify: `cd /home/oliviero/Workspace/kiln && go build ./... && go test ./...`
 </task>
+<task order="3" title="Test with actual vault build and verify HTML output" depends_on="2">
+**Purpose**: Verify that the generated HTML output for backlinks contains the correct HTMX attributes.
 
-<task order="3" title="Add BacklinksPanel templ component for default layout">
-Create the `BacklinksPanel` templ component and add it to the right sidebar in the default layout. Follow the exact same pattern as `TOCPanel`.
+**What to do**:
+1. Run the full test suite: `cd /home/oliviero/Workspace/kiln && go test ./...`
+2. Check the generated Go template files to verify the HTMX attributes are present in the output:
+   - Read `/home/oliviero/Workspace/kiln/internal/templates/content_templ.go` and search for `backlinks-container` to verify the `hx-get`, `hx-target`, `hx-select`, `hx-swap`, and `hx-push-url` attributes are in the generated Go code for the `BacklinksPanel` component
+   - Also search for `SimpleBacklinksContainer` in the same file to verify the simple layout backlinks have the correct attributes
+3. If anything looks wrong, go back to `/home/oliviero/Workspace/kiln/internal/templates/content.templ` and fix the templ source, then regenerate.
 
-Files to edit:
-
-1. **`internal/templates/content.templ`** — After the `TOCPanel` component (around line 397), add a new `BacklinksPanel` templ component:
-```templ
-templ BacklinksPanel(data *PageData) {
-    if !data.Site.DisableBacklinks && len(data.Backlinks) > 0 {
-        <div id="backlinks-container" hx-swap-oob="true">
-            <header class="flex justify-between items-center py-2 border-b border-sidebar-border mb-4">
-                <span class="font-bold">{ data.Site.Labels.Backlinks }</span>
-            </header>
-            <ul class="flex flex-col gap-1">
-                for _, bl := range data.Backlinks {
-                    <li>
-                        <a
-                            href={ templ.SafeURL(bl.WebPath) }
-                            class="text-sm hover:text-accent transition-colors"
-                        >
-                            { bl.Name }
-                        </a>
-                    </li>
-                }
-            </ul>
-        </div>
-    }
-}
-```
-
-2. **`internal/templates/layout_default.templ`** — In the right sidebar `<div id="right-sidebar-content">` section (around line 146-148), add `@BacklinksPanel(data)` after `@TOCPanel(data)`. The current code is:
-```templ
-<div id="right-sidebar-content" class="p-4 flex-1 overflow-y-auto flex flex-col gap-8">
-    @TOCPanel(data)
-</div>
-```
-Change it to:
-```templ
-<div id="right-sidebar-content" class="p-4 flex-1 overflow-y-auto flex flex-col gap-8">
-    @TOCPanel(data)
-    @BacklinksPanel(data)
-</div>
-```
-
-Also update the right sidebar visibility condition (line 122). Currently it's:
-```templ
-if !data.Site.DisableLocalGraph || !data.Site.DisableTOC {
-```
-Change it to:
-```templ
-if !data.Site.DisableLocalGraph || !data.Site.DisableTOC || !data.Site.DisableBacklinks {
-```
-
-And the same condition on line 108 (the toggle button visibility):
-```templ
-if !data.Site.DisableLocalGraph || !data.Site.DisableTOC {
-```
-Change to:
-```templ
-if !data.Site.DisableLocalGraph || !data.Site.DisableTOC || !data.Site.DisableBacklinks {
-```
-
-And the condition on line 105 (when to show graph button in main header):
-```templ
-if data.Site.DisableLocalGraph && data.Site.DisableTOC {
-```
-Change to:
-```templ
-if data.Site.DisableLocalGraph && data.Site.DisableTOC && data.Site.DisableBacklinks {
-```
-
-3. Run `go generate ./internal/templates/...` or `templ generate` to regenerate the `_templ.go` files from the `.templ` sources. If `templ` is not available in PATH, try `go run github.com/a-h/templ/cmd/templ@latest generate`.
-
-Verify with: `go build ./...`
-</task>
-
-<task order="4" title="Add BacklinksPanel to simple layout">
-Add backlinks support to the simple layout, following the exact same pattern as `SimpleTOCContainer` and `SimpleTOCButton`.
-
-Files to edit:
-
-1. **`internal/templates/content.templ`** — After the `SimpleLocalGraphContainer` component (around line 539), add two new components:
-
-A `SimpleBacklinksButton` component (follow the pattern of `SimpleTOCButton` and `SimpleLocalGraphButton`):
-```templ
-templ SimpleBacklinksButton(labels *i18n.Labels) {
-    <div>
-        <button
-            id="backlinks-button"
-            aria-label={ labels.Backlinks }
-            title={ labels.Backlinks }
-            class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
-        >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="w-5 h-5 text-foreground"
-                id="backlinks-icon"
-            >
-                <path d="M9 17H7A5 5 0 0 1 7 7h2"></path>
-                <path d="M15 7h2a5 5 0 1 1 0 10h-2"></path>
-                <line x1="8" x2="16" y1="12" y2="12"></line>
-            </svg>
-        </button>
-    </div>
-}
-```
-
-A `SimpleBacklinksContainer` component (follow pattern of `SimpleTOCContainer`):
-```templ
-templ SimpleBacklinksContainer(data *PageData) {
-    <div
-        class="fixed inset-0 z-40 bg-background pb-4 hidden overflow-scroll p-4 md:p-0"
-        id="backlinks-wrapper"
-    >
-        <div class="max-w-prose mx-auto w-full rounded-xl border border-sidebar-border p-6 mt-20 md:mt-24">
-            if !data.Site.DisableBacklinks && len(data.Backlinks) > 0 {
-                <div id="backlinks-container">
-                    <header class="flex justify-between items-center py-2 border-b border-sidebar-border mb-4">
-                        <span class="font-bold">{ data.Site.Labels.Backlinks }</span>
-                    </header>
-                    <ul class="flex flex-col gap-1">
-                        for _, bl := range data.Backlinks {
-                            <li>
-                                <a
-                                    href={ templ.SafeURL(bl.WebPath) }
-                                    class="text-sm hover:text-accent transition-colors"
-                                >
-                                    { bl.Name }
-                                </a>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
-        </div>
-    </div>
-}
-```
-
-2. **`internal/templates/layout_simple.templ`** — In the header buttons section (around line 56-58), add after the local graph button:
-```templ
-if !data.Site.DisableBacklinks && len(data.Backlinks) > 0 {
-    @SimpleBacklinksButton(data.Site.Labels)
-}
-```
-
-In the modal containers section (around line 79-81), add:
-```templ
-if !data.Site.DisableBacklinks {
-    @SimpleBacklinksContainer(data)
-}
-```
-
-3. **`assets/simple_app.js`** — Add the backlinks panel to the `window._panels` array. Currently it has 3 panels (menu, local-graph, toc). Add a 4th:
-```js
-{ btn: "backlinks-button", wrapper: "backlinks-wrapper", icon: "backlinks-icon" },
-```
-Also add a named toggle function:
-```js
-window.toggleBacklinks = () =>
-  window._togglePanel(window._panels[3]);
-```
-
-4. Run `templ generate` (or `go run github.com/a-h/templ/cmd/templ@latest generate`) to regenerate `_templ.go` files.
-
-Verify with: `go build ./...`
-</task>
-
-<task order="5" title="Regenerate templ files and run tests">
-Regenerate all templ output files and run the full test suite to verify everything compiles and tests pass.
-
-Steps:
-1. Run `go run github.com/a-h/templ/cmd/templ@latest generate` from the project root to regenerate all `*_templ.go` files from the `.templ` sources. If this fails, check the templ version in go.mod (`github.com/a-h/templ@v0.3.1001`) and use the matching version.
-
-2. Run `go build ./...` to verify compilation.
-
-3. Run `go test ./...` to run all tests.
-
-4. If any tests fail related to the config (e.g., `config_test.go` or `config_integration_test.go`), check if the test YAML fixtures need updating with the new `disable-backlinks` field. The existing tests use inline YAML strings — the new field defaults to `false` so existing tests should still pass without changes.
-
-5. If templ generation fails, check the `.templ` files for syntax errors. Common issues:
-   - Missing imports in templ files
-   - Incorrect templ syntax (e.g., using Go-style `if len(slice) > 0` is valid in templ)
-   - Make sure `templ.SafeURL` is used for href attributes
-
-Verify with: `go test ./...` — all tests must pass.
+**Verify**: `cd /home/oliviero/Workspace/kiln && go build ./... && go test ./...`
 </task>
 </tasks>
