@@ -34,11 +34,11 @@ If just changing the layout is not enough, you can take a look at [[What is Cust
 The **Default** layout is designed to feel exactly like Obsidian Publish or the Obsidian desktop app. It maximizes information density.
 
 - **Left Sidebar:** Contains the **[[Explorer|File Explorer]]** and Search.
-- **Right Sidebar:** Contains the **[[Table of Contents]]** and **[[Local Graph]]**.
+- **Right Sidebar:** Contains the **[[Table of Contents]]**, **[[Local Graph]]**, and **[[Backlinks]]**.
 - **Behavior:** Sidebars are collapsible but intended to be open to provide context.
 
 ### Simple (Minimalist)
 The **Simple** layout removes the "app-like" chrome to focus purely on the text.
 
 - **No Fixed Sidebars:** The screen is dedicated to your content.
-- **Action Buttons:** Tools like the Graph, Table of Contents, and Search are tucked away behind floating buttons or a simplified header. They appear as overlays or modals when needed, rather than taking up permanent screen real estate.
+- **Action Buttons:** Tools like the Graph, Table of Contents, Backlinks, and Search are tucked away behind floating buttons or a simplified header. They appear as overlays or modals when needed, rather than taking up permanent screen real estate.

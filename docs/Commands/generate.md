@@ -37,7 +37,8 @@ This reads from `./vault`, writes to `./public`, and applies the default theme, 
 | `--layout`              | `-L`  | `default` | Page layout to use. See [Layouts](../Features/User Interface/Layouts.md) for available options.                                          |
 | `--flat-urls`           |       | `false`   | Generate flat files (`note.html`) instead of directories (`note/index.html`).                                                            |
 | `--disable-toc`         |       | `false`   | Hides the [Table of Contents](../Features/User Interface/Table of Contents.md) from the right sidebar.                                   |
-| `--disable-local-graph` |       | `false`   | Hides the [Local Graph](../Features/User Interface/Local Graph.md) from the right sidebar. Disabling both TOC and local graph removes the right sidebar entirely. |
+| `--disable-local-graph` |       | `false`   | Hides the [Local Graph](../Features/User Interface/Local Graph.md) from the right sidebar. Disabling TOC, local graph, and backlinks removes the right sidebar entirely. |
+| `--disable-backlinks`   |       | `false`   | Hides the [[Backlinks]] panel from the right sidebar.                                                                    |
 | `--log`                 | `-l`  | `info`    | Log verbosity. Choose `info` or `debug`.                                                                                                 |
 
 ## What Gets Generated
