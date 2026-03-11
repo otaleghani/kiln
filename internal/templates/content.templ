@@ -561,6 +561,66 @@ templ SimpleLocalGraphContainer() {
 	</div>
 }
 
+// SimpleBacklinksButton renders the backlinks icon button for the simple layout header.
+templ SimpleBacklinksButton(labels *i18n.Labels) {
+	<div>
+		<button
+			id="backlinks-button"
+			aria-label={ labels.Backlinks }
+			title={ labels.Backlinks }
+			class="cursor-pointer p-1 rounded hover:bg-hover transition-colors"
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="w-5 h-5 text-foreground"
+				id="backlinks-icon"
+			>
+				<path d="M9 17H7A5 5 0 0 1 7 7h2"></path>
+				<path d="M15 7h2a5 5 0 1 1 0 10h-2"></path>
+				<line x1="8" x2="16" y1="12" y2="12"></line>
+			</svg>
+		</button>
+	</div>
+}
+
+// SimpleBacklinksContainer renders the overlay modal for backlinks in the simple layout.
+templ SimpleBacklinksContainer(data *PageData) {
+	<div
+		class="fixed inset-0 z-40 bg-background pb-4 hidden overflow-scroll p-4 md:p-0"
+		id="backlinks-wrapper"
+	>
+		<div class="max-w-prose mx-auto w-full rounded-xl border border-sidebar-border p-6 mt-20 md:mt-24">
+			if !data.Site.DisableBacklinks && len(data.Backlinks) > 0 {
+				<div id="backlinks-container">
+					<header class="flex justify-between items-center py-2 border-b border-sidebar-border mb-4">
+						<span class="font-bold">{ data.Site.Labels.Backlinks }</span>
+					</header>
+					<ul class="flex flex-col gap-1">
+						for _, bl := range data.Backlinks {
+							<li>
+								<a
+									href={ templ.SafeURL(bl.WebPath) }
+									class="text-sm hover:text-accent transition-colors"
+								>
+									{ bl.Name }
+								</a>
+							</li>
+						}
+					</ul>
+				</div>
+			}
+		</div>
+	</div>
+}
+
 // SimpleMenuButton renders the hamburger menu icon button for the simple layout header.
 templ SimpleMenuButton(labels *i18n.Labels) {
 	<div>

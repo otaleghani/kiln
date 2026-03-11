@@ -56,6 +56,9 @@ templ SimpleLayout(data *PageData) {
 					if !data.Site.DisableLocalGraph && !data.IsGraph {
 						@SimpleLocalGraphButton(data.Site.Labels)
 					}
+					if !data.Site.DisableBacklinks && len(data.Backlinks) > 0 {
+						@SimpleBacklinksButton(data.Site.Labels)
+					}
 					@GraphButton(data.Site.BaseURL)
 					@SimpleMenuButton(data.Site.Labels)
 				</div>
@@ -78,6 +81,9 @@ templ SimpleLayout(data *PageData) {
 			}
 			if !data.Site.DisableLocalGraph {
 				@SimpleLocalGraphContainer()
+			}
+			if !data.Site.DisableBacklinks {
+				@SimpleBacklinksContainer(data)
 			}
 		</body>
 	</html>

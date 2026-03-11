@@ -22,6 +22,7 @@ window._panels = [
     icon: "local-graph-icon",
   },
   { btn: "toc-button", wrapper: "toc-wrapper", icon: "toc-icon" },
+  { btn: "backlinks-button", wrapper: "backlinks-wrapper", icon: "backlinks-icon" },
 ];
 
 // Close a single panel instantly (no animation), used during htmx navigation.
@@ -83,6 +84,8 @@ window.toggleLocalGraph = () =>
   window._togglePanel(window._panels[1]);
 window.toggleTOC = () =>
   window._togglePanel(window._panels[2]);
+window.toggleBacklinks = () =>
+  window._togglePanel(window._panels[3]);
 
 // Event delegation: one listener that survives htmx swaps.
 window.initToggles = function () {

@@ -208,6 +208,12 @@ func SimpleLayout(data *PageData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
+		if !data.Site.DisableBacklinks && len(data.Backlinks) > 0 {
+			templ_7745c5c3_Err = SimpleBacklinksButton(data.Site.Labels).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
 		templ_7745c5c3_Err = GraphButton(data.Site.BaseURL).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -272,6 +278,12 @@ func SimpleLayout(data *PageData) templ.Component {
 		}
 		if !data.Site.DisableLocalGraph {
 			templ_7745c5c3_Err = SimpleLocalGraphContainer().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		if !data.Site.DisableBacklinks {
+			templ_7745c5c3_Err = SimpleBacklinksContainer(data).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
