@@ -42,6 +42,8 @@ func init() {
 	cmdGenerate.Flags().
 		BoolVar(&disableLocalGraph, FlagDisableLocalGraph, DefaultDisableLocalGraph, "Disables the Local graph. If the table of contents is disabled too, hides the right sidebar.")
 	cmdGenerate.Flags().
+		BoolVar(&disableBacklinks, FlagDisableBacklinks, DefaultDisableBacklinks, "Disables the Backlinks panel on the right sidebar.")
+	cmdGenerate.Flags().
 		StringVarP(&lang, FlagLang, FlagLangShort, DefaultLang, "Language code for the site (e.g. en, it, fr)")
 	cmdGenerate.Flags().
 		StringVarP(&accentColor, FlagAccentColor, FlagAccentColorShort, DefaultAccentColor, "Accent color from theme palette (red, orange, yellow, green, blue, purple, cyan)")
@@ -62,6 +64,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	applyBoolFlag(cmd, FlagFlatURLS, &flatUrls, cfg, DefaultFlatURLS)
 	applyBoolFlag(cmd, FlagDisableTOC, &disableTOC, cfg, DefaultDisableTOC)
 	applyBoolFlag(cmd, FlagDisableLocalGraph, &disableLocalGraph, cfg, DefaultDisableLocalGraph)
+	applyBoolFlag(cmd, FlagDisableBacklinks, &disableBacklinks, cfg, DefaultDisableBacklinks)
 	applyStringFlag(cmd, FlagLang, &lang, cfg, DefaultLang)
 	applyStringFlag(cmd, FlagAccentColor, &accentColor, cfg, DefaultAccentColor)
 
@@ -76,6 +79,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	builder.LayoutName = layout
 	builder.DisableTOC = disableTOC
 	builder.DisableLocalGraph = disableLocalGraph
+	builder.DisableBacklinks = disableBacklinks
 	builder.Lang = lang
 	builder.AccentColorName = accentColor
 

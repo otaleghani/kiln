@@ -25,6 +25,7 @@ type Config struct {
 	FlatURLs          bool   `yaml:"flat-urls"`
 	DisableTOC        bool   `yaml:"disable-toc"`
 	DisableLocalGraph bool   `yaml:"disable-local-graph"`
+	DisableBacklinks  bool   `yaml:"disable-backlinks"`
 	Port              string `yaml:"port"`
 	Log               string `yaml:"log"`
 	Lang              string `yaml:"lang"`
@@ -114,6 +115,8 @@ func (c *Config) BoolOr(field string, fallback bool) bool {
 		return c.DisableTOC
 	case "disable-local-graph":
 		return c.DisableLocalGraph
+	case "disable-backlinks":
+		return c.DisableBacklinks
 	}
 	return fallback
 }

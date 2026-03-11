@@ -54,6 +54,7 @@ func runInit(cmd *cobra.Command, args []string) {
 # flat-urls: false
 # disable-toc: false
 # disable-local-graph: false
+# disable-backlinks: false
 `
 		if err := os.WriteFile(config.DefaultFilename, []byte(content), 0o644); err != nil {
 			log.Error("Couldn't create config file", "error", err)

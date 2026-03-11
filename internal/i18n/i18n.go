@@ -9,6 +9,7 @@ type Labels struct {
 	OnThisPage        string
 	TableOfContents   string
 	LocalGraph        string
+	Backlinks         string
 	GeneratedWith     string
 	PageNotFound      string
 	GoBackHome        string
@@ -34,6 +35,7 @@ var languages = map[string]*Labels{
 		OnThisPage:        "On this page",
 		TableOfContents:   "Table of contents",
 		LocalGraph:        "Local Graph",
+		Backlinks:         "Backlinks",
 		GeneratedWith:     "Generated with",
 		PageNotFound:      "Page not found",
 		GoBackHome:        "Go back home",
@@ -57,6 +59,7 @@ var languages = map[string]*Labels{
 		OnThisPage:        "In questa pagina",
 		TableOfContents:   "Indice",
 		LocalGraph:        "Grafo locale",
+		Backlinks:         "Backlinks",
 		GeneratedWith:     "Generato con",
 		PageNotFound:      "Pagina non trovata",
 		GoBackHome:        "Torna alla home",

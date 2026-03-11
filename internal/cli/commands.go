@@ -29,6 +29,7 @@ const (
 	DefaultLayout            = "default"
 	DefaultDisableTOC        = false
 	DefaultDisableLocalGraph = false
+	DefaultDisableBacklinks  = false
 	DefaultLang              = "en"
 	DefaultAccentColor       = "" // Empty means use the theme's built-in accent
 )
@@ -58,6 +59,7 @@ const (
 	FlagFlatURLS          = "flat-urls"
 	FlagDisableTOC        = "disable-toc"
 	FlagDisableLocalGraph = "disable-local-graph"
+	FlagDisableBacklinks  = "disable-backlinks"
 	FlagLang              = "lang"
 	FlagLangShort         = "g"
 	FlagAccentColor       = "accent-color"
@@ -79,6 +81,7 @@ var (
 	layout            string // The chosen layout
 	disableTOC        bool   // Disable the Table of contents
 	disableLocalGraph bool   // Disable the local graph
+	disableBacklinks  bool   // Disable the backlinks panel
 	lang              string // Language code for the site
 	accentColor       string // Accent color override from theme palette
 )

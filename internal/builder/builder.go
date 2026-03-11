@@ -28,6 +28,7 @@ var (
 	LayoutName        string // Layout name
 	DisableTOC        bool   // Disables table of contents
 	DisableLocalGraph bool   // Disables local graph
+	DisableBacklinks  bool   // Disables backlinks panel
 	Lang              string // Language code for the site
 	AccentColorName   string // Accent color override (palette color name)
 )
