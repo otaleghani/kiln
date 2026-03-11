@@ -613,6 +613,7 @@ templ SimpleBacklinksContainer(data *PageData) {
 							<li>
 								<a
 									href={ templ.SafeURL(bl.WebPath) }
+									hx-boost="true"
 									class="text-sm hover:text-accent transition-colors"
 								>
 									{ bl.Name }
