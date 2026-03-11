@@ -4,6 +4,7 @@ package builder
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/otaleghani/kiln/internal/i18n"
 	"github.com/otaleghani/kiln/internal/obsidian"
@@ -35,6 +36,7 @@ func toTemplPageData(p *DefaultSitePageData) *templates.PageData {
 			NavbarRoot:        p.Site.NavbarRoot,
 			DisableLocalGraph: p.Site.DisableLocalGraph,
 			DisableTOC:        p.Site.DisableTOC,
+			DisableBacklinks:  p.Site.DisableBacklinks,
 			FlatURLs:          p.Site.FlatURLs,
 			Lang:              p.Site.Lang,
 			Labels:            i18n.Resolve(p.Site.Lang),
@@ -54,6 +56,19 @@ func toTemplPageData(p *DefaultSitePageData) *templates.PageData {
 			Created:     p.File.Created,
 			Modified:    p.File.Modified,
 			Tags:        tags,
+		}
+
+		if !p.Site.DisableBacklinks && len(p.File.Backlinks) > 0 {
+			for _, bl := range p.File.Backlinks {
+				name := strings.TrimPrefix(bl, "[[")
+				name = strings.TrimSuffix(name, "]]")
+				if files, ok := p.Site.Obsidian.Vault.FileIndex[name]; ok && len(files) > 0 {
+					data.Backlinks = append(data.Backlinks, templates.Backlink{
+						Name:    name,
+						WebPath: files[0].WebPath,
+					})
+				}
+			}
 		}
 	}
 

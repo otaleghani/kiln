@@ -74,6 +74,7 @@ func buildDefault(log *slog.Logger) {
 		NavbarRoot:        rootNode,
 		DisableLocalGraph: DisableLocalGraph,
 		DisableTOC:        DisableTOC,
+		DisableBacklinks:  DisableBacklinks,
 		FlatURLs:          FlatUrls,
 		OGFontFace:        ogFace,
 		Lang:              Lang,
@@ -870,6 +871,7 @@ type DefaultSite struct {
 	Minifier          *minify.M                  // Minifier to minify html pages
 	DisableLocalGraph bool                       // If set, disables the local graph
 	DisableTOC        bool                       // If set, disables the Table of contents
+	DisableBacklinks  bool                       // If set, disables the backlinks panel
 	FlatURLs          bool                       // If set, handles flat urls (used in canonical)
 	OGFontFace        font.Face                  // Font face for OG image text rendering
 	Lang              string                     // Language code for the site

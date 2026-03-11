@@ -28,6 +28,7 @@ type PageData struct {
 	Is404       bool
 	Frontmatter map[string]any
 	Meta        *NoteMeta
+	Backlinks   []Backlink
 	Base        BaseViewData
 }
 
@@ -40,6 +41,12 @@ type NoteMeta struct {
 	Tags        []string
 }
 
+// Backlink represents a resolved incoming link to the current page.
+type Backlink struct {
+	Name    string
+	WebPath string
+}
+
 // SiteData holds global site configuration used across all pages.
 type SiteData struct {
 	BaseURL           string
@@ -48,6 +55,7 @@ type SiteData struct {
 	NavbarRoot        *obsidian.NavbarNode
 	DisableLocalGraph bool
 	DisableTOC        bool
+	DisableBacklinks  bool
 	FlatURLs          bool
 	Lang              string
 	Labels            *i18n.Labels
