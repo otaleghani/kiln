@@ -3,7 +3,6 @@ package obsidian
 
 import (
 	"encoding/xml"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,7 +53,7 @@ func (o *Obsidian) AddSitemapEntry(modTime time.Time, baseURL, webPath string) {
 		Loc:     fullURL,
 		LastMod: modTime.Format("2006-01-02"),
 	})
-	log.Println("Added to sitemap", "url", webPath)
+	o.log.Debug("Added to sitemap", "url", webPath)
 }
 
 // SitemapEntry represents a single URL entry in the sitemap.xml.
