@@ -2,6 +2,10 @@
 package cli
 
 import (
+	"context"
+	"os/signal"
+	"syscall"
+
 	"github.com/otaleghani/kiln/internal/builder"
 	"github.com/otaleghani/kiln/internal/server"
 	"github.com/spf13/cobra"
@@ -39,5 +43,9 @@ func runServe(cmd *cobra.Command, args []string) {
 	localBaseURL := "http://localhost:" + port
 
 	log := getLogger()
-	server.Serve(port, builder.OutputDir, localBaseURL, log)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	server.Serve(ctx, port, builder.OutputDir, localBaseURL, log)
 }

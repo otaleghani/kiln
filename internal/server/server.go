@@ -2,6 +2,7 @@
 package server
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -13,7 +14,7 @@ import (
 // Serve starts a simple static file server on the specified port.
 // It includes logic to handle "Clean URLs" (extensionless linking) and directory indices,
 // mimicking the behavior of production static hosting providers.
-func Serve(port, outputDir, baseURL string, log *slog.Logger) {
+func Serve(ctx context.Context, port, outputDir, baseURL string, log *slog.Logger) {
 	// Determine path prefix
 	// If the user's BaseURL includes a path (e.g., "https://example.com/docs"),
 	// we need to serve the site under that prefix ("/docs") locally to match production.
@@ -106,10 +107,18 @@ func Serve(port, outputDir, baseURL string, log *slog.Logger) {
 	}
 
 	log.Info("Press Ctrl+C to stop")
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+
+	srv := &http.Server{Addr: ":" + port}
+	go func() {
+		<-ctx.Done()
+		srv.Shutdown(context.Background())
+	}()
+
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		log.Error("Server failed", "error", err)
 		os.Exit(1)
 	}
+	log.Info("Server stopped")
 }
 
 // serve404 writes the custom 404.html page if it exists, otherwise falls back

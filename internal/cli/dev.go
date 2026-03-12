@@ -166,5 +166,5 @@ func runDev(cmd *cobra.Command, args []string) {
 
 	// Serve on main goroutine
 	localBaseURL := "http://localhost:" + port
-	server.Serve(port, builder.OutputDir, localBaseURL, log)
+	server.Serve(ctx, port, builder.OutputDir, localBaseURL, log)
 }
