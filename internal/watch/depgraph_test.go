@@ -142,6 +142,23 @@ func TestBuildFromFiles(t *testing.T) {
 	}
 }
 
+func TestUpdateFiles(t *testing.T) {
+	g := NewDepGraph()
+	g.AddEdge("a.md", "b")
+
+	files := []*obsidian.File{
+		{RelPath: "a.md", Ext: ".md", Links: []string{"[[c]]"}},
+	}
+	g.UpdateFiles(files)
+
+	if deps := g.Dependents("b"); len(deps) != 0 {
+		t.Errorf("expected no dependents for b, got %v", deps)
+	}
+	if deps := g.Dependents("c"); len(deps) != 1 || deps[0] != "a.md" {
+		t.Errorf("expected [a.md] for c, got %v", deps)
+	}
+}
+
 func TestBuildFromFilesMailtoSkipped(t *testing.T) {
 	files := []*obsidian.File{
 		{

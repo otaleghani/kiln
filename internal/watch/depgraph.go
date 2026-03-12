@@ -66,6 +66,24 @@ func (g *DepGraph) Dependents(name string) []string {
 	return result
 }
 
+// UpdateFiles refreshes the graph for the given files, removing stale edges
+// and adding new ones based on current links.
+func (g *DepGraph) UpdateFiles(files []*obsidian.File) {
+	for _, f := range files {
+		if f.Ext != ".md" {
+			continue
+		}
+		g.RemoveSource(f.RelPath)
+		for _, link := range f.Links {
+			target := parseTarget(link)
+			if target == "" {
+				continue
+			}
+			g.AddEdge(f.RelPath, target)
+		}
+	}
+}
+
 var mdLinkRe = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+)\)`)
 
 // BuildFromFiles populates the graph from a slice of obsidian files.

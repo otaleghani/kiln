@@ -134,6 +134,21 @@ func runDev(cmd *cobra.Command, args []string) {
 			)
 
 			builder.IncrementalBuild(log, cs.Rebuild, cs.Remove)
+
+			// Refresh dependency graph for changed files
+			vault := obsidian.New(
+				obsidian.WithInputDir(inputDir),
+				obsidian.WithOutputDir(outputDir),
+				obsidian.WithBaseURL(baseURL),
+				obsidian.WithFlatURLs(flatUrls),
+				obsidian.WithLogger(log),
+			)
+			if err := vault.Scan(); err != nil {
+				log.Error("failed to rescan vault", "err", err)
+				return nil
+			}
+			graph.UpdateFiles(vault.Vault.Files)
+
 			return nil
 		},
 	}
