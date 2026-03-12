@@ -2,7 +2,7 @@
 title: "Kiln Quirks — File Overrides, URL Conflicts & Edge Cases"
 description: "Known quirks when converting an Obsidian vault with Kiln: how duplicate filenames resolve, folder page overrides, and flat vs pretty URL behavior."
 ---
-# Kiln Quirks
+# Kiln Quirksss
 
 When Kiln converts your Obsidian vault into a static site, a few edge cases arise from the differences between how Obsidian organizes files and how websites serve pages. This page covers the known quirks you should keep in mind.
 
