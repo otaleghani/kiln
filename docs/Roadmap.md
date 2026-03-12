@@ -22,6 +22,7 @@ These features were on the roadmap and have since been shipped:
 *Major functionality upgrades planned for upcoming releases.*
 
 - [x] **Configuration File:** Support for `kiln.yaml` to save preferences (flags) persistently, so you don't need to pass CLI flags on every [generate](./Commands/generate.md) run.
+- [x] **Incremental Builds:** File watcher with dependency-aware change detection for the [dev command](./Commands/dev.md).
 - [x] **Image Optimization:** Automatic WebP conversion and responsive image sizing to improve page load speed.
 - [x] **Localization:** i18n support for translating the UI into multiple languages.
 - [x] **Structured Data:** Automatically generate JSON-LD schema markup for articles and breadcrumbs to improve search engine visibility.

@@ -115,3 +115,5 @@ kiln serve
 ```
 
 See the [Init Command](./init.md), [Doctor Command](./doctor.md), and [Serve Command](./serve.md) for details on each step. After verifying the output, deploy to [GitHub Pages](../Deployment/GitHub Pages.md), [Netlify](../Deployment/Netlify.md), [Vercel](../Deployment/Vercel.md), [Cloudflare Pages](../Deployment/Cloudflare Pages.md), or any [static web server](../Deployment/Web Servers.md).
+
+For active development with automatic rebuilds, use the [Dev Command](./dev.md) instead — it combines building, watching for changes, and serving into a single step.

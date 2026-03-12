@@ -79,5 +79,6 @@ To deploy your site to the web, upload the contents of your output directory to 
 ## Related Commands
 
 - [Generate Command](./generate.md) — build your vault into a static site
+- [Dev Command](./dev.md) — build, watch, and serve in a single step
 - [Clean Command](./clean.md) — remove build output before rebuilding
 - [Doctor Command](./doctor.md) — scan for broken wikilinks before deploying
