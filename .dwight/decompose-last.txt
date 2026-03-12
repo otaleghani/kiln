@@ -1,109 +1,301 @@
 -- DwightAuto decomposition output
--- Request: The incremental builds need documentation: add that under docs
--- Timestamp: Thu 12 Mar 2026 09:17:05 AM CET
+-- Request: The incremental builds with `dev` command doesn't seem to work. Everytime that I change a single file the hole thing gets re-built. Also make the image optimization faster. Maybe make it concurrent wi
+-- Timestamp: Thu 12 Mar 2026 09:52:13 AM CET
 
-Now I have a thorough understanding of the codebase, the docs structure/style, and the incremental build feature. Let me compose the task decomposition.
+
+
+Continuing the task decomposition from where I left off:
 
 <tasks>
-<task order="1" title="Dev command documentation">
-Create the missing `docs/Commands/dev.md` documentation page for the `kiln dev` command. This is the user-facing command that combines build, watch, and serve into a single workflow.
+<task order="1" title="Add IncrementalBuild to builder.go">
+## Context
+The `dev` command computes a `ChangeSet` via `watch.ComputeChangeSet` but discards it and calls `builder.Build(log)` which always calls `CleanOutputDir()` + full rebuild. This is the root cause.
 
-**File to create:** `docs/Commands/dev.md`
+## What to build
 
-**Content requirements:**
-- Follow the EXACT same markdown format as the other command docs (e.g., `docs/Commands/generate.md`, `docs/Commands/serve.md`, `docs/Commands/clean.md`):
-  - YAML frontmatter with `title` and `description` fields
-  - `# Dev Command` heading
-  - Introductory paragraph explaining what the command does
-  - `## Usage` section with code blocks
-  - `## Flags` section with a markdown table listing ALL flags from `internal/cli/dev.go` (theme, font, url, name, input, output, flat-urls, mode, layout, log, disable-toc, disable-local-graph, disable-backlinks, lang, accent-color, port)
-  - `## How It Works` section explaining the build-watch-serve lifecycle:
-    1. Runs an initial full build (same as `kiln generate`)
-    2. Populates a modification-time baseline for all vault files
-    3. Builds a dependency graph from wikilinks between notes
-    4. Starts a filesystem watcher on the input directory
-    5. Launches a local HTTP server (same as `kiln serve`)
-    6. On file changes, computes a changeset and triggers a rebuild
-  - `## Examples` section with 2-3 practical examples
-  - `## Related Commands` section linking to generate.md, serve.md, clean.md
-- Cross-link to existing doc pages using relative paths (e.g., `[Generate Command](./generate.md)`, `[Themes](../Features/User Interface/Themes.md)`)
-- Mention that `Ctrl+C` cleanly shuts down the watcher and server (the code uses `signal.NotifyContext` with SIGINT/SIGTERM)
-- Note that the dev command accepts ALL the same flags as `generate` plus `--port`
+### Step 1: Write tests
+Create `internal/builder/builder_test.go`:
+```go
+// @feature:builder Tests for incremental build logic.
+package builder
+```
 
-**Verify:** The file exists and is valid markdown. Run `test -f docs/Commands/dev.md && echo OK`
+Add tests:
+- `TestShouldRebuildNilFilter`: Set `RebuildFilter = nil`, assert `shouldRebuild("any.md")` returns `true`.
+- `TestShouldRebuildWithFilter`: Set `RebuildFilter` to `map[string]struct{}{"notes/a.md": {}}`, assert `shouldRebuild("notes/a.md")` returns `true` and `shouldRebuild("notes/b.md")` returns `false`.
+
+### Step 2: Add RebuildFilter and shouldRebuild
+Edit `internal/builder/builder.go`. Add a package-level var:
+```go
+var RebuildFilter map[string]struct{}
+```
+
+Edit `internal/builder/utils.go` (has: `Init`, `CleanOutputDir`, `isImageExt`, `isAllowedExt`). Add:
+```go
+func shouldRebuild(relPath string) bool {
+    if RebuildFilter == nil {
+        return true
+    }
+    _, ok := RebuildFilter[relPath]
+    return ok
+}
+```
+
+### Step 3: Add IncrementalBuild function
+Edit `internal/builder/builder.go`. Add:
+```go
+func IncrementalBuild(log *slog.Logger, rebuild []string, remove []string) {
+    for _, relPath := range remove {
+        outPath := filepath.Join(OutputDir, relPath)
+        if strings.HasSuffix(relPath, ".md") {
+            outPath = strings.TrimSuffix(outPath, ".md")
+            if FlatUrls {
+                outPath += ".html"
+            } else {
+                outPath = filepath.Join(outPath, "index.html")
+            }
+        }
+        os.Remove(outPath)
+    }
+
+    RebuildFilter = make(map[string]struct{}, len(rebuild))
+    for _, relPath := range rebuild {
+        RebuildFilter[relPath] = struct{}{}
+    }
+    defer func() { RebuildFilter = nil }()
+
+    switch Mode {
+    case "custom":
+        log.Info("Incremental build (custom mode)")
+        buildCustom(log)
+    default:
+        log.Info("Incremental build (default mode)")
+        buildDefault(log)
+    }
+}
+```
+
+Add `"path/filepath"`, `"strings"`, `"os"` to imports.
+
+### Step 4: Apply filter in buildDefault
+Edit `internal/builder/builder_default.go`. Add `if !shouldRebuild(file.RelPath) { continue }` as the first line inside these loops:
+- Static files loop (line 142, `for _, file := range staticFiles`)
+- Canvas pages loop (line 198, `for _, file := range canvasPages`)
+- Note pages loop (line 232, `for _, note := range notePages`)
+- Base pages loop (line 215, `for _, base := range basePages`) — use `base.File.RelPath`
+
+Do NOT filter folder rendering (folders are cheap and may reference changed files).
+
+### Step 5: Wire into dev.go
+Edit `internal/cli/dev.go` line 136. Change `builder.Build(log)` to `builder.IncrementalBuild(log, cs.Rebuild, cs.Remove)`.
+
+### Step 6: Verify
+Run `go test ./internal/builder/...` and `go build ./cmd/kiln/`.
 </task>
 
-<task order="2" title="Incremental builds overview doc">
-Create a new documentation page explaining the incremental build system architecture. This goes under a new `Features/` page since it documents how the watch system works under the hood.
+<task order="2" title="Update dep graph after incremental rebuild" depends_on="1">
+## Context
+The dependency graph is built once at startup but never updated. When files change links, the graph becomes stale.
 
-**File to create:** `docs/Features/Incremental Builds.md`
+## What to build
 
-**Content requirements:**
-- Follow the EXACT same format as `docs/Features/Image Optimization.md` — YAML frontmatter with `title` and `description`, then heading, intro paragraph, and well-structured sections.
-- `# Incremental Builds` heading
-- Introductory paragraph: Kiln's `dev` command uses an incremental build pipeline to detect file changes and rebuild only what is necessary. Explain that this consists of four components working together.
-- `## Architecture` section with a plain-text diagram or description of the pipeline:
-  - **Filesystem Watcher** → detects raw filesystem events (write, create, remove, rename) using fsnotify
-  - **Mtime Store** → tracks modification times, reports changed and removed files
-  - **Dependency Graph** → maps wikilink relationships between notes (forward and reverse edges)
-  - **Changeset Computation** → combines mtime changes with dependency graph to determine the full set of files to rebuild
-- `## Filesystem Watcher` section:
-  - Uses fsnotify to monitor the input directory recursively
-  - Automatically watches new subdirectories as they are created
-  - Skips dotfiles (`.obsidian`, `.git`) and `_hidden_` prefixed paths
-  - Debounces rapid changes (default 300ms) to avoid redundant rebuilds
-  - Multiple rapid saves collapse into a single rebuild
-- `## Modification Time Store` section:
-  - Tracks the last-known modification time of every file in the vault
-  - On each rebuild trigger, walks the input directory and compares current mtimes against stored values
-  - Reports two lists: **changed** files (new or modified) and **removed** files (previously tracked but no longer present)
-  - Skips dotfiles and `_hidden_` paths, matching vault scan behavior
-- `## Dependency Graph` section:
-  - Built from the vault's wikilinks and markdown links after the initial scan
-  - Maintains forward edges (source → targets it links to) and reverse edges (target → sources that link to it)
-  - Parses both `[[wikilink]]` and `[text](path.md)` syntax
-  - Strips aliases (`|`), anchors (`#`), and path prefixes to normalize target names
-  - When a file is removed, its forward edges are cleaned up from the reverse index
-- `## Changeset Computation` section:
-  - Takes the changed/removed lists from the mtime store and the dependency graph
-  - For each changed file, adds it and all its dependents (files that link TO it) to the rebuild set
-  - For each removed file, adds its dependents to the rebuild set and the file itself to the remove set
-  - Deduplicates: a file that appears as both changed and a dependent is only rebuilt once
-  - Removed files are excluded from the rebuild set (no point rendering a deleted file)
-  - Returns a `ChangeSet` with `Rebuild` (files to re-render) and `Remove` (files to delete from output)
-- `## Lifecycle` section: Walk through what happens when you run `kiln dev`:
-  1. Initial full build
-  2. Mtime baseline populated (first scan sees all files as "new")
-  3. Dependency graph built from vault wikilinks
-  4. Watcher starts monitoring the input directory
-  5. Server starts on `localhost:PORT`
-  6. User edits a file → fsnotify event → debounce timer resets → timer fires → mtime update → changeset computed → rebuild triggered
-- `## Current Limitations` section:
-  - The rebuild currently performs a full site generation (the changeset is computed but not yet used to selectively rebuild individual pages)
-  - The dependency graph is built once at startup and not updated after incremental changes
-  - Only wikilink and markdown link dependencies are tracked; template or layout changes require a full restart
+### Step 1: Write test
+Edit `internal/watch/depgraph_test.go` (has: `TestAddEdge`, `TestRemoveSource`, `TestDependents`, `TestBuildFromFiles`, etc.). Read it first. Add:
+```go
+func TestUpdateFiles(t *testing.T) {
+    g := NewDepGraph()
+    g.AddEdge("a.md", "b")
+    
+    files := []*obsidian.File{
+        {RelPath: "a.md", Ext: ".md", Links: []string{"[[c]]"}},
+    }
+    g.UpdateFiles(files)
+    
+    if deps := g.Dependents("b"); len(deps) != 0 {
+        t.Errorf("expected no dependents for b, got %v", deps)
+    }
+    if deps := g.Dependents("c"); len(deps) != 1 || deps[0] != "a.md" {
+        t.Errorf("expected [a.md] for c, got %v", deps)
+    }
+}
+```
 
-Cross-link to the [Dev Command](../Commands/dev.md) page.
+### Step 2: Add UpdateFiles method
+Edit `internal/watch/depgraph.go` (has: `NewDepGraph`, `AddEdge`, `RemoveSource`, `Dependents`, `BuildFromFiles`, `parseTarget`). Add:
+```go
+func (g *DepGraph) UpdateFiles(files []*obsidian.File) {
+    for _, f := range files {
+        if f.Ext != ".md" {
+            continue
+        }
+        g.RemoveSource(f.RelPath)
+        for _, link := range f.Links {
+            target := parseTarget(link)
+            if target == "" {
+                continue
+            }
+            g.AddEdge(f.RelPath, target)
+        }
+    }
+}
+```
 
-**Verify:** `test -f "docs/Features/Incremental Builds.md" && echo OK`
+### Step 3: Update dev.go OnRebuild callback
+Edit `internal/cli/dev.go`. After `builder.IncrementalBuild(log, cs.Rebuild, cs.Remove)` (the line changed in task 1), add a vault re-scan and graph update:
+```go
+// Refresh dependency graph for changed files
+vault := obsidian.New(
+    obsidian.WithInputDir(inputDir),
+    obsidian.WithOutputDir(outputDir),
+    obsidian.WithBaseURL(baseURL),
+    obsidian.WithFlatURLs(flatUrls),
+    obsidian.WithLogger(log),
+)
+if err := vault.Scan(); err != nil {
+    log.Error("failed to rescan vault", "err", err)
+    return nil
+}
+graph.UpdateFiles(vault.Vault.Files)
+```
+
+Note: the `vault` variable shadows the outer one — this is intentional since we need fresh file data.
+
+### Step 4: Verify
+Run `go test ./internal/watch/...` and `go build ./cmd/kiln/`.
 </task>
 
-<task order="3" title="Cross-link docs and update roadmap" depends_on="1,2">
-Update existing documentation to cross-link to the new incremental builds and dev command pages.
+<task order="3" title="Concurrent image optimization with goroutines" depends_on="1">
+## Context
+Image optimization processes images sequentially in a `for` loop. Each image decodes, resizes at 3 breakpoints, and shells out to `cwebp`/`avifenc`. No concurrency.
 
-**Files to edit:**
+## What to build
 
-1. **`docs/Commands/generate.md`** — In the "Full Workflow" section (around line 99-117), add a note that for active development, the [Dev Command](./dev.md) combines building, watching, and serving into a single step. Add it after the existing workflow example, something like:
-   > For active development with automatic rebuilds, use the [Dev Command](./dev.md) instead — it combines building, watching for changes, and serving into a single step.
+### Step 1: Write test
+Edit `internal/imgopt/imgopt_test.go` (has: helpers `newTestImage`/`savePNG`, tests `TestResize`, `TestResize_SmallerThanTarget`, `TestDecodeImage`, `TestProcessImage`, `TestIsOptimizable`). Add `"fmt"` to imports. Add:
+```go
+func TestProcessImages(t *testing.T) {
+    dir := t.TempDir()
+    outDir := filepath.Join(dir, "out")
+    os.MkdirAll(outDir, 0o755)
 
-2. **`docs/Commands/serve.md`** — In the "Related Commands" section (around line 79-83), add a bullet point for the Dev Command:
-   - `[Dev Command](./dev.md) — build, watch, and serve in a single step`
+    var jobs []ImageJob
+    for i := 0; i < 4; i++ {
+        name := fmt.Sprintf("img%d", i)
+        path := filepath.Join(dir, name+".png")
+        savePNG(t, path, newTestImage(1600, 900))
+        jobs = append(jobs, ImageJob{
+            SrcPath:  path,
+            OutDir:   outDir,
+            WebDir:   "/images",
+            BaseName: name,
+            WebPath:  "/images/" + name + ".png",
+        })
+    }
 
-3. **`docs/Roadmap.md`** — If incremental builds or dev command is not yet mentioned, add a completed item under a relevant section. Check the roadmap first — if there's already a mention, mark it as completed `[x]`. If not, add under "Core Features":
-   - `[x] **Incremental Builds:** File watcher with dependency-aware change detection for the [dev command](./Commands/dev.md).`
+    results := ProcessImages(jobs, DefaultBreakpoints(), 4)
+    if len(results) != 4 {
+        t.Fatalf("expected 4 results, got %d", len(results))
+    }
+    for _, job := range jobs {
+        if results[job.WebPath] == nil {
+            t.Errorf("nil result for %s", job.WebPath)
+        }
+    }
+}
+```
 
-4. **`docs/Features/Configuration File.md`** — Read this file first. If it mentions the `generate` command as the primary way to use config, add a note that the `dev` command also reads from `kiln.yaml`.
+### Step 2: Add ImageJob and ProcessImages
+Edit `internal/imgopt/imgopt.go` (has: `Variant`, `Result`, `ErrNoEncoder`, functions `DefaultBreakpoints`, `IsOptimizable`, `DecodeImage`, `Resize`, `EncodeWebP`, `EncodeAVIF`, `ProcessImage`, `writeImage`, `writeEncoded`). Add `"sync"` to imports. Add at end:
+```go
+type ImageJob struct {
+    SrcPath  string
+    OutDir   string
+    WebDir   string
+    BaseName string
+    WebPath  string
+}
 
-**Verify:** Run `go test ./...` to make sure no Go code was accidentally broken (docs-only changes, should pass). Also verify: `test -f "docs/Commands/dev.md" && test -f "docs/Features/Incremental Builds.md" && echo OK`
+func ProcessImages(jobs []ImageJob, breakpoints []int, maxWorkers int) map[string]*Result {
+    if maxWorkers < 1 {
+        maxWorkers = 1
+    }
+    type entry struct {
+        webPath string
+        result  *Result
+    }
+    jobCh := make(chan ImageJob, len(jobs))
+    resultCh := make(chan entry, len(jobs))
+    var wg sync.WaitGroup
+    for i := 0; i < maxWorkers; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            for job := range jobCh {
+                r, err := ProcessImage(job.SrcPath, job.OutDir, job.WebDir, job.BaseName, breakpoints)
+                if err != nil {
+                    continue
+                }
+                resultCh <- entry{webPath: job.WebPath, result: r}
+            }
+        }()
+    }
+    for _, job := range jobs {
+        jobCh <- job
+    }
+    close(jobCh)
+    go func() { wg.Wait(); close(resultCh) }()
+    results := make(map[string]*Result, len(jobs))
+    for e := range resultCh {
+        results[e.webPath] = e.result
+    }
+    return results
+}
+```
+
+### Step 3: Verify imgopt tests
+Run `go test ./internal/imgopt/...`.
+
+### Step 4: Update builder_default.go
+Edit `internal/builder/builder_default.go`. Add `"runtime"` to imports. Replace the static files loop (lines 141-164) with:
+1. First pass: collect `imgopt.ImageJob` slice and copy all files.
+2. Call `imgopt.ProcessImages(jobs, imgopt.DefaultBreakpoints(), runtime.NumCPU())`.
+3. Merge returned map into `site.ImageResults`.
+
+The new code replacing lines 141-164:
+```go
+log.Info("Copying static assets...")
+var imgJobs []imgopt.ImageJob
+for _, file := range staticFiles {
+    if !shouldRebuild(file.RelPath) {
+        continue
+    }
+    l := log.With("file", file.Path)
+    if err := os.MkdirAll(filepath.Dir(file.OutPath), 0755); err != nil {
+        l.Error("Couldn't create output directory", "error", err)
+        continue
+    }
+    if imgopt.IsOptimizable(file.Ext) {
+        imgJobs = append(imgJobs, imgopt.ImageJob{
+            SrcPath:  file.Path,
+            OutDir:   filepath.Dir(file.OutPath),
+            WebDir:   filepath.Dir(file.WebPath),
+            BaseName: file.Name,
+            WebPath:  file.WebPath,
+        })
+    }
+    if copyErr := obsidian.CopyFile(file.Path, file.OutPath); copyErr != nil {
+        l.Error("Couldn't copy file", "error", copyErr)
+    }
+}
+for k, v := range imgopt.ProcessImages(imgJobs, imgopt.DefaultBreakpoints(), runtime.NumCPU()) {
+    site.ImageResults[k] = v
+}
+```
+
+### Step 5: Update builder_custom.go
+Edit `internal/builder/builder_custom.go`. In `parseStaticFiles()` (lines 257-296), apply the same pattern: collect `ImageJob` slice, call `ProcessImages` after the loop, merge results. Add `"runtime"` to imports.
+
+### Step 6: Verify
+Run `go test ./internal/imgopt/... ./internal/builder/...` and `go build ./cmd/kiln/`.
 </task>
 </tasks>
