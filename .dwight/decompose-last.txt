@@ -1,176 +1,109 @@
 -- DwightAuto decomposition output
--- Request: Create an Incremental / Watch Builds feature.
-Currently `kiln build` regenerates the entire site. Adding file-system watching (via `fsnotify`) and incremental rebuilds—only re-rendering changed note
--- Timestamp: Thu 12 Mar 2026 08:43:26 AM CET
+-- Request: The incremental builds need documentation: add that under docs
+-- Timestamp: Thu 12 Mar 2026 09:17:05 AM CET
 
-
-
-Continuing from task 6:
+Now I have a thorough understanding of the codebase, the docs structure/style, and the incremental build feature. Let me compose the task decomposition.
 
 <tasks>
-<task order="1" title="Dependency graph tracker">
-Create `internal/watch/depgraph.go` — a dependency graph that maps each vault file to the set of files that depend on it (via wikilinks/backlinks). This is the foundation for knowing which files to re-render when a source file changes.
+<task order="1" title="Dev command documentation">
+Create the missing `docs/Commands/dev.md` documentation page for the `kiln dev` command. This is the user-facing command that combines build, watch, and serve into a single workflow.
 
-**Files to create:**
-- `internal/watch/depgraph.go` — `// @feature:watch Dependency graph for incremental rebuild invalidation.`
-- `internal/watch/depgraph_test.go` — `// @feature:watch Tests for dependency graph.`
+**File to create:** `docs/Commands/dev.md`
 
-**Types and functions:**
+**Content requirements:**
+- Follow the EXACT same markdown format as the other command docs (e.g., `docs/Commands/generate.md`, `docs/Commands/serve.md`, `docs/Commands/clean.md`):
+  - YAML frontmatter with `title` and `description` fields
+  - `# Dev Command` heading
+  - Introductory paragraph explaining what the command does
+  - `## Usage` section with code blocks
+  - `## Flags` section with a markdown table listing ALL flags from `internal/cli/dev.go` (theme, font, url, name, input, output, flat-urls, mode, layout, log, disable-toc, disable-local-graph, disable-backlinks, lang, accent-color, port)
+  - `## How It Works` section explaining the build-watch-serve lifecycle:
+    1. Runs an initial full build (same as `kiln generate`)
+    2. Populates a modification-time baseline for all vault files
+    3. Builds a dependency graph from wikilinks between notes
+    4. Starts a filesystem watcher on the input directory
+    5. Launches a local HTTP server (same as `kiln serve`)
+    6. On file changes, computes a changeset and triggers a rebuild
+  - `## Examples` section with 2-3 practical examples
+  - `## Related Commands` section linking to generate.md, serve.md, clean.md
+- Cross-link to existing doc pages using relative paths (e.g., `[Generate Command](./generate.md)`, `[Themes](../Features/User Interface/Themes.md)`)
+- Mention that `Ctrl+C` cleanly shuts down the watcher and server (the code uses `signal.NotifyContext` with SIGINT/SIGTERM)
+- Note that the dev command accepts ALL the same flags as `generate` plus `--port`
 
-```go
-package watch
-
-type DepGraph struct {
-    Forward map[string]map[string]struct{} // source RelPath -> set of target names
-    Reverse map[string]map[string]struct{} // target name -> set of source RelPaths
-}
-
-func NewDepGraph() *DepGraph
-func (g *DepGraph) AddEdge(sourceRelPath, targetName string)
-func (g *DepGraph) RemoveSource(sourceRelPath string)
-func (g *DepGraph) Dependents(name string) []string
-func (g *DepGraph) BuildFromFiles(files []*obsidian.File)
-```
-
-Import `github.com/otaleghani/kiln/internal/obsidian`. The `File` struct has `RelPath string`, `Ext string`, `Name string`, `Links []string` (raw wikilinks like `[[Target]]` or markdown links like `[text](path.md)`).
-
-`BuildFromFiles`: for each `.md` file, parse `file.Links` to extract target names. For wikilinks: strip `[[`/`]]`, remove alias after `|`, remove anchor after `#`, take `filepath.Base` if contains `/`, lowercase. For markdown links `[text](path)`: extract path, skip http/https/mailto, remove anchor, take `filepath.Base`, strip `.md`, lowercase.
-
-**Tests (write first):**
-1. `TestNewDepGraph` — empty graph, no dependents.
-2. `TestAddEdgeAndDependents` — add A->B, C->B; `Dependents("b")` returns {A,C}.
-3. `TestRemoveSource` — remove A; `Dependents("b")` returns {C}.
-4. `TestBuildFromFiles` — mock files with Links `[[NoteB]]` and `[text](./notec.md)`; verify dependents.
-
-**Verify:** `go test ./internal/watch/...`
+**Verify:** The file exists and is valid markdown. Run `test -f docs/Commands/dev.md && echo OK`
 </task>
 
-<task order="2" title="Mtime store for change detection" depends_on="1">
-Create `internal/watch/mtimestore.go` — tracks file modification times and computes which files changed.
+<task order="2" title="Incremental builds overview doc">
+Create a new documentation page explaining the incremental build system architecture. This goes under a new `Features/` page since it documents how the watch system works under the hood.
 
-**Files to create:**
-- `internal/watch/mtimestore.go` — `// @feature:watch File modification time tracking for incremental builds.`
-- `internal/watch/mtimestore_test.go` — `// @feature:watch Tests for mtime store.`
+**File to create:** `docs/Features/Incremental Builds.md`
 
-```go
-package watch
+**Content requirements:**
+- Follow the EXACT same format as `docs/Features/Image Optimization.md` — YAML frontmatter with `title` and `description`, then heading, intro paragraph, and well-structured sections.
+- `# Incremental Builds` heading
+- Introductory paragraph: Kiln's `dev` command uses an incremental build pipeline to detect file changes and rebuild only what is necessary. Explain that this consists of four components working together.
+- `## Architecture` section with a plain-text diagram or description of the pipeline:
+  - **Filesystem Watcher** → detects raw filesystem events (write, create, remove, rename) using fsnotify
+  - **Mtime Store** → tracks modification times, reports changed and removed files
+  - **Dependency Graph** → maps wikilink relationships between notes (forward and reverse edges)
+  - **Changeset Computation** → combines mtime changes with dependency graph to determine the full set of files to rebuild
+- `## Filesystem Watcher` section:
+  - Uses fsnotify to monitor the input directory recursively
+  - Automatically watches new subdirectories as they are created
+  - Skips dotfiles (`.obsidian`, `.git`) and `_hidden_` prefixed paths
+  - Debounces rapid changes (default 300ms) to avoid redundant rebuilds
+  - Multiple rapid saves collapse into a single rebuild
+- `## Modification Time Store` section:
+  - Tracks the last-known modification time of every file in the vault
+  - On each rebuild trigger, walks the input directory and compares current mtimes against stored values
+  - Reports two lists: **changed** files (new or modified) and **removed** files (previously tracked but no longer present)
+  - Skips dotfiles and `_hidden_` paths, matching vault scan behavior
+- `## Dependency Graph` section:
+  - Built from the vault's wikilinks and markdown links after the initial scan
+  - Maintains forward edges (source → targets it links to) and reverse edges (target → sources that link to it)
+  - Parses both `[[wikilink]]` and `[text](path.md)` syntax
+  - Strips aliases (`|`), anchors (`#`), and path prefixes to normalize target names
+  - When a file is removed, its forward edges are cleaned up from the reverse index
+- `## Changeset Computation` section:
+  - Takes the changed/removed lists from the mtime store and the dependency graph
+  - For each changed file, adds it and all its dependents (files that link TO it) to the rebuild set
+  - For each removed file, adds its dependents to the rebuild set and the file itself to the remove set
+  - Deduplicates: a file that appears as both changed and a dependent is only rebuilt once
+  - Removed files are excluded from the rebuild set (no point rendering a deleted file)
+  - Returns a `ChangeSet` with `Rebuild` (files to re-render) and `Remove` (files to delete from output)
+- `## Lifecycle` section: Walk through what happens when you run `kiln dev`:
+  1. Initial full build
+  2. Mtime baseline populated (first scan sees all files as "new")
+  3. Dependency graph built from vault wikilinks
+  4. Watcher starts monitoring the input directory
+  5. Server starts on `localhost:PORT`
+  6. User edits a file → fsnotify event → debounce timer resets → timer fires → mtime update → changeset computed → rebuild triggered
+- `## Current Limitations` section:
+  - The rebuild currently performs a full site generation (the changeset is computed but not yet used to selectively rebuild individual pages)
+  - The dependency graph is built once at startup and not updated after incremental changes
+  - Only wikilink and markdown link dependencies are tracked; template or layout changes require a full restart
 
-type MtimeStore struct {
-    Entries map[string]time.Time // key = RelPath
-}
+Cross-link to the [Dev Command](../Commands/dev.md) page.
 
-func NewMtimeStore() *MtimeStore
-func (s *MtimeStore) Update(inputDir string) (changed []string, removed []string, err error)
-```
-
-`Update` walks `inputDir` with `filepath.WalkDir`, skips dotfiles and `_hidden_` prefixed paths (matching `obsidian.Scan` at `internal/obsidian/obsidian.go:466-475`), computes RelPath via `filepath.Rel`, compares `info.ModTime()` against stored value. After walk, previously-tracked but unseen paths are `removed`.
-
-**Tests (write first):**
-1. `TestUpdateNewFiles` — 2 files, both in `changed`.
-2. `TestUpdateUnchanged` — second call returns empty.
-3. `TestUpdateModifiedFile` — rewrite file to bump mtime, only it appears in `changed`.
-4. `TestUpdateRemovedFile` — delete file, appears in `removed`.
-5. `TestSkipsDotfiles` — `.hidden` file never reported.
-
-**Verify:** `go test ./internal/watch/...`
+**Verify:** `test -f "docs/Features/Incremental Builds.md" && echo OK`
 </task>
 
-<task order="3" title="Changeset computation with invalidation" depends_on="2">
-Create `internal/watch/changeset.go` — expands mtime changes using the dependency graph.
-
-**Files to create:**
-- `internal/watch/changeset.go` — `// @feature:watch Changeset computation combining mtime changes with dependency graph invalidation.`
-- `internal/watch/changeset_test.go` — `// @feature:watch Tests for changeset computation.`
-
-```go
-package watch
-
-type ChangeSet struct {
-    Rebuild []string // RelPaths to re-render
-    Remove  []string // RelPaths to delete from output
-}
-
-func ComputeChangeSet(changed, removed []string, graph *DepGraph) *ChangeSet
-```
-
-Logic: start with `rebuild = set(changed)`. For each changed/removed file, extract name (base, lowercase, strip `.md`), call `graph.Dependents(name)`, add to rebuild. For removed, also call `graph.RemoveSource`. Deduplicate rebuild, exclude removed paths.
-
-**Tests (write first):**
-1. `TestComputeChangeSetSimple` — one changed, no dependents.
-2. `TestComputeChangeSetWithDependents` — B links to A; A changes → both in rebuild.
-3. `TestComputeChangeSetRemoved` — A removed, dependent B in rebuild, A in remove only.
-4. `TestComputeChangeSetDedup` — no duplicates.
-
-**Verify:** `go test ./internal/watch/...`
-</task>
-
-<task order="4" title="Fsnotify watcher with debounce" depends_on="3">
-Create `internal/watch/watcher.go` — fsnotify watcher with debounce. Add the `fsnotify` dependency.
-
-**Run first:** `go get github.com/fsnotify/fsnotify@latest`
-
-**Files to create:**
-- `internal/watch/watcher.go` — `// @feature:watch Filesystem watcher using fsnotify with debounced rebuild trigger.`
-- `internal/watch/watcher_test.go` — `// @feature:watch Tests for filesystem watcher.`
-
-```go
-package watch
-
-const DefaultDebounce = 300 * time.Millisecond
-
-type RebuildFunc func() error
-
-type Watcher struct {
-    InputDir  string
-    Debounce  time.Duration
-    Log       *slog.Logger
-    OnRebuild RebuildFunc
-}
-
-func (w *Watcher) Watch(ctx context.Context) error
-```
-
-`Watch`: create `fsnotify.NewWatcher()`, recursively add dirs (skip dotfiles/`_hidden_`). Event loop: on Write/Create/Remove/Rename reset debounce timer. On timer fire call `w.OnRebuild()`. On Create for dir, add to watcher. On `ctx.Done()` close and return.
-
-**Tests (write first):**
-1. `TestWatchDetectsFileChange` — temp dir, 50ms debounce, modify file, verify callback fires.
-2. `TestWatchDebounce` — 5 rapid writes → callback fires once.
-3. `TestWatchContextCancellation` — cancel ctx → returns nil.
-
-**Verify:** `go test ./internal/watch/...`
-</task>
-
-<task order="5" title="CLI dev command with watch + serve" depends_on="4">
-Create `kiln dev` command: full build → start watcher → serve. Wire incremental rebuild in `OnRebuild`.
-
-**Files to create:**
-- `internal/cli/dev.go` — `// @feature:cli Cobra dev command: build, watch, and serve for local development.`
+<task order="3" title="Cross-link docs and update roadmap" depends_on="1,2">
+Update existing documentation to cross-link to the new incremental builds and dev command pages.
 
 **Files to edit:**
-- `internal/cli/commands.go` — add `rootCmd.AddCommand(cmdDev)` at line ~107 alongside existing commands.
 
-**Implementation:**
+1. **`docs/Commands/generate.md`** — In the "Full Workflow" section (around line 99-117), add a note that for active development, the [Dev Command](./dev.md) combines building, watching, and serving into a single step. Add it after the existing workflow example, something like:
+   > For active development with automatic rebuilds, use the [Dev Command](./dev.md) instead — it combines building, watching for changes, and serving into a single step.
 
-```go
-var cmdDev = &cobra.Command{
-    Use:   "dev",
-    Short: "Build, watch for changes, and serve locally",
-    Run:   runDev,
-}
-```
+2. **`docs/Commands/serve.md`** — In the "Related Commands" section (around line 79-83), add a bullet point for the Dev Command:
+   - `[Dev Command](./dev.md) — build, watch, and serve in a single step`
 
-Register same flags as `cmdGenerate` plus `--port` from `cmdServe` in `init()`.
+3. **`docs/Roadmap.md`** — If incremental builds or dev command is not yet mentioned, add a completed item under a relevant section. Check the roadmap first — if there's already a mention, mark it as completed `[x]`. If not, add under "Core Features":
+   - `[x] **Incremental Builds:** File watcher with dependency-aware change detection for the [dev command](./Commands/dev.md).`
 
-`runDev`:
-1. Load config, apply flags, set `builder.*` package vars (same as `runGenerate`).
-2. Call `builder.Build(log)` for initial full build.
-3. Create `watch.NewMtimeStore()`, call `Update(inputDir)` to populate baseline.
-4. Create `watch.NewDepGraph()`. Do a quick vault scan (`obsidian.New(...).Scan()`), call `graph.BuildFromFiles(vault.Files)`.
-5. Create `watch.Watcher` with `OnRebuild` that: calls `mtimeStore.Update(inputDir)`, calls `watch.ComputeChangeSet(changed, removed, graph)`, logs the changeset, then calls `builder.Build(log)` for a full rebuild (V1 simplicity — true incremental render is a follow-up).
-6. Use `signal.NotifyContext(context.Background(), os.Interrupt)` for clean shutdown.
-7. Start `watcher.Watch(ctx)` in a goroutine.
-8. Start `server.Serve(port, builder.OutputDir, localBaseURL, log)` on main goroutine.
+4. **`docs/Features/Configuration File.md`** — Read this file first. If it mentions the `generate` command as the primary way to use config, add a note that the `dev` command also reads from `kiln.yaml`.
 
-**Verify:** `go build ./cmd/kiln/` and `go test ./internal/...`
+**Verify:** Run `go test ./...` to make sure no Go code was accidentally broken (docs-only changes, should pass). Also verify: `test -f "docs/Commands/dev.md" && test -f "docs/Features/Incremental Builds.md" && echo OK`
 </task>
 </tasks>
