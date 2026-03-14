@@ -2,17 +2,16 @@
 # Uncomment and edit the options below to set defaults for your project.
 # CLI flags will override these values.
 
-theme: "dracula"
-# accent-color: blue
-font: inter
-# url: "https://kiln.talesign.com"
+theme: "catppuccin"
+font: "inter"
+url: "https://kiln.talesign.com"
 name: "Kiln"
-input: ./docs
-output: ./public
-mode: default
-layout: default
-lang: en
-accent-color: green
+input: "./docs"
+output: "./public"
+mode: "default"
+layout: "default"
+lang: "en"
+accent-color: "purple"
 # flat-urls: false
 # disable-toc: false
 # disable-local-graph: false

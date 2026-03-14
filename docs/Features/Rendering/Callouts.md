@@ -114,4 +114,4 @@ Kiln automatically pairs each callout type with its corresponding icon from the 
 
 ## Styling Callouts with Themes
 
-Callout colors and appearance adapt to the active [theme](../User Interface/Themes.md) and respect [Light & Dark Mode](../User Interface/Light-Dark Mode.md) settings, so they look correct in both modes without extra work.
+Callout colors and appearance adapt to the active [[Themes|theme]] and respect [[Light-Dark Mode|Light & Dark Mode]] settings, so they look correct in both modes without extra work.
