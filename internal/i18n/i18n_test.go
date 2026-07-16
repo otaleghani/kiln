@@ -41,6 +41,23 @@ func TestResolve_Italian(t *testing.T) {
 	}
 }
 
+func TestResolve_French(t *testing.T) {
+	l := Resolve("fr")
+	if l.SearchPlaceholder != "Rechercher parmi les notes…" {
+		t.Errorf("SearchPlaceholder = %q, want %q", l.SearchPlaceholder, "Rechercher parmi les notes…")
+	}
+	if l.BackToTop != "Torna su" {
+		t.Errorf("BackToTop = %q, want %q", l.BackToTop, "Retour en haut de la page")
+	}
+	if l.PageNotFound != "Page introuvable" {
+		t.Errorf("PageNotFound = %q, want %q", l.PageNotFound, "Page introuvable")
+	}
+	if l.MinRead != "%d min de lecture" {
+		t.Errorf("MinRead = %q, want %q", l.MinRead, "%d min de lecture")
+	}
+}
+
+
 func TestResolve_UnknownFallback(t *testing.T) {
 	l := Resolve("xx")
 	en := Resolve("en")
