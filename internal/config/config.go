@@ -27,6 +27,7 @@ type Config struct {
 	DisableLocalGraph bool   `yaml:"disable-local-graph"`
 	DisableBacklinks  bool   `yaml:"disable-backlinks"`
 	Port              string `yaml:"port"`
+	Host              string `yaml:"host"`
 	Log               string `yaml:"log"`
 	Lang              string `yaml:"lang"`
 	AccentColor       string `yaml:"accent-color"`
@@ -93,6 +94,8 @@ func (c *Config) ValueOr(field, fallback string) string {
 		val = c.Layout
 	case "port":
 		val = c.Port
+	case "host":
+		val = c.Host
 	case "log":
 		val = c.Log
 	case "lang":

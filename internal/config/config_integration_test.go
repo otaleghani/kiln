@@ -13,6 +13,7 @@ func TestConfigIntegration_FullPipeline(t *testing.T) {
 font: lato
 url: https://example.com
 accent-color: green
+host: 127.0.0.1
 `
 	if err := os.WriteFile(filepath.Join(dir, "kiln.yaml"), []byte(content), 0o644); err != nil {
 		t.Fatalf("write kiln.yaml: %v", err)
@@ -47,10 +48,18 @@ accent-color: green
 	if cfg.AccentColor != "green" {
 		t.Errorf("AccentColor = %q, want %q", cfg.AccentColor, "green")
 	}
+	if cfg.Host != "127.0.0.1" {
+		t.Errorf("Host = %q, want %q", cfg.Host, "127.0.0.1")
+	}
 
 	// ValueOr: config value wins over fallback.
 	if got := cfg.ValueOr("theme", "default"); got != "dracula" {
 		t.Errorf("ValueOr(theme) = %q, want %q", got, "dracula")
+	}
+
+	// ValueOr: host config value wins.
+	if got := cfg.ValueOr("host", "0.0.0.0"); got != "127.0.0.1" {
+		t.Errorf("ValueOr(host) = %q, want %q", got, "127.0.0.1")
 	}
 
 	// ValueOr: accent-color config value wins.

@@ -51,6 +51,8 @@ func init() {
 	cmdDev.Flags().
 		StringVarP(&accentColor, FlagAccentColor, FlagAccentColorShort, DefaultAccentColor, "Accent color from theme palette (red, orange, yellow, green, blue, purple, cyan)")
 	cmdDev.Flags().
+		StringVarP(&host, FlagHost, FlagHostShort, DefaultHost, "Host to bind the server to")
+	cmdDev.Flags().
 		StringVarP(&port, FlagPort, FlagPortShort, DefaultPort, "Port to serve on")
 }
 
@@ -71,6 +73,7 @@ func runDev(cmd *cobra.Command, args []string) {
 	applyBoolFlag(cmd, FlagDisableBacklinks, &disableBacklinks, cfg, DefaultDisableBacklinks)
 	applyStringFlag(cmd, FlagLang, &lang, cfg, DefaultLang)
 	applyStringFlag(cmd, FlagAccentColor, &accentColor, cfg, DefaultAccentColor)
+	applyStringFlag(cmd, FlagHost, &host, cfg, DefaultHost)
 	applyStringFlag(cmd, FlagPort, &port, cfg, DefaultPort)
 
 	builder.OutputDir = outputDir
@@ -166,5 +169,5 @@ func runDev(cmd *cobra.Command, args []string) {
 
 	// Serve on main goroutine
 	localBaseURL := "http://localhost:" + port
-	server.Serve(ctx, port, builder.OutputDir, localBaseURL, log)
+	server.Serve(ctx, host, port, builder.OutputDir, localBaseURL, log)
 }

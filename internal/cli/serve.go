@@ -24,7 +24,8 @@ var port string
 
 func init() {
 	// Register flags for the serve command.
-	// Users can customize the listening port and the directory being served.
+	// Users can customize the listening host, port, and the directory being served.
+	cmdServe.Flags().StringVarP(&host, FlagHost, FlagHostShort, DefaultHost, "Host to bind the server to")
 	cmdServe.Flags().StringVarP(&port, FlagPort, FlagPortShort, DefaultPort, "Port to serve on")
 	cmdServe.Flags().
 		StringVarP(&outputDir, FlagOutputDir, FlagOutputDirShort, DefaultOutputDir, "Name of the output directory to serve(defaults to ./public)")
@@ -35,6 +36,7 @@ func init() {
 // runServe executes the server logic.
 func runServe(cmd *cobra.Command, args []string) {
 	cfg := loadConfig(cmd)
+	applyStringFlag(cmd, FlagHost, &host, cfg, DefaultHost)
 	applyStringFlag(cmd, FlagPort, &port, cfg, DefaultPort)
 	applyStringFlag(cmd, FlagOutputDir, &outputDir, cfg, DefaultOutputDir)
 	applyStringFlag(cmd, FlagLog, &logger, cfg, DefaultLog)
@@ -47,5 +49,5 @@ func runServe(cmd *cobra.Command, args []string) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	server.Serve(ctx, port, builder.OutputDir, localBaseURL, log)
+	server.Serve(ctx, host, port, builder.OutputDir, localBaseURL, log)
 }
