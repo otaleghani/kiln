@@ -25,6 +25,7 @@ const (
 	DefaultFlatURLS          = false
 	DefaultMode              = "default"
 	DefaultPort              = "8080"
+	DefaultHost              = "127.0.0.1"
 	DefaultLog               = "info"
 	DefaultLayout            = "default"
 	DefaultDisableTOC        = false
@@ -52,6 +53,8 @@ const (
 	FlagModeShort         = "m"
 	FlagPort              = "port"
 	FlagPortShort         = "p"
+	FlagHost              = "host"
+	FlagHostShort         = "H"
 	FlagLog               = "log"
 	FlagLogShort          = "l"
 	FlagLayout            = "layout"
@@ -84,6 +87,7 @@ var (
 	disableBacklinks  bool   // Disable the backlinks panel
 	lang              string // Language code for the site
 	accentColor       string // Accent color override from theme palette
+	host              string // Host to bind the server to (defaults to 127.0.0.1)
 )
 
 // Init constructs and returns the root command for the application.

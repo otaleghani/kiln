@@ -25,11 +25,12 @@ Once running, open `http://localhost:8080` in your browser to view your site.
 
 ## Flags
 
-| Flag       | Short | Default    | Description                                                                                     |
-| ---------- | ----- | ---------- | ----------------------------------------------------------------------------------------------- |
-| `--port`   | `-p`  | `8080`     | Port number to listen on. Change this if port 8080 is already in use.                           |
-| `--output` | `-o`  | `./public` | Directory to serve. Should match the output path used during the [generate](./generate.md) step.|
-| `--log`    | `-l`  | `info`     | Sets the log level. Choose between `info` or `debug`.                                           |
+| Flag       | Short | Default     | Description                                                                                     |
+| ---------- | ----- | ----------- | ----------------------------------------------------------------------------------------------- |
+| `--host`   | `-H`  | `127.0.0.1` | Host address to bind the server to.                                                             |
+| `--port`   | `-p`  | `8080`      | Port number to listen on. Change this if port 8080 is already in use.                           |
+| `--output` | `-o`  | `./public`  | Directory to serve. Should match the output path used during the [generate](./generate.md) step.|
+| `--log`    | `-l`  | `info`      | Sets the log level. Choose between `info` or `debug`.                                           |
 
 ## Clean URL Support
 

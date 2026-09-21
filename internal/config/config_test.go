@@ -22,6 +22,7 @@ flat-urls: true
 disable-toc: true
 disable-local-graph: true
 port: "3000"
+host: 127.0.0.1
 log: debug
 accent-color: blue
 `
@@ -72,6 +73,9 @@ accent-color: blue
 	}
 	if cfg.Port != "3000" {
 		t.Errorf("Port = %q, want %q", cfg.Port, "3000")
+	}
+	if cfg.Host != "127.0.0.1" {
+		t.Errorf("Host = %q, want %q", cfg.Host, "127.0.0.1")
 	}
 	if cfg.Log != "debug" {
 		t.Errorf("Log = %q, want %q", cfg.Log, "debug")
@@ -136,6 +140,9 @@ url: https://notes.dev
 	}
 	if cfg.Port != "" {
 		t.Errorf("Port = %q, want empty", cfg.Port)
+	}
+	if cfg.Host != "" {
+		t.Errorf("Host = %q, want empty", cfg.Host)
 	}
 	if cfg.Log != "" {
 		t.Errorf("Log = %q, want empty", cfg.Log)
@@ -247,9 +254,14 @@ func TestValueOr_OnlyOverridesEmpty(t *testing.T) {
 	if got := cfgColor.ValueOr("accent-color", ""); got != "red" {
 		t.Errorf("ValueOr(accent-color) = %q, want %q", got, "red")
 	}
-	// accent-color: fallback wins when empty.
-	cfgNoColor := Config{}
-	if got := cfgNoColor.ValueOr("accent-color", ""); got != "" {
-		t.Errorf("ValueOr(accent-color) = %q, want empty", got)
+	// host: config value wins when set.
+	cfgHost := Config{Host: "0.0.0.0"}
+	if got := cfgHost.ValueOr("host", "127.0.0.1"); got != "0.0.0.0" {
+		t.Errorf("ValueOr(host) = %q, want %q", got, "0.0.0.0")
+	}
+	// host: fallback wins when empty.
+	cfgNoHost := Config{}
+	if got := cfgNoHost.ValueOr("host", "127.0.0.1"); got != "127.0.0.1" {
+		t.Errorf("ValueOr(host) = %q, want %q", got, "127.0.0.1")
 	}
 }

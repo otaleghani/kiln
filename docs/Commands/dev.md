@@ -42,6 +42,7 @@ This reads from `./vault`, writes to `./public`, applies the default theme, font
 | `--lang`                | `-g`  | `en`      | Language code for the site (e.g., `en`, `it`, `fr`).                                                                                     |
 | `--accent-color`        | `-a`  | `""`      | Accent color from the theme palette (`red`, `orange`, `yellow`, `green`, `blue`, `purple`, `cyan`). Defaults to the theme's built-in accent. |
 | `--log`                 | `-l`  | `info`    | Log verbosity. Choose `info` or `debug`.                                                                                                 |
+| `--host`                | `-H`  | `127.0.0.1` | Host address to bind the local development server to.                                                                                    |
 | `--port`                | `-p`  | `8080`    | Port number for the local development server.                                                                                            |
 
 ## How It Works
